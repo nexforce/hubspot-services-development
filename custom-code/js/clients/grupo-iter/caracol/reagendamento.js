@@ -21,6 +21,16 @@ const axios = require("axios");
 //   - data_da_visita (deal, date) usa apenas cf_date_visit_expected.
 //   - cf_data_visita_anterior: DD-MM-YYYY -> YYYY-MM-DD.
 //   - cf_bilhetes: string com os IDs, gravada como recebida.
+//   - cf_data_hora_visita: com fuso explícito (Z ou ±HH:mm), usa o instante
+//     como veio; sem fuso, o horário é o de Brasília (UTC-3).
+//
+// Datas que chegam como timestamp: o gatilho de webhook do workflow entrega
+// cf_date_visit_expected, cf_data_visita_anterior e cf_data_hora_visita em
+// timestamp ms. Antes de qualquer uso, normalizeTimestampFields devolve esses
+// campos ao formato do SIG (DD-MM-YYYY para data, "YYYY-MM-DD HH:mm:ss" em
+// horário de Brasília para data e hora). A propriedade payload do contato
+// recebe esse texto, e a conversão para timestamp ms acontece só nas
+// propriedades enviadas pela API. Campo que já chega como texto fica intacto.
 //
 // O token vem de ACTIVE.hubspotToken: secret HUBSPOT_TOKEN_SANDBOX_INTEGRACAO_SIG
 // em sandbox e HUBSPOT_TOKEN_INTEGRACAO_SIG em produção, nunca hardcoded.
@@ -110,9 +120,76 @@ const toDateTimeMs = (rawDate, rawTime) => {
   return Date.UTC(year, month - 1, day, hour, minute, second) + 3 * 60 * 60 * 1000;
 };
 
+// Data e hora "YYYY-MM-DD HH:mm[:ss]" -> timestamp ms (UTC). Com fuso explícito
+// (Z ou ±HH:mm), usa o instante como veio; sem fuso, o horário é o de Brasília
+// (UTC-3), para não depender do fuso do servidor que roda a action.
 const toDateTimeIsoMs = (raw) => {
-  const timestamp = Date.parse(String(raw || ""));
-  return Number.isFinite(timestamp) ? timestamp : null;
+  const text = String(raw || "").trim();
+  if (!text) return null;
+  if (/(Z|[+-]\d{2}:?\d{2})$/i.test(text)) {
+    const timestamp = Date.parse(text.replace(" ", "T"));
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+  const match =
+    /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(text);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = match[4] ? Number(match[4]) : 12;
+  const minute = match[5] ? Number(match[5]) : 0;
+  const second = match[6] ? Number(match[6]) : 0;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  if (hour > 23 || minute > 59 || second > 59) return null;
+  return Date.UTC(year, month - 1, day, hour, minute, second) + 3 * 60 * 60 * 1000;
+};
+
+// --- normalização dos campos que chegam como timestamp ----------------------
+
+// Campos que o gatilho de webhook entrega em timestamp ms e o formato do SIG
+// para o qual voltam: "date" -> DD-MM-YYYY, "datetime" -> YYYY-MM-DD HH:mm:ss
+// (horário de Brasília).
+const TIMESTAMP_FIELDS = [
+  { name: "cf_date_visit_expected", format: "date" },
+  { name: "cf_data_visita_anterior", format: "date" },
+  { name: "cf_data_hora_visita", format: "datetime" },
+];
+
+const BRASILIA_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+// Reconhece um timestamp ms (12 ou 13 dígitos, datas a partir de 1973).
+const isTimestampMs = (valor) => /^\d{12,13}$/.test(String(valor ?? "").trim());
+
+// Data "só data" do HubSpot é meia-noite UTC: lê os componentes em UTC para não
+// voltar um dia.
+const timestampToDateText = (timestampMs) => {
+  const date = new Date(timestampMs);
+  return `${padNumber(date.getUTCDate())}-${padNumber(date.getUTCMonth() + 1)}-${date.getUTCFullYear()}`;
+};
+
+// Data e hora: converte o instante UTC para o horário de Brasília (UTC-3).
+const timestampToDateTimeText = (timestampMs) => {
+  const date = new Date(timestampMs - BRASILIA_OFFSET_MS);
+  return (
+    `${date.getUTCFullYear()}-${padNumber(date.getUTCMonth() + 1)}-${padNumber(date.getUTCDate())} ` +
+    `${padNumber(date.getUTCHours())}:${padNumber(date.getUTCMinutes())}:${padNumber(date.getUTCSeconds())}`
+  );
+};
+
+// Devolve uma cópia do payload com os campos de TIMESTAMP_FIELDS em texto no
+// formato do SIG. Valor ausente ou que já é texto fica como recebido.
+const normalizeTimestampFields = (inputFields) => {
+  const normalized = { ...inputFields };
+  for (const field of TIMESTAMP_FIELDS) {
+    const valor = normalized[field.name];
+    if (!isTimestampMs(valor)) continue;
+    const timestampMs = Number(String(valor).trim());
+    normalized[field.name] =
+      field.format === "date"
+        ? timestampToDateText(timestampMs)
+        : timestampToDateTimeText(timestampMs);
+  }
+  return normalized;
 };
 
 const convertField = (field, payload) => {
@@ -194,7 +271,10 @@ exports.main = async (event, callback) => {
     throw new Error("Secret HUBSPOT_TOKEN_INTEGRACAO_SIG ausente na action de custom code.");
   }
 
-  const payload = event.inputFields || {};
+  // Datas que chegam em timestamp voltam ao formato do SIG antes de qualquer
+  // uso: a propriedade payload guarda esse texto e as conversões para ms ficam
+  // só nas propriedades enviadas pela API.
+  const payload = normalizeTimestampFields(event.inputFields || {});
 
   // No reagendamento, o objeto inscrito no workflow é o DEAL, não o contato.
   const dealId = String(event.object?.objectId || "");
