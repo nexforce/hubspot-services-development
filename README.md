@@ -62,3 +62,5 @@ Projetos de **UI Extensions** (custom cards) do CRM HubSpot, organizados por cli
 ## Dúvidas
 
 Fale com o time de desenvolvimento antes de subir código que envolva integrações externas, manipulação de dados sensíveis ou lógica de negócio complexa.
+
+//teste nathan
