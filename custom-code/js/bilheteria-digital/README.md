@@ -47,7 +47,7 @@ Erros da API (`{ "error": <código>, "message": "<texto>" }`). O script prioriza
 | 404 | 2005 | praca_id não existe ou está inativo |
 | 500 | 9001 | falha inesperada |
 
-Timeout ou falha de rede: `errorStatus` e `errorCode` saem `null`.
+Timeout, falha de rede ou falha ao buscar o owner no HubSpot: `errorStatus` e `errorCode` saem `null`, com a mensagem em `errorMessage`.
 
 Mapeamento de campos (input do workflow para o corpo da API):
 
@@ -65,12 +65,35 @@ Mapeamento de campos (input do workflow para o corpo da API):
 | (owner do deal, via API) | `comercial_id` |
 | (ID do deal) | `hubspot_id` |
 
+### `painel/proposalNotification.js`
+
+Custom code de **ação de workflow baseado em negócio**. Cria a proposta no painel via `POST https://ms.bilheteriadigital.net/hubspot-integration/v1/create-proposal`.
+
+Fluxo:
+
+1. Lê `id_do_produtor` e `praca_id` dos `inputFields`.
+2. Busca o `hubspot_owner_id` do deal e envia como `comercial_id`, com `hubspot_id` = ID do deal.
+3. Devolve os output fields: `hs_execution_state`, `error`, `errorStatus`, `errorCode`, `errorMessage`, no mesmo formato de `createProducerOnPainel.js`.
+
+Erros da API, com o mesmo fallback do script de produtor:
+
+| HTTP | Código | Significado |
+| --- | --- | --- |
+| 401 | 1001 | x-api-key ausente ou inválida |
+| 400 | 1002 | corpo ausente ou JSON malformado |
+| 400 | 1003 | produtor_id, hubspot_id, comercial_id ou praca_id ausente |
+| 404 | 2001 | produtor_id não encontrado |
+| 404 | 2002 | comercial_id não encontrado |
+| 404 | 2005 | praca_id não existe ou está inativo |
+| 500 | 9001 | falha inesperada |
+
+Falha ao buscar o owner no HubSpot ou de rede: `errorStatus` e `errorCode` saem `null`, com a mensagem em `errorMessage`.
+
 ## Pontos de atenção no script atual
 
 Levantados na leitura do código em 2026-10-02, ainda não corrigidos:
 
 - **Prefixo 55 no telefone:** `onlyDigits` remove `55` do início sempre. Um número sem código de país com DDD 55 (região de Santa Maria, RS) perde o DDD.
-- **Falha em `getOwnerId` fica fora do `try`:** o erro sobe sem os output fields de erro, e o workflow não recebe `errorMessage`.
 - **Owner duplicado:** o owner chega duas vezes, como `hubspot_owner_id` (input) e `comercial_id` (buscado na API). Falta confirmar com o cliente qual dos dois o painel usa.
 - **Log com dados pessoais:** `console.log(bodyFiltered)` grava CPF, e-mail e telefone nos logs do workflow.
 
