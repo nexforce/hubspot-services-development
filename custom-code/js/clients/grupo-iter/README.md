@@ -33,6 +33,7 @@ custom-code/js/clients/grupo-iter/
 │   ├── reagendamento.js              # evento reagendamento
 │   └── loginSite.js                  # evento login-site
 ├── c2rio/
+│   ├── formSubmit.js                 # evento form-submit
 │   ├── compraSiteSucesso.js          # evento compra-site-sucesso
 │   ├── compraSiteNegadaAntifraude.js # evento compra-site-negada-antifraude
 │   ├── compraSiteNegadaCartao.js     # evento compra-site-negada-cartao
@@ -87,6 +88,7 @@ Brand da unidade de negócio: `hs_all_assigned_business_unit_ids = 4554144`.
 
 | Evento | Script | Conta | Endpoint / link de cadastro |
 |---|---|---|---|
+| form-submit | `c2rio/formSubmit.js` | sandbox | a cadastrar |
 | compra-site-sucesso | `c2rio/compraSiteSucesso.js` | sandbox | `https://api.hubapi.com/automation/v4/webhook-triggers/52050136/Ok2f2Of` |
 | compra-site-negada-antifraude | `c2rio/compraSiteNegadaAntifraude.js` | sandbox | `https://api.hubapi.com/automation/v4/webhook-triggers/52050136/U3AANb4` |
 | compra-site-negada-cartao | `c2rio/compraSiteNegadaCartao.js` | sandbox | `https://api.hubapi.com/automation/v4/webhook-triggers/52050136/KQ6M6My` |
