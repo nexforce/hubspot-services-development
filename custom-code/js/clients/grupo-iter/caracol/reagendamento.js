@@ -25,12 +25,15 @@ const axios = require("axios");
 //     como veio; sem fuso, o horário é o de Brasília (UTC-3).
 //
 // Datas que chegam como timestamp: o gatilho de webhook do workflow entrega
-// cf_date_visit_expected, cf_data_visita_anterior e cf_data_hora_visita em
-// timestamp ms. Antes de qualquer uso, normalizeTimestampFields devolve esses
-// campos ao formato do SIG (DD-MM-YYYY para data, "YYYY-MM-DD HH:mm:ss" em
-// horário de Brasília para data e hora). A propriedade payload do contato
-// recebe esse texto, e a conversão para timestamp ms acontece só nas
-// propriedades enviadas pela API. Campo que já chega como texto fica intacto.
+// cf_data_hora_visita e cf_data_hora_visita_anterior em timestamp ms, e o tipo
+// dessas chaves não pode ser trocado para texto no gatilho. Antes de qualquer
+// uso, normalizeTimestampFields devolve esses campos ao formato do SIG
+// ("YYYY-MM-DD HH:mm:ss" em horário de Brasília para data e hora, DD-MM-YYYY
+// para data). A propriedade payload do contato recebe esse texto, e a
+// conversão para timestamp ms acontece só nas propriedades enviadas pela API.
+// cf_date_visit_expected e cf_data_visita_anterior hoje chegam como texto
+// DD-MM-YYYY e ficam na lista só por segurança: campo que já chega como texto
+// fica intacto.
 //
 // O token vem de ACTIVE.hubspotToken: secret HUBSPOT_TOKEN_SANDBOX_INTEGRACAO_SIG
 // em sandbox e HUBSPOT_TOKEN_INTEGRACAO_SIG em produção, nunca hardcoded.
@@ -153,6 +156,7 @@ const TIMESTAMP_FIELDS = [
   { name: "cf_date_visit_expected", format: "date" },
   { name: "cf_data_visita_anterior", format: "date" },
   { name: "cf_data_hora_visita", format: "datetime" },
+  { name: "cf_data_hora_visita_anterior", format: "datetime" },
 ];
 
 const BRASILIA_OFFSET_MS = 3 * 60 * 60 * 1000;
