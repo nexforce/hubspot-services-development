@@ -1,0 +1,12 @@
+{
+  "config": {
+    "entrypoint": "app/functions/cancelPreEnrollment.js",
+    "secretKeys": [
+      "MULESOFT_BASE_URL",
+      "MULESOFT_PASSWORD",
+      "MULESOFT_USERNAME"
+    ]
+  },
+  "uid": "cancelPreEnrollment",
+  "type": "app-function"
+}
