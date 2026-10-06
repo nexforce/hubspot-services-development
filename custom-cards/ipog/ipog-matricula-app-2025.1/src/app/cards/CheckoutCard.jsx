@@ -234,6 +234,17 @@ hubspot.extend(({ context, runServerlessFunction, actions }) => (
 // neste arranjo não fecha nada. Mesmo padrão dos modais do orcamento-toolkit.
 const DISCIPLINAS_MODAL_ID = "consultarDatasInicioModal";
 
+// Modal de resultado do cancelamento de pré-matrícula, montado pelo mesmo
+// arranjo do overlay do LoadingButton (ver comentário do DISCIPLINAS_MODAL_ID).
+const CANCEL_RESULT_MODAL_ID = "cancelarPreMatriculaModal";
+
+// Etapas "Matrícula ganha" (closed/won) do portal IPOG, conforme o schema de
+// referência: Matrícula | Aquisição (43349147, stage 90834562) e E-commerce
+// (857102112, stage 1278396076). Fora delas o botão de cancelamento existe;
+// nelas o briefing esconde o botão. Compara por ID, não por rótulo, para não
+// depender de acentuação ou renomeação de etapa na UI.
+const MATRICULA_GANHA_STAGE_IDS = ["90834562", "1278396076"];
+
 // studentStartDate tem uma forma só: { year, month (base zero), date,
 // formattedDate }, ou null. Nunca timestamp. formattedDate é opcional no
 // payload do DateInput, e recalculá-lo aqui é o que mantém determinístico o
@@ -417,6 +428,47 @@ const DisciplinasModal = ({
   </Modal>
 );
 
+// Modal de retorno do cancelamento. Sucesso mostra a mensagem de confirmação;
+// erro mostra o texto recebido na propriedade `message` da resposta da API
+// (validação de status centralizada no IPOG), sem reescrever o motivo, além do
+// status atual da matrícula e do correlationId para acionar o suporte.
+const CancelResultModal = ({ result, onClose }) => (
+  <Modal
+    id={CANCEL_RESULT_MODAL_ID}
+    title={result?.ok ? "Pré-matrícula cancelada" : "Cancelamento não realizado"}
+    width="sm"
+  >
+    <ModalBody>
+      {result?.ok ? (
+        <Flex direction="column" gap="small">
+          <Text>{result.message}</Text>
+        </Flex>
+      ) : (
+        <Flex direction="column" gap="small">
+          <Alert title="Não foi possível cancelar" variant="danger">
+            {result?.message || "Erro desconhecido."}
+          </Alert>
+          {result?.statusMatricula && (
+            <Text format={{ fontSize: "small" }}>
+              Status da matrícula: {result.statusMatricula}
+            </Text>
+          )}
+          {result?.correlationId && (
+            <Text variant="microcopy">
+              correlationId: {result.correlationId}
+            </Text>
+          )}
+        </Flex>
+      )}
+    </ModalBody>
+    <ModalFooter>
+      <Button type="button" variant="secondary" onClick={onClose}>
+        Fechar
+      </Button>
+    </ModalFooter>
+  </Modal>
+);
+
 const CheckoutCard = ({ context, runServerless, actions }) => {
   const { properties: dealProperties } = useCrmProperties([
     "e_mail",
@@ -455,7 +507,8 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     "city",
     "sigla_estado",
     "diamantes_orcados",
-    "aluno_cadastrado_status"
+    "aluno_cadastrado_status",
+    "dealstage"
   ]);
 
   const [email, setEmail] = useState("");
@@ -488,6 +541,13 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [educationType, setEducationType] = useState("");
   const [registeredCpf, setRegisteredCpf] = useState(null);
+
+  // Cancelamento de pré-matrícula: loading fica no botão principal (que é o
+  // portador do overlay do modal de resultado), a caixa de confirmação e o
+  // conteúdo do modal de resultado vivem em estado.
+  const [loadingCancel, setLoadingCancel] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelResult, setCancelResult] = useState(null);
 
   const [studentStartModule, setStudentStartModule] = useState("");
   const [studentStartDate, setStudentStartDate] = useState(null);
@@ -543,6 +603,9 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const classIdentifier = dealProperties.turmaidentificador || "";
   const classCode = dealProperties.turmacodigo || "";
   const enrollmentId = dealProperties.id_da_matricula || "";
+  const dealStage = String(dealProperties.dealstage || "");
+  const isWonEnrollmentStage = MATRICULA_GANHA_STAGE_IDS.includes(dealStage);
+  const canCancelPreEnrollment = Boolean(enrollmentId) && !isWonEnrollmentStage;
   const link = dealProperties.link_de_checkout || "";
   const typeOfInterest = dealProperties.modalidade_de_interesse || "";
   const levelOfInterest = dealProperties.nivel_de_interesse || "";
@@ -1079,6 +1142,51 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       });
     } finally {
       setLoadingEnrollment(false);
+    }
+  };
+
+  const handleCancelPreEnrollment = async () => {
+    if (!canCancelPreEnrollment || loadingCancel) return;
+
+    setShowCancelConfirm(false);
+    setLoadingCancel(true);
+    setCancelResult(null);
+
+    try {
+      const { response } = await runServerless({
+        name: "cancelPreEnrollment",
+        parameters: { matricula: enrollmentId },
+      });
+
+      if (!response) {
+        setCancelResult({
+          ok: false,
+          message: "Tempo de resposta esgotado. Tente novamente.",
+        });
+        return;
+      }
+
+      const isSuccess = response.status === "SUCCESS";
+      setCancelResult({
+        ok: isSuccess,
+        message: isSuccess
+          ? response.message || "Pré-matrícula cancelada com sucesso."
+          : response.message || "Não foi possível cancelar a pré-matrícula.",
+        correlationId: response.correlationId,
+        statusMatricula: response.statusMatricula,
+      });
+
+      if (isSuccess) {
+        await actions.refreshObjectProperties();
+      }
+    } catch (error) {
+      console.error("Erro ao cancelar pré-matrícula:", error);
+      setCancelResult({
+        ok: false,
+        message: "Erro ao processar o cancelamento. Tente novamente.",
+      });
+    } finally {
+      setLoadingCancel(false);
     }
   };
 
@@ -1668,18 +1776,80 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
             </Text>
           )}
 
-          <Button
-            type="submit"
-            variant="primary"
-            onClick={handleGenerateEnrollment}
-            disabled={
-              loadingEnrollment ||
-              !isStudentRegistered ||
-              !isEnrollmentFormValid()
-            }
-          >
-            {loadingEnrollment ? "Gerando..." : "Gerar Matrícula"}
-          </Button>
+          <Flex direction="row" gap="small">
+            <Button
+              type="submit"
+              variant="primary"
+              onClick={handleGenerateEnrollment}
+              disabled={
+                loadingEnrollment ||
+                !isStudentRegistered ||
+                !isEnrollmentFormValid()
+              }
+            >
+              {loadingEnrollment ? "Gerando..." : "Gerar Matrícula"}
+            </Button>
+
+            {canCancelPreEnrollment && (
+              <LoadingButton
+                type="button"
+                variant="destructive"
+                loading={loadingCancel}
+                disabled={
+                  loadingCancel ||
+                  loadingEnrollment ||
+                  loadingRegenerateCheckout
+                }
+                onClick={() => setShowCancelConfirm(true)}
+                overlayOptions={{ openBehavior: "onLoadingFinish" }}
+                overlay={
+                  <CancelResultModal
+                    result={cancelResult}
+                    onClose={() => actions.closeOverlay(CANCEL_RESULT_MODAL_ID)}
+                  />
+                }
+              >
+                Cancelar pré-matrícula
+              </LoadingButton>
+            )}
+          </Flex>
+
+          {showCancelConfirm && (
+            <Box
+              border="thin"
+              borderColor="warning"
+              backgroundColor="#fffbeb"
+              borderRadius="medium"
+              padding="medium"
+            >
+              <Flex direction="column" gap="small">
+                <Text format={{ fontWeight: "bold" }}>
+                  Tem certeza de que deseja cancelar esta pré-matrícula?
+                </Text>
+                <Text format={{ fontSize: "small" }}>
+                  ID da matrícula: {enrollmentId}
+                </Text>
+                <Flex direction="row" gap="small">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={handleCancelPreEnrollment}
+                    disabled={loadingCancel}
+                  >
+                    Sim, cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setShowCancelConfirm(false)}
+                    disabled={loadingCancel}
+                  >
+                    Não, voltar
+                  </Button>
+                </Flex>
+              </Flex>
+            </Box>
+          )}
         </Flex>
       </Accordion>
     </Flex>
