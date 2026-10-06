@@ -33,6 +33,7 @@ O caso "As duas rotas gravam exatamente as mesmas propriedades" compara as duas 
 **Canário da precisão.**
 `DECIMAIS_VALOR = 6` nas duas cópias não é enfeite.
 Baixar para 2 faz a seção "Canário: por que a base precisa de mais de 2 decimais" falhar com os desvios exatos que operações reportou.
+As casas também crescem com a `quantity` do item (`decimaisPara`): com 6 fixas, um item de `quantity` na casa dos milhares fazia o líquido gravado desviar R$ 0,002 para cima ou para baixo do digitado em outubro/2026. Tirar esse termo faz a seção "Quantity alta: valor digitado sem desvio abaixo do centavo" falhar.
 Se algum dia as props de valor do portal passarem a recusar 6 casas, a alocação precisa virar restrita, com o alvo de cada item em centavos sendo múltiplo da `quantity` dele, e aí o alvo digitado só é alcançável quando `mdc(quantity_i)` divide os centavos do total.
 
 ## O snapshot hora×valor é decidido pelo schema, não pela resposta
