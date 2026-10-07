@@ -1,6 +1,11 @@
+// Card de plano financeiro de graduação (IPOG), no registro de negócio.
+// Simula as condições de pagamento da turma associada (fetchFinancialPlanGraduation),
+// deixa o consultor desmarcar disciplinas da grade e grava a condição escolhida
+// em itens de linha (updateGraduationDeal) antes de gerar a proposta (createQuote).
 import React, { useEffect, useState } from "react";
 import {
   Card,
+  Checkbox,
   Flex,
   Text,
   Select,
@@ -94,6 +99,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const [fetchedDiscount, setFetchedDiscount] = useState(null);
   const [selectedDiscount, setSelectedDiscount] = useState(null);
   const [selectedCondition, setSelectedCondition] = useState(null);
+  // Guarda as desmarcadas, não as marcadas: o padrão é a grade inteira
+  // selecionada, e o código da disciplina é o mesmo em todas as condições.
+  const [deselectedSubjectCodes, setDeselectedSubjectCodes] = useState([]);
   const [entryMethod, setEntryMethod] = useState();
   const [fetchDuration, setFetchDuration] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -165,6 +173,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     setFetchedDiscount(null);
     setSelectedDiscount(null);
     setSelectedCondition(null);
+    setDeselectedSubjectCodes([]);
 
     if (selectedCategory === "graduacao" && !entryMethod) {
       sendAlert({
@@ -246,6 +255,38 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     return parseFloat(normalized) || 0;
   };
 
+  const roundToCents = (value) => Math.round(value * 100) / 100;
+
+  const getSubjectCode = (subject) => String(subject?.codigoDisciplina ?? "");
+
+  const getConditionSubjects = (condition) =>
+    Array.isArray(condition?.disciplinas) ? condition.disciplinas : [];
+
+  const isSubjectSelected = (subject) =>
+    !deselectedSubjectCodes.includes(getSubjectCode(subject));
+
+  const handleToggleSubject = (subjectCode, isChecked) => {
+    setDeselectedSubjectCodes((currentCodes) =>
+      isChecked
+        ? currentCodes.filter((code) => code !== subjectCode)
+        : currentCodes.includes(subjectCode)
+          ? currentCodes
+          : [...currentCodes, subjectCode],
+    );
+  };
+
+  // Valor por parcela das disciplinas desmarcadas, como a API devolve em
+  // valorIndividualDisciplina. A parcela parte do valor da API e só perde o que
+  // foi desmarcado: somar as marcadas divergiria em centavos com a grade cheia.
+  const getDeselectedSubjectsValue = (condition) =>
+    getConditionSubjects(condition)
+      .filter((subject) => !isSubjectSelected(subject))
+      .reduce(
+        (total, subject) =>
+          total + parseBRLToNumber(subject.valorIndividualDisciplina),
+        0,
+      );
+
   const getDiscountData = (condition) => {
     const discountItem = selectedDiscount;
 
@@ -258,7 +299,11 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
     const valorTotal = parseBRLToNumber(condition.valorTotalPeriodo);
     const nrParcelas = condition.nrParcelasPeriodo || 1;
-    const valorParcela = valorTotal / nrParcelas;
+    const valorParcelaApi = valorTotal / nrParcelas;
+    const valorParcela = roundToCents(
+      Math.max(valorParcelaApi - getDeselectedSubjectsValue(condition), 0),
+    );
+    const valorTotalPeriodo = roundToCents(valorParcela * nrParcelas);
     const valorMatricula = parseBRLToNumber(
       condition.valorMatriculaSistemaPorCredito,
     );
@@ -282,6 +327,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       discountMatriculaValue,
       valorParcela,
       valorParcelaFinal: valorParcela - discountValue,
+      valorTotalPeriodo,
       valorMatricula,
       valorMatriculaFinal: valorMatricula - discountMatriculaValue,
       // A matrícula passa a ser a primeira parcela, então as subsequentes caem
@@ -302,6 +348,18 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
   const handleConfirm = async () => {
     if (!selectedCondition) return;
+
+    const conditionSubjects = getConditionSubjects(selectedCondition);
+    if (
+      conditionSubjects.length > 0 &&
+      !conditionSubjects.some((subject) => isSubjectSelected(subject))
+    ) {
+      sendAlert({
+        type: "warning",
+        message: "Selecione ao menos uma disciplina para gerar o orçamento.",
+      });
+      return;
+    }
 
     setIsSaving(true);
 
@@ -606,6 +664,79 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
             </>
           )}
 
+        {/* Subject Selection */}
+        {graduationPlanData?.condicoesPagamento?.length > 0 &&
+          (() => {
+            // Sem condição escolhida, a lista mostra os valores da primeira,
+            // e o texto acima da tabela diz de qual condição eles são.
+            const referenceCondition =
+              selectedCondition || graduationPlanData.condicoesPagamento[0];
+            const subjects = getConditionSubjects(referenceCondition);
+            if (subjects.length === 0) return null;
+
+            const selectedCount = subjects.filter(isSubjectSelected).length;
+
+            return (
+              <>
+                <Divider />
+                <Heading>Disciplinas</Heading>
+                <Text>
+                  {selectedCount} de {subjects.length} disciplina(s)
+                  selecionada(s). Valores por parcela na condição "
+                  {referenceCondition.descricao}".
+                </Text>
+                {selectedCount === 0 && (
+                  <Alert title="Nenhuma disciplina selecionada" variant="warning">
+                    Marque ao menos uma disciplina para gerar o orçamento.
+                  </Alert>
+                )}
+
+                <Table bordered>
+                  <TableHead>
+                    <TableRow>
+                      <TableHeader>Disciplina</TableHeader>
+                      <TableHeader>Carga Horária</TableHeader>
+                      <TableHeader>Valor por Parcela</TableHeader>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {subjects.map((subject, index) => {
+                      const subjectCode = getSubjectCode(subject);
+                      return (
+                        <TableRow key={`${subjectCode}-${index}`}>
+                          <TableCell>
+                            <Checkbox
+                              name={`disciplina-${subjectCode}`}
+                              value={subjectCode}
+                              checked={isSubjectSelected(subject)}
+                              onChange={(isChecked) =>
+                                handleToggleSubject(subjectCode, isChecked)
+                              }
+                            >
+                              {subject.nomeDisciplina || subjectCode}
+                            </Checkbox>
+                          </TableCell>
+                          <TableCell>
+                            {subject.cargaHoraria
+                              ? `${subject.cargaHoraria}h`
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            {formatCurrency(
+                              parseBRLToNumber(
+                                subject.valorIndividualDisciplina,
+                              ),
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </>
+            );
+          })()}
+
         {/* Summary Section */}
         {selectedCondition &&
           (() => {
@@ -618,8 +749,14 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               valorParcelaFinal,
               valorMatricula,
               valorMatriculaFinal,
+              valorTotalPeriodo,
               nrParcelasCobranca,
             } = getDiscountData(selectedCondition);
+
+            const conditionSubjects = getConditionSubjects(selectedCondition);
+            const hasNoSubjectSelected =
+              conditionSubjects.length > 0 &&
+              !conditionSubjects.some((subject) => isSubjectSelected(subject));
 
             return (
               <>
@@ -656,6 +793,13 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                     <Text>Quantidade de Parcelas:</Text>
                     <Text format={{ fontWeight: "demibold" }}>
                       {nrParcelasCobranca}
+                    </Text>
+                  </Flex>
+
+                  <Flex direction="row" justify="between">
+                    <Text>Valor total do período:</Text>
+                    <Text format={{ fontWeight: "bold" }}>
+                      {formatCurrency(valorTotalPeriodo)}
                     </Text>
                   </Flex>
 
@@ -718,7 +862,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                 <Button
                   onClick={handleConfirm}
                   variant="primary"
-                  disabled={isSaving}
+                  disabled={isSaving || hasNoSubjectSelected}
                 >
                   {isSaving ? "Salvando..." : "Confirmar seleção e gerar orçamento"}
                 </Button>

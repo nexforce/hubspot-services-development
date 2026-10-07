@@ -1,0 +1,10 @@
+{
+  "config": {
+    "entrypoint": "app/functions/evaluateLegacyDiscounts.js",
+    "secretKeys": [
+      "HUBSPOT_API_KEY"
+    ]
+  },
+  "uid": "evaluateLegacyDiscounts",
+  "type": "app-function"
+}

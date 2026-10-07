@@ -32,6 +32,7 @@ const CONFIG = {
   sandbox: {
     portalId: 51406295,
     classObjectId: "2-61647973",
+    convenioObjectId: "2-61647970",
     templates: {
       posPresencial: "557223214116",
       posEad: "567949826727",
@@ -40,6 +41,7 @@ const CONFIG = {
   },
   production: {
     classObjectId: "2-42181871",
+    convenioObjectId: "2-42538986",
     templates: {
       posPresencial: "510682133656",
       posEad: "512266346925",
@@ -150,6 +152,12 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const [diamondLimit, setDiamondLimit] = useState(null);
   const [diamondTier, setDiamondTier] = useState(null); // null | 5 | 10 — required exact count for CEU/Pós
   const [diamondDiscounts, setDiamondDiscounts] = useState([]);
+
+  // Estado da verificação legada de descontos (custom code que replica o workflow
+  // "v0 - Processos de descontos"). null = ainda não avaliado / falhou (fallback para
+  // properties.categorias_aprovadas); array = resultado da última avaliação.
+  const [legacyCategories, setLegacyCategories] = useState(null);
+  const [isEvaluatingDiscounts, setIsEvaluatingDiscounts] = useState(false);
 
   const turmaAtual = manualTurmaData || associatedTurmaResult[0];
 
@@ -305,6 +313,57 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       setIsRefreshing(false);
     }
   };
+
+  // Verifica os descontos legados via custom code (réplica 1:1 do workflow
+  // "v0 - Processos de descontos"). Executa ao abrir o card e pode ser reexecutada
+  // pelo botão "Verificar descontos".
+  const handleVerifyDiscounts = async () => {
+    setIsEvaluatingDiscounts(true);
+    try {
+      const { response } = await runServerless({
+        name: "evaluateLegacyDiscounts",
+        parameters: {
+          dealId: context.crm.objectId,
+          convenioObjectId: envConfig.convenioObjectId,
+        },
+      });
+
+      if (response?.status === "SUCCESS") {
+        const categories = response.response?.categories || [];
+        setLegacyCategories(categories);
+        sendAlert({
+          type: "success",
+          message:
+            categories.length > 0
+              ? `Descontos verificados: ${categories.length} categoria(s) aprovada(s).`
+              : "Descontos verificados: nenhuma categoria aprovada para este negócio.",
+        });
+      } else {
+        sendAlert({
+          type: "warning",
+          message: formatOriginError(
+            response?.origin,
+            response?.message || "Não foi possível verificar os descontos.",
+          ),
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao verificar descontos legados:", error);
+      sendAlert({
+        type: "danger",
+        message: formatOriginError(
+          "SISTEMA",
+          "Erro ao verificar descontos. Tente novamente.",
+        ),
+      });
+    } finally {
+      setIsEvaluatingDiscounts(false);
+    }
+  };
+
+  useEffect(() => {
+    handleVerifyDiscounts();
+  }, []);
 
   useEffect(() => {
     const templates = envConfig.templates;
@@ -864,15 +923,23 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
           { label: "Boleto", value: "BOLETO" },
         ];
 
-  const discountCategoryOptions = properties.categorias_aprovadas
-    ? properties.categorias_aprovadas
-        .split(";")
-        .filter((cat) => cat !== "" && cat !== "acao_comercial")
-        .map((cat) => ({
-          label: categoryLabels[cat] || cat,
-          value: cat,
-        }))
-    : [];
+  // Fonte das categorias aprovadas: resultado da verificação legada via custom code.
+  // Fallback para a propriedade do CRM quando a verificação ainda não rodou ou falhou.
+  const approvedCategoriesSource =
+    legacyCategories !== null
+      ? legacyCategories
+      : properties.categorias_aprovadas
+        ? properties.categorias_aprovadas
+            .split(";")
+            .filter((cat) => cat !== "" && cat !== "acao_comercial")
+        : [];
+
+  const discountCategoryOptions = approvedCategoriesSource
+    .filter((cat) => cat !== "" && cat !== "acao_comercial")
+    .map((cat) => ({
+      label: categoryLabels[cat] || cat,
+      value: cat,
+    }));
 
   const isAVista = isPagamentoAVista(selectedTipoPagamento);
 
@@ -953,6 +1020,13 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
         {/* Buttons Row */}
         <Flex direction="row" justify="start" gap="small">
+          <Button
+            onClick={handleVerifyDiscounts}
+            variant="secondary"
+            disabled={isEvaluatingDiscounts}
+          >
+            {isEvaluatingDiscounts ? "Verificando..." : "Verificar descontos"}
+          </Button>
           <Button
             onClick={handleSimulate}
             variant="primary"
