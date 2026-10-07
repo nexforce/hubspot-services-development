@@ -1,0 +1,10 @@
+{
+  "config": {
+    "entrypoint": "app/functions/evaluateObjectDiscounts.js",
+    "secretKeys": [
+      "HUBSPOT_API_KEY"
+    ]
+  },
+  "uid": "evaluateObjectDiscounts",
+  "type": "app-function"
+}

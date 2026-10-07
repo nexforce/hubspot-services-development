@@ -32,6 +32,8 @@ const CONFIG = {
   sandbox: {
     portalId: 51406295,
     classObjectId: "2-61647973",
+    convenioObjectId: "2-61647970",
+    discountsObjectId: "2-70555261",
     templates: {
       posPresencial: "557223214116",
       posEad: "567949826727",
@@ -40,6 +42,8 @@ const CONFIG = {
   },
   production: {
     classObjectId: "2-42181871",
+    convenioObjectId: "2-42538986",
+    discountsObjectId: "", // objeto Descontos ainda não existe em produção
     templates: {
       posPresencial: "510682133656",
       posEad: "512266346925",
@@ -53,6 +57,16 @@ const NIVEL_INTERESSE_CEU = "Curso de extensão universitária";
 // PIX e cartão à vista seguem as mesmas regras de pagamento à vista.
 const isPagamentoAVista = (tipoPagamento) =>
   tipoPagamento === "PIX" || tipoPagamento === "A_VISTA";
+
+// Traduz o Tipo de Pagamento do card para o vocabulário de forma_pagamento
+// do objeto Descontos (valores espelhados da propriedade forma_de_pagamento_list).
+const FORMA_PAGAMENTO_POR_TIPO = {
+  PIX: "Pix",
+  BOLETO: "Boleto bancário",
+  A_VISTA: "Cartão de crédito",
+  PARCELADO: "Cartão de crédito",
+  RECORRENTE: "Cartão de crédito",
+};
 
 const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const { properties } = useCrmProperties([
@@ -89,7 +103,10 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       );
   }, [runServerless]);
 
-  const { results: contactResults } = useAssociations(
+  const {
+    results: contactResults,
+    isLoading: isLoadingContactAssociations,
+  } = useAssociations(
     {
       toObjectType: "0-1",
       properties: ["quantidade_de_indicacoes"],
@@ -124,9 +141,14 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     },
   );
 
-  // Extrai o primeiro contato associado, mapeando toObjectId para id
-  const associatedContact = contactResults?.[0]
-    ? { ...contactResults[0], id: contactResults[0].toObjectId }
+  // useAssociations tem retornado `toObjectId` em alguns resultados e `id` em outros.
+  // Normalize ambos, preservando o formato de origem para o resto do card.
+  const firstContactAssociation = contactResults?.[0];
+  const associatedContactId = firstContactAssociation
+    ? firstContactAssociation.toObjectId ?? firstContactAssociation.id
+    : null;
+  const associatedContact = associatedContactId
+    ? { ...firstContactAssociation, id: associatedContactId }
     : null;
 
   const [selectedTipoPagamento, setSelectedTipoPagamento] = useState("");
@@ -147,9 +169,23 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const [diamondIndications, setDiamondIndications] = useState([]);
   const [selectedDiamonds, setSelectedDiamonds] = useState([]);
   const [isLoadingDiamonds, setIsLoadingDiamonds] = useState(false);
+  const [hasRequestedDiamondIndications, setHasRequestedDiamondIndications] =
+    useState(false);
   const [diamondLimit, setDiamondLimit] = useState(null);
   const [diamondTier, setDiamondTier] = useState(null); // null | 5 | 10 — required exact count for CEU/Pós
   const [diamondDiscounts, setDiamondDiscounts] = useState([]);
+
+  // Estado da verificação legada de descontos (custom code que replica o workflow
+  // "v0 - Processos de descontos"). null = ainda não avaliado / falhou (fallback para
+  // properties.categorias_aprovadas); array = resultado da última avaliação.
+  const [legacyCategories, setLegacyCategories] = useState(null);
+  const [isEvaluatingDiscounts, setIsEvaluatingDiscounts] = useState(false);
+
+  // Descontos do objeto "Descontos" (etapa 2) elegíveis para o negócio. Entram no mesmo
+  // seletor das categorias legadas, sem distinção visual de origem. O benefício (tipo e
+  // valor) continua vindo da MuleSoft via fetchDiscount com o categoria_sei da regra.
+  const [objectDiscountCategories, setObjectDiscountCategories] = useState([]);
+  const [isEvaluatingObjectDiscounts, setIsEvaluatingObjectDiscounts] = useState(false);
 
   const turmaAtual = manualTurmaData || associatedTurmaResult[0];
 
@@ -306,6 +342,110 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     }
   };
 
+  // Verifica os descontos legados via custom code (réplica 1:1 do workflow
+  // "v0 - Processos de descontos"). Executa ao abrir o card e pode ser reexecutada
+  // pelo botão "Verificar descontos".
+  const handleVerifyDiscounts = async () => {
+    setIsEvaluatingDiscounts(true);
+    try {
+      const { response } = await runServerless({
+        name: "evaluateLegacyDiscounts",
+        parameters: {
+          dealId: context.crm.objectId,
+          convenioObjectId: envConfig.convenioObjectId,
+        },
+      });
+
+      if (response?.status === "SUCCESS") {
+        const categories = response.response?.categories || [];
+        setLegacyCategories(categories);
+        sendAlert({
+          type: "success",
+          message:
+            categories.length > 0
+              ? `Descontos verificados: ${categories.length} categoria(s) aprovada(s).`
+              : "Descontos verificados: nenhuma categoria aprovada para este negócio.",
+        });
+      } else {
+        sendAlert({
+          type: "warning",
+          message: formatOriginError(
+            response?.origin,
+            response?.message || "Não foi possível verificar os descontos.",
+          ),
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao verificar descontos legados:", error);
+      sendAlert({
+        type: "danger",
+        message: formatOriginError(
+          "SISTEMA",
+          "Erro ao verificar descontos. Tente novamente.",
+        ),
+      });
+    } finally {
+      setIsEvaluatingDiscounts(false);
+    }
+  };
+
+  useEffect(() => {
+    handleVerifyDiscounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Motor da etapa 2: avalia as regras do objeto Descontos contra o negócio e devolve
+  // as categorias elegíveis. O benefício (tipo/valor) continua vindo da MuleSoft via
+  // fetchDiscount com o categoria_sei de cada regra.
+  const refreshObjectDiscounts = async (qtdeParcelas = null) => {
+    if (!envConfig.discountsObjectId) return;
+    setIsEvaluatingObjectDiscounts(true);
+    try {
+      const { response } = await runServerless({
+        name: "evaluateObjectDiscounts",
+        parameters: {
+          dealId: context.crm.objectId,
+          discountsObjectId: envConfig.discountsObjectId,
+          formaPagamento: FORMA_PAGAMENTO_POR_TIPO[selectedTipoPagamento] || null,
+          qtdeParcelas,
+        },
+      });
+
+      if (response?.status === "SUCCESS") {
+        const categories = response.response?.categories || [];
+        setObjectDiscountCategories(categories);
+        sendAlert({
+          type: "success",
+          message:
+            categories.length > 0
+              ? `Descontos do objeto elegíveis: ${categories.length}.`
+              : `Descontos do objeto: nenhuma regra elegível (${response.response?.rulesEvaluated ?? 0} avaliadas).`,
+        });
+      } else {
+        setObjectDiscountCategories([]);
+        sendAlert({
+          type: "warning",
+          message: formatOriginError(
+            response?.origin,
+            response?.message || "Não foi possível avaliar os descontos do objeto.",
+          ),
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao avaliar descontos do objeto:", error);
+      setObjectDiscountCategories([]);
+      sendAlert({
+        type: "danger",
+        message: formatOriginError(
+          "SISTEMA",
+          "Erro ao avaliar descontos do objeto. Tente novamente.",
+        ),
+      });
+    } finally {
+      setIsEvaluatingObjectDiscounts(false);
+    }
+  };
+
   useEffect(() => {
     const templates = envConfig.templates;
 
@@ -336,6 +476,17 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   }, [properties.categoriacondicao]);
 
   const handleSimulate = async () => {
+    if (
+      selectedCategory.includes("aluno_diamante") &&
+      isLoadingContactAssociations
+    ) {
+      sendAlert({
+        type: "warning",
+        message: "Aguarde o carregamento do contato associado antes de simular.",
+      });
+      return;
+    }
+
     if (!selectedTipoPagamento) {
       sendAlert({
         type: "warning",
@@ -354,6 +505,12 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     setDiamondIndications([]);
     setSelectedDiamonds([]);
     setDiamondTier(null);
+    setHasRequestedDiamondIndications(false);
+
+    // Motores da etapa 2 + legado: reavaliam os descontos elegíveis no clique único
+    // (legado roda também ao abrir o card; aqui garante frescor com o tipo selecionado).
+    handleVerifyDiscounts();
+    refreshObjectDiscounts(FORMA_PAGAMENTO_POR_TIPO[selectedTipoPagamento] || null);
 
     try {
       const promises =
@@ -408,6 +565,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       // Fetch diamante indications if aluno_diamante is in selected categories
       if (selectedCategory.includes("aluno_diamante") && associatedContact?.id) {
         setIsLoadingDiamonds(true);
+        setHasRequestedDiamondIndications(true);
         promises.push(
           runServerless({
             name: "fetchDiamanteIndications",
@@ -640,6 +798,8 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
   const handleSelectCondition = (condition) => {
     setSelectedCondition(condition);
+    // O critério de parcelas do objeto Descontos é avaliado por condição escolhida.
+    refreshObjectDiscounts(condition?.qtdeParcelas ?? null);
   };
 
   const calculateAntecipationValue = (
@@ -864,15 +1024,32 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
           { label: "Boleto", value: "BOLETO" },
         ];
 
-  const discountCategoryOptions = properties.categorias_aprovadas
-    ? properties.categorias_aprovadas
-        .split(";")
-        .filter((cat) => cat !== "" && cat !== "acao_comercial")
-        .map((cat) => ({
-          label: categoryLabels[cat] || cat,
-          value: cat,
-        }))
-    : [];
+  // Fonte das categorias aprovadas: resultado da verificação legada via custom code.
+  // Fallback para a propriedade do CRM quando a verificação ainda não rodou ou falhou.
+  const approvedCategoriesSource =
+    legacyCategories !== null
+      ? legacyCategories
+      : properties.categorias_aprovadas
+        ? properties.categorias_aprovadas
+            .split(";")
+            .filter((cat) => cat !== "" && cat !== "acao_comercial")
+        : [];
+
+  const legacyCategoryOptions = approvedCategoriesSource
+    .filter((cat) => cat !== "" && cat !== "acao_comercial")
+    .map((cat) => ({
+      label: categoryLabels[cat] || cat,
+      value: cat,
+    }));
+
+  // Descontos do objeto Descontos (etapa 2): entram no mesmo seletor, sem distinção
+  // visual de origem. Deduplicados contra as categorias legadas pelo value.
+  const objectCategoryOptions = objectDiscountCategories
+    .filter((item) => item.value)
+    .map((item) => ({ value: item.value, label: item.label || item.value }))
+    .filter((item) => !approvedCategoriesSource.includes(item.value));
+
+  const discountCategoryOptions = [...legacyCategoryOptions, ...objectCategoryOptions];
 
   const isAVista = isPagamentoAVista(selectedTipoPagamento);
 
@@ -932,6 +1109,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                 return newState;
               });
             }
+            // Motor da etapa 2: reavalia as regras do objeto Descontos com a forma de
+            // pagamento escolhida, antes de qualquer simulação.
+            refreshObjectDiscounts(FORMA_PAGAMENTO_POR_TIPO[newTipo] || null);
           }}
               options={paymentTypeOptions}
               placeholder="Selecione o tipo"
@@ -943,7 +1123,15 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               label="Categorias do Desconto"
               name="categoriacondicao"
               value={selectedCategory}
-              onChange={(value) => setSelectedCategory(value)}
+              onChange={(value) => {
+                setSelectedCategory(value);
+                if (!value.includes("aluno_diamante")) {
+                  setHasRequestedDiamondIndications(false);
+                  setDiamondIndications([]);
+                  setSelectedDiamonds([]);
+                  setDiamondTier(null);
+                }
+              }}
               options={discountCategoryOptions}
               placeholder="Selecione as categorias"
             />
@@ -956,11 +1144,23 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
           <Button
             onClick={handleSimulate}
             variant="primary"
-            disabled={isLoading}
+            disabled={
+              isLoading ||
+              (selectedCategory.includes("aluno_diamante") &&
+                isLoadingContactAssociations)
+            }
           >
             Simular
           </Button>
         </Flex>
+        {selectedCategory.includes("aluno_diamante") &&
+          !isLoadingContactAssociations &&
+          !associatedContactId && (
+            <Alert title="Contato associado não localizado" variant="warning">
+              As indicações Diamante não serão consultadas até que este negócio
+              tenha um contato associado.
+            </Alert>
+          )}
 
         {/* Discount Selection by Category (exclui acao_comercial) */}
         {Object.keys(discountsByCategory).filter(c => c !== "acao_comercial").length > 0 && (
@@ -1054,7 +1254,8 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
         )}
 
         {/* Seção: Selecione as Indicações (Diamante) */}
-        {selectedCategory.includes("aluno_diamante") && (
+        {selectedCategory.includes("aluno_diamante") &&
+          hasRequestedDiamondIndications && (
           <>
             <Divider />
             <Heading>Selecione as indicações</Heading>
