@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Box,
   Card,
   Flex,
   Text,
@@ -1236,7 +1237,13 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                 </Text>
               ) : (
                 enrollmentData.groups.map((group) => (
-                  <Card key={group.key}>
+                  <Box
+                    key={group.key}
+                    border="thin"
+                    borderColor="default"
+                    borderRadius="medium"
+                    padding="medium"
+                  >
                     <Flex direction="column" gap="extra-small">
                       <Text format={{ fontWeight: "demibold" }}>
                         {`${group.label}: ${group.total} matrícula(s)`}
@@ -1247,7 +1254,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                         </Text>
                       ))}
                     </Flex>
-                  </Card>
+                  </Box>
                 ))
               )}
             </>
