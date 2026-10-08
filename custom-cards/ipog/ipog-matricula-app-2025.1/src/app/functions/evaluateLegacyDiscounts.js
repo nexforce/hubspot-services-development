@@ -86,8 +86,11 @@ function evaluateLegacyDiscounts(ctx = {}) {
       categories.push("aluno_diamante");
       trace.push("categoria: aluno_diamante (indicações pós >= 5)");
     } else {
-      categories.push("ead_30", "ead_50");
-      trace.push("categorias: ead_30;ead_50 (EAD sem matrículas/indicações)");
+      // Regra de negócio (2026-10-07): em Pós-EAD, sem matrículas formadas e sem
+      // indicações, liberar apenas o desconto de R$50. O R$30 (ead_30) deixou de
+      // ser ofertado nesta condição, divergindo do workflow v0 de propósito.
+      categories.push("ead_50");
+      trace.push("categoria: ead_50 (EAD sem matrículas/indicações)");
     }
   } else if (nivelDeInteresse === NIVEL_CEU) {
     trace.push("ramo: CEU");

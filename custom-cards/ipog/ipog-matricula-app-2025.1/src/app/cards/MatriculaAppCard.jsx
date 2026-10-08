@@ -186,6 +186,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   // valor) continua vindo da MuleSoft via fetchDiscount com o categoria_sei da regra.
   const [objectDiscountCategories, setObjectDiscountCategories] = useState([]);
   const [isEvaluatingObjectDiscounts, setIsEvaluatingObjectDiscounts] = useState(false);
+  const [objectDiscountsEvaluated, setObjectDiscountsEvaluated] = useState(false);
 
   const turmaAtual = manualTurmaData || associatedTurmaResult[0];
 
@@ -357,15 +358,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       });
 
       if (response?.status === "SUCCESS") {
-        const categories = response.response?.categories || [];
-        setLegacyCategories(categories);
-        sendAlert({
-          type: "success",
-          message:
-            categories.length > 0
-              ? `Descontos verificados: ${categories.length} categoria(s) aprovada(s).`
-              : "Descontos verificados: nenhuma categoria aprovada para este negócio.",
-        });
+        setLegacyCategories(response.response?.categories || []);
       } else {
         sendAlert({
           type: "warning",
@@ -412,15 +405,8 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       });
 
       if (response?.status === "SUCCESS") {
-        const categories = response.response?.categories || [];
-        setObjectDiscountCategories(categories);
-        sendAlert({
-          type: "success",
-          message:
-            categories.length > 0
-              ? `Descontos do objeto elegíveis: ${categories.length}.`
-              : `Descontos do objeto: nenhuma regra elegível (${response.response?.rulesEvaluated ?? 0} avaliadas).`,
-        });
+        setObjectDiscountCategories(response.response?.categories || []);
+        setObjectDiscountsEvaluated(true);
       } else {
         setObjectDiscountCategories([]);
         sendAlert({
@@ -1153,6 +1139,16 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
             Simular
           </Button>
         </Flex>
+        {/* Status discreto dos descontos elegíveis (substitui os pop-ups de sucesso) */}
+        {legacyCategories !== null && (
+          <Text format={{ fontSize: "small" }}>
+            {`Descontos elegíveis: ${legacyCategories.length} legado(s)` +
+              (objectDiscountsEvaluated
+                ? ` + ${objectDiscountCategories.length} do objeto`
+                : "") +
+              "."}
+          </Text>
+        )}
         {selectedCategory.includes("aluno_diamante") &&
           !isLoadingContactAssociations &&
           !associatedContactId && (
