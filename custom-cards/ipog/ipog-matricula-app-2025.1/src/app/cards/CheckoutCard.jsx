@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
+  AutoGrid,
   Flex,
   Box,
   Text,
@@ -47,6 +48,7 @@ const SECTION_A_LABELS = {
   cpf: "CPF",
   phoneNumber: "Número de Telefone",
   birthDate: "Data de Nascimento",
+  educationType: "Escolaridade",
   postalCode: "CEP",
   street: "Rua",
   streetNumber: "Número",
@@ -57,6 +59,21 @@ const SECTION_A_LABELS = {
   ibgeCityCode: "Código IBGE da Cidade",
   ibgeBirthplaceCode: "Código IBGE da Naturalidade",
 };
+
+// Os valores são os mesmos que o Negócio grava em escolaridade_do_aluno e os
+// mesmos que generateEnrollment traduz para o SEI no educationMapper. Uma opção
+// sem par naquele mapa chega à MuleSoft como escolaridade vazia, então incluir
+// uma aqui exige incluir a tradução lá também.
+const EDUCATION_LEVEL_OPTIONS = [
+  { label: "Ensino fundamental", value: "Ensino fundamental" },
+  { label: "Ensino médio", value: "Ensino médio" },
+  { label: "Graduação", value: "Graduação" },
+  { label: "Tecnólogo", value: "Tecnólogo" },
+  { label: "Especialização", value: "Especialização" },
+  { label: "Pós-graduação", value: "Pós-graduação" },
+  { label: "Mestrado", value: "Mestrado" },
+  { label: "Doutorado", value: "Doutorado" },
+];
 
 // O gate e a microcopy dizem a mesma coisa ao consultor, então cada frase existe
 // uma vez. O guard pós-clique é inalcançável enquanto o disabled do botão vale,
@@ -69,6 +86,13 @@ const missingFieldsMessage = (fields) =>
   `Preencha os campos obrigatórios para cadastrar o aluno: ${fields
     .map((field) => field.label)
     .join(", ")}.`;
+
+// Os campos que a matrícula exige saíram da tela na limpeza da Seção B, então
+// o motivo de o botão estar travado precisa estar escrito. Sem a frase, o
+// consultor vê um botão desabilitado e nenhum campo na tela onde procurar o que
+// falta.
+const missingEnrollmentFieldsMessage = (labels) =>
+  `Dados pendentes no Negócio para gerar a matrícula: ${labels.join(", ")}.`;
 
 const MISSING_RESPONSIBLE_USER_MESSAGE =
   "Usuário responsável não preenchido no Negócio. Preencha a propriedade no Negócio para habilitar o cadastro.";
@@ -476,14 +500,11 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     "numero_de_telefone",
     "usuarioresponsavel",
     "cpf",
-    "permitimatricula4modulo",
-    "permitimatriculainadiplente",
     "geracaodeparcelaautomatica",
     "tipo_de_matricula",
     "datamatricula",
     "escolaridade_do_aluno",
     "consultoremail",
-    "codigocontrato",
     "codigocondicao",
     "codigoconsultor",
     "codigodesconto",
@@ -570,22 +591,16 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     today.getDate(),
   );
 
-  const allowFourthModuleEnrollment =
-    dealProperties.permitimatricula4modulo === "true";
-  const allowDelinquentEnrollment =
-    dealProperties.permitimatriculainadiplente === "true";
   const automaticInstallmentGeneration =
     dealProperties.geracaodeparcelaautomatica === "true";
   const enrollmentType = dealProperties.tipo_de_matricula || "";
   const enrollmentDate = dealProperties.datamatricula || "";
   const studentCpf = dealProperties.cpf || "";
   const consultantEmail = dealProperties.consultoremail || "";
-  const contractCode = dealProperties.codigocontrato || "";
   const responsibleUser = String(dealProperties.usuarioresponsavel || "");
   const conditionCode = dealProperties.codigocondicao || "";
   const discountCode = dealProperties.codigodesconto || "";
   const consultantCode = dealProperties.codigoconsultor || "";
-  const source = "HUBSPOT";
 
   // A propriedade é booleancheckbox, mas o único precedente verificado no card é
   // de enumeration/select, então a comparação tolera os dois.
@@ -786,8 +801,11 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     }
   }, [dealProperties, initialLoadDone]);
 
+  // A propriedade do Negócio manda enquanto chega preenchida. Quando vem vazia,
+  // o Select da Seção A fica à disposição do consultor, e o fallback para string
+  // vazia evita que o Select receba undefined.
   useEffect(() => {
-     setEducationType(dealProperties.escolaridade_do_aluno);
+    setEducationType(dealProperties.escolaridade_do_aluno || "");
   }, [dealProperties.escolaridade_do_aluno]);
 
   useEffect(() => {
@@ -825,6 +843,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       cpf: cpf,
       numero_de_telefone: phoneNumber,
       data_de_nascimento: formatBirthDateForDeal(birthDate),
+      escolaridade_do_aluno: educationType,
       cep: postalCode,
       rua: street,
       numero: streetNumber,
@@ -908,6 +927,10 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       reason: phoneReason(phoneNumber),
     },
     { label: SECTION_A_LABELS.birthDate, reason: birthDateReason(birthDate) },
+    {
+      label: SECTION_A_LABELS.educationType,
+      reason: filledReason(educationType),
+    },
     { label: SECTION_A_LABELS.postalCode, reason: postalCodeReason(postalCode) },
     { label: SECTION_A_LABELS.street, reason: filledReason(street) },
     { label: SECTION_A_LABELS.streetNumber, reason: filledReason(streetNumber) },
@@ -998,6 +1021,21 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     }
   };
 
+  // Mesmo desenho de requiredFieldChecks na Seção A: uma lista alimenta o
+  // disabled do botão e a frase que o explica, para os dois nunca discordarem.
+  // Todos estes campos vêm de propriedades do Negócio, e a Escolaridade é o
+  // único que o consultor resolve dentro do card, na Seção A.
+  const missingEnrollmentDealFields = [
+    { label: "Tipo de Matrícula", value: enrollmentType },
+    { label: SECTION_A_LABELS.educationType, value: educationType },
+    { label: SECTION_A_LABELS.cpf, value: studentCpf },
+    { label: "E-mail do Consultor", value: consultantEmail },
+    { label: "Código da Condição", value: conditionCode },
+    { label: "Identificador da Turma", value: classIdentifier },
+  ]
+    .filter((field) => !field.value)
+    .map((field) => field.label);
+
   const isEnrollmentFormValid = () => {
     const isStudentStartModuleRequired =
       (typeOfInterest === "Ao Vivo" || typeOfInterest === "Presencial") &&
@@ -1014,12 +1052,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       : true;
 
     return (
-      enrollmentType &&
-      educationType &&
-      studentCpf &&
-      consultantEmail &&
-      conditionCode &&
-      classIdentifier &&
+      missingEnrollmentDealFields.length === 0 &&
       isStudentStartModuleValid &&
       isStudentStartDateValid
     );
@@ -1363,6 +1396,16 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
             />
           </Flex>
 
+          <Select
+            label={SECTION_A_LABELS.educationType}
+            name="educationType"
+            value={educationType}
+            onChange={(value) => setEducationType(String(value))}
+            options={EDUCATION_LEVEL_OPTIONS}
+            placeholder="Selecione a escolaridade"
+            required={true}
+          />
+
           <Divider />
 
           <Input
@@ -1577,73 +1620,19 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
             </Box>
           )}
 
-          <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
-            Dados da Matrícula (Propriedades do Negócio)
-          </Text>
-
-          <Flex direction="row" gap="small" justify="between">
-            <Text>Permitir Matrícula 4º Módulo:</Text>
-            <Text format={{ fontWeight: "bold" }}>
-              {allowFourthModuleEnrollment ? "Sim" : "Não"}
-            </Text>
-          </Flex>
-
-          <Flex direction="row" gap="small" justify="between">
-            <Text>Permitir Matrícula Inadimplente:</Text>
-            <Text format={{ fontWeight: "bold" }}>
-              {allowDelinquentEnrollment ? "Sim" : "Não"}
-            </Text>
-          </Flex>
-
-          <Flex direction="row" gap="small" justify="between">
-            <Text>Geração Automática de Parcelas:</Text>
-            <Text format={{ fontWeight: "bold" }}>
-              {automaticInstallmentGeneration ? "Sim" : "Não"}
-            </Text>
-          </Flex>
-
-          <Divider />
-
-          <Flex direction="row" gap="small">
-            <Input
-              label="Tipo de Matrícula"
-              name="enrollmentType"
-              value={enrollmentType}
-              readOnly={true}
-            />
-            <DateInput
-              label="Data da Matrícula"
-              name="enrollmentDate"
-              value={formatTimestampToDateObject(enrollmentDate)}
-              readOnly={true}
-            />
-          </Flex>
-
-          {/* Education and Student CPF - Row */}
-          <Flex direction="row" gap="small">
-            <Select
-              label="Escolaridade"
-              name="educationType"
-              value={educationType}
-              onChange={(value) => setEducationType(String(value))}
-              readOnly={true}
-              options={[
-                  { label: "Ensino fundamental", value: "Ensino fundamental" },
-                  { label: "Ensino médio", value: "Ensino médio" },
-                  { label: "Graduação", value: "Graduação" },
-                  { label: "Tecnólogo", value: "Tecnólogo" },
-                  { label: "Especialização", value: "Especialização" },
-                  { label: "Pós-graduação", value: "Pós-graduação" },
-                  { label: "Mestrado", value: "Mestrado" },
-                  { label: "Doutorado", value: "Doutorado" },
-                  { label: "Graduação teste", value: "GRADUACAO" },
-              ]}
-            />
-            {/* Espelha a propriedade do Negócio, que é o cpf que vai para a
-                MuleSoft e o cpf que a flag de cadastro cobre. O campo editável
-                da Seção A pode estar à frente do que foi salvo. */}
-            <Input label="CPF" name="cpf" value={studentCpf} readOnly={true} />
-          </Flex>
+          {/* A Seção B mostra só o que o consultor não encontra em outro lugar
+              da tela. Tipo de Matrícula, CPF, Código do Contrato, Código da
+              Condição, Origem, Identificador da Turma e as três flags de
+              matrícula saíram da visualização e continuam valendo por baixo: a
+              validação e o payload de generateEnrollment leem as mesmas
+              propriedades do Negócio. A Escolaridade virou campo editável na
+              Seção A. */}
+          <DateInput
+            label="Data da Matrícula"
+            name="enrollmentDate"
+            value={formatTimestampToDateObject(enrollmentDate)}
+            readOnly={true}
+          />
 
           {/* Consultant Email - Full width */}
           <Input
@@ -1653,28 +1642,14 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
             readOnly={true}
           />
 
-          {/* Contract Code and Responsible User - Row */}
-          <Flex direction="row" gap="small">
-            <Input
-              label="Código do Contrato"
-              name="contractCode"
-              value={contractCode}
-              readOnly={true}
-            />
+          {/* Colunas de mesma largura, que se reacomodam conforme a largura do
+              card. A data de início e o botão que a consulta ocupam a mesma
+              célula, para o botão continuar colado no campo que ele preenche. */}
+          <AutoGrid columnWidth={240} gap="small" flexible={true}>
             <Input
               label="Usuário Responsável"
               name="responsibleUser"
               value={responsibleUser}
-              readOnly={true}
-            />
-          </Flex>
-
-          {/* Condition Code and Consultant Code - Row */}
-          <Flex direction="row" gap="small">
-            <Input
-              label="Código da Condição"
-              name="conditionCode"
-              value={conditionCode}
               readOnly={true}
             />
             <Input
@@ -1683,30 +1658,10 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
               value={consultantCode}
               readOnly={true}
             />
-          </Flex>
-
-          {/* Source and Installment Base Date - Row */}
-          <Flex direction="row" gap="small">
-            <Input
-              label="Origem"
-              name="source"
-              value={source}
-              readOnly={true}
-            />
             <Input
               label="Código da Turma"
               name="classCode"
               value={classCode}
-              readOnly={true}
-            />
-          </Flex>
-
-          {/* Class Identifier and Class Code - Row */}
-          <Flex direction="row" gap="small">
-            <Input
-              label="Identificador da Turma"
-              name="classIdentifier"
-              value={classIdentifier}
               readOnly={true}
             />
 
@@ -1748,7 +1703,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
                 )}
               </Flex>
             )}
-          </Flex>
+          </AutoGrid>
 
           {(typeOfInterest === "Ao Vivo" || typeOfInterest === "Presencial") &&
             levelOfInterest === "Pós-graduação" && (
@@ -1773,6 +1728,12 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
           {initialLoadDone && !isStudentRegistered && (
             <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
               Conclua o cadastro do aluno na Seção A antes de gerar a matrícula.
+            </Text>
+          )}
+
+          {initialLoadDone && missingEnrollmentDealFields.length > 0 && (
+            <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
+              {missingEnrollmentFieldsMessage(missingEnrollmentDealFields)}
             </Text>
           )}
 
