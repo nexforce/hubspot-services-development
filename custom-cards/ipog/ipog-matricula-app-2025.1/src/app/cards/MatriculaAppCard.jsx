@@ -75,6 +75,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     "categoriacondicao",
     "desconto_aprovado",
     "categorias_aprovadas",
+    "cpf",
     "nivel_de_interesse",
     "modalidade_de_interesse",
     "matriculas_formadas_posgraduacao",
@@ -410,50 +411,54 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const savedCpfDigits = cpfDigits(properties.cpf);
   const typedCpfDigits = cpfDigits(cpfInput);
   const cpfChanged = typedCpfDigits !== savedCpfDigits;
-  const cpfIsValid = typedCpfDigits.length === 11 || typedCpfDigits.length === 0;
 
   useEffect(() => {
     setCpfInput(properties.cpf || "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [properties.cpf]);
 
-  const handleSaveCpf = async () => {
-    if (!cpfIsValid) {
-      sendAlert({ type: "warning", message: "CPF deve ter 11 dígitos." });
+  // Salva o CPF digitado (se mudou) e, em seguida, busca as matrículas e reavalia os
+  // descontos de ex-aluno. Um único clique executa as duas etapas em sequência.
+  const handleSaveAndSearch = async () => {
+    if (typedCpfDigits.length !== 11) {
+      sendAlert({ type: "warning", message: "Informe um CPF com 11 dígitos." });
       return;
     }
-    setIsSavingCpf(true);
-    try {
-      const { response } = await runServerless({
-        name: "saveDealCpf",
-        parameters: { dealId: context.crm.objectId, cpf: cpfInput },
-      });
-      if (response?.status === "SUCCESS") {
-        setCpfInput(response.response?.cpf || "");
-        // CPF novo invalida as matrículas anteriores: recalcula como "sem matrícula"
-        // até que a busca pelo CPF novo seja feita.
-        setEnrollmentData(null);
-        await handleVerifyDiscounts(null);
-        await actions.refreshObjectProperties();
-        sendAlert({ type: "success", message: "CPF salvo no negócio." });
-      } else {
-        sendAlert({
-          type: "warning",
-          message: formatOriginError(
-            response?.origin,
-            response?.message || "Não foi possível salvar o CPF.",
-          ),
+
+    if (cpfChanged) {
+      setIsSavingCpf(true);
+      try {
+        const { response } = await runServerless({
+          name: "saveDealCpf",
+          parameters: { dealId: context.crm.objectId, cpf: cpfInput },
         });
+        if (response?.status !== "SUCCESS") {
+          sendAlert({
+            type: "warning",
+            message: formatOriginError(
+              response?.origin,
+              response?.message || "Não foi possível salvar o CPF.",
+            ),
+          });
+          return;
+        }
+        setCpfInput(response.response?.cpf || "");
+        // CPF novo invalida as matrículas anteriores; a busca abaixo recarrega.
+        setEnrollmentData(null);
+        await actions.refreshObjectProperties();
+      } catch (error) {
+        console.error("Erro ao salvar CPF:", error);
+        sendAlert({
+          type: "danger",
+          message: formatOriginError("SISTEMA", "Erro ao salvar o CPF. Tente novamente."),
+        });
+        return;
+      } finally {
+        setIsSavingCpf(false);
       }
-    } catch (error) {
-      console.error("Erro ao salvar CPF:", error);
-      sendAlert({
-        type: "danger",
-        message: formatOriginError("SISTEMA", "Erro ao salvar o CPF. Tente novamente."),
-      });
-    } finally {
-      setIsSavingCpf(false);
     }
+
+    await handleSearchEnrollments();
   };
 
   const handleSearchEnrollments = async () => {
@@ -1177,18 +1182,15 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               placeholder="000.000.000-00"
             />
             <Button
-              onClick={handleSaveCpf}
-              variant="secondary"
-              disabled={!cpfChanged || !cpfIsValid || isSavingCpf}
-            >
-              {isSavingCpf ? "Salvando..." : "Salvar CPF"}
-            </Button>
-            <Button
-              onClick={handleSearchEnrollments}
+              onClick={handleSaveAndSearch}
               variant="primary"
-              disabled={typedCpfDigits.length !== 11 || isSearchingEnrollments}
+              disabled={typedCpfDigits.length !== 11 || isSavingCpf || isSearchingEnrollments}
             >
-              {isSearchingEnrollments ? "Buscando..." : "Buscar matrículas"}
+              {isSavingCpf
+                ? "Salvando..."
+                : isSearchingEnrollments
+                ? "Buscando matrículas..."
+                : "Salvar e buscar matrículas"}
             </Button>
           </Flex>
           <Text format={{ fontSize: "small" }}>
