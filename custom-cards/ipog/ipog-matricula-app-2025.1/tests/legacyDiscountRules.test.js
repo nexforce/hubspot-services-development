@@ -88,10 +88,10 @@ check("egresso graduação com indicação >= 1 ganha diamante", {
 }, ["ex_aluno_2_graduacao", "aluno_diamante"]);
 
 // Pós-Graduação EAD
-check("EAD sem matrículas e sem indicações = ead_30 + ead_50", {
+check("EAD sem matrículas e sem indicações = apenas ead_50", {
   nivelDeInteresse: POS, modalidadeDeInteresse: "EAD",
   matriculasFormadasPosgraduacao: null, matriculasFormadasGraduacao: null,
-}, ["ead_30", "ead_50"]);
+}, ["ead_50"]);
 
 check("EAD com indicações >= 5 = diamante (sem ead_30/ead_50)", {
   nivelDeInteresse: POS, modalidadeDeInteresse: "Online",
