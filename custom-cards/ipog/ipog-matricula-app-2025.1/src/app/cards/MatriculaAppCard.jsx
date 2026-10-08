@@ -1192,9 +1192,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
             </Button>
           </Flex>
           <Text format={{ fontSize: "small" }}>
-            Sem matrículas buscadas, o aluno é tratado como sem vínculo IPOG (convênio/EAD R$50).
-            Salve o CPF e busque as matrículas para liberar 2ª/3ª/4ª Pós, Egresso Graduação e
-            CEU (2ª Pós).
+            Digite o CPF para validar descontos de ex aluno.
           </Text>
           {enrollmentData && (
             <>
