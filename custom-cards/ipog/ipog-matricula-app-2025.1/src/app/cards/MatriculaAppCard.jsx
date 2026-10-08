@@ -198,11 +198,17 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
   const turmaAtual = manualTurmaData || associatedTurmaResult[0];
 
-  // Determina se é CEU ou Pós sem matrículas (para regra de limite de diamantes)
+  // Determina se é CEU ou Pós sem matrículas (para regra de limite de diamantes).
+  // Fonte única = contagens da API de matrículas por CPF (mesma base do motor legado);
+  // sem busca feita (counts ausente) o aluno é tratado como sem matrícula.
+  // "Com matrícula" em Pós espelha o motor: pos >= 1 OU graduação >= 1.
+  const posCount = enrollmentData?.counts?.pos ?? 0;
+  const gradCount = enrollmentData?.counts?.graduacao ?? 0;
   const isCeuOrPosSemMatricula =
     properties.nivel_de_interesse === NIVEL_INTERESSE_CEU ||
     (properties.nivel_de_interesse === "Pós-graduação" &&
-      (parseInt(properties.matriculas_formadas_posgraduacao, 10) || 0) === 0);
+      posCount < 1 &&
+      gradCount < 1);
 
   // Categoria do desconto de pagamento à vista (Ação Comercial) por nível de interesse:
   // CEU -> acao_comercial_ceu | Pós-graduação (e fallback) -> acao_comercial_pos.
@@ -1426,7 +1432,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               <Text format={{ fontSize: "small" }}>
                 Nenhum desconto disponível para a quantidade de indicações.
               </Text>
-            ) : isCeuOrPosSemMatricula && diamondIndications.length >= 10 && diamondTier === null ? (
+            ) : isCeuOrPosSemMatricula && diamondIndications.length >= 5 && diamondTier === null ? (
               <>
                 <Text format={{ fontSize: "small" }}>
                   Selecione o tier de desconto para visualizar as indicações.
@@ -1439,18 +1445,20 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                   >
                     50% de desconto (5 indicações)
                   </Button>
-                  <Button
-                    onClick={() => handleSelectDiamondTier(10)}
-                    variant={diamondTier === 10 ? "primary" : "secondary"}
-                    size="small"
-                  >
-                    100% de desconto (10 indicações)
-                  </Button>
+                  {diamondIndications.length >= 10 && (
+                    <Button
+                      onClick={() => handleSelectDiamondTier(10)}
+                      variant={diamondTier === 10 ? "primary" : "secondary"}
+                      size="small"
+                    >
+                      100% de desconto (10 indicações)
+                    </Button>
+                  )}
                 </Flex>
               </>
             ) : (
               <>
-                {isCeuOrPosSemMatricula && diamondIndications.length >= 10 && diamondTier !== null && (
+                {isCeuOrPosSemMatricula && diamondTier !== null && (
                   <Flex direction="row" gap="small" wrap="wrap">
                     <Button
                       onClick={() => handleSelectDiamondTier(5)}
@@ -1459,13 +1467,15 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                     >
                       50% de desconto (5 indicações)
                     </Button>
-                    <Button
-                      onClick={() => handleSelectDiamondTier(10)}
-                      variant={diamondTier === 10 ? "primary" : "secondary"}
-                      size="small"
-                    >
-                      100% de desconto (10 indicações)
-                    </Button>
+                    {diamondIndications.length >= 10 && (
+                      <Button
+                        onClick={() => handleSelectDiamondTier(10)}
+                        variant={diamondTier === 10 ? "primary" : "secondary"}
+                        size="small"
+                      >
+                        100% de desconto (10 indicações)
+                      </Button>
+                    )}
                   </Flex>
                 )}
                 <Flex direction="row" gap="small" wrap="wrap">
