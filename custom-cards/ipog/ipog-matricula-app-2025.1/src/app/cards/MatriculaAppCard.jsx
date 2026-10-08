@@ -1170,8 +1170,36 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   return (
     <Card>
       <Flex direction="column" gap="medium">
-        {/* CPF do aluno: campo no topo. Os descontos de ex-aluno dependem da consulta
-            de matrículas por CPF (fonte única das contagens). */}
+        {/* Header Info: turma, unidade e atualização de dados no topo */}
+        <Flex direction="row" justify="between" gap="medium" align="end">
+          <Flex direction="column" gap="extra-small">
+            <Text format={{ fontWeight: "regular" }}>Turma</Text>
+            <Text format={{ fontWeight: "demibold" }}>
+              {turmaAtual?.properties?.id_da_turma || "N/A"}
+            </Text>
+          </Flex>
+
+          <Flex direction="column" gap="extra-small">
+            <Text format={{ fontWeight: "regular" }}>Unidade ID</Text>
+            <Text format={{ fontWeight: "demibold" }}>
+              {turmaAtual?.properties?.unidadeensino || "N/A"}
+            </Text>
+          </Flex>
+
+          <Flex direction="column" gap="extra-small">
+            <Button
+              onClick={handleRefreshAssociations}
+              variant="secondary"
+              size="small"
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? "Atualizando..." : "🔄 Atualizar dados de turma"}
+            </Button>
+          </Flex>
+        </Flex>
+
+        {/* CPF do aluno e matrículas: no meio. Os descontos de ex-aluno dependem da
+            consulta de matrículas por CPF (fonte única das contagens). */}
         <Flex direction="column" gap="small">
           <Flex direction="row" gap="small" align="end">
             <Input
@@ -1208,48 +1236,22 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                 </Text>
               ) : (
                 enrollmentData.groups.map((group) => (
-                  <Flex key={group.key} direction="column" gap="extra-small">
-                    <Text format={{ fontWeight: "demibold" }}>
-                      {`${group.label}: ${group.total} matrícula(s)`}
-                    </Text>
-                    {group.matriculas.map((mat) => (
-                      <Text key={mat.id} format={{ fontSize: "small" }}>
-                        {`${mat.id} | ${mat.statusLabel} | ${mat.curso}`}
+                  <Card key={group.key}>
+                    <Flex direction="column" gap="extra-small">
+                      <Text format={{ fontWeight: "demibold" }}>
+                        {`${group.label}: ${group.total} matrícula(s)`}
                       </Text>
-                    ))}
-                  </Flex>
+                      {group.matriculas.map((mat) => (
+                        <Text key={mat.id} format={{ fontSize: "small" }}>
+                          {`${mat.id} | ${mat.statusLabel} | ${mat.curso}`}
+                        </Text>
+                      ))}
+                    </Flex>
+                  </Card>
                 ))
               )}
             </>
           )}
-        </Flex>
-
-        {/* Header Info */}
-        <Flex direction="row" justify="between" gap="medium" align="end">
-          <Flex direction="column" gap="extra-small">
-            <Text format={{ fontWeight: "regular" }}>Turma</Text>
-            <Text format={{ fontWeight: "demibold" }}>
-              {turmaAtual?.properties?.id_da_turma || "N/A"}
-            </Text>
-          </Flex>
-
-          <Flex direction="column" gap="extra-small">
-            <Text format={{ fontWeight: "regular" }}>Unidade ID</Text>
-            <Text format={{ fontWeight: "demibold" }}>
-              {turmaAtual?.properties?.unidadeensino || "N/A"}
-            </Text>
-          </Flex>
-
-          <Flex direction="column" gap="extra-small">
-            <Button
-              onClick={handleRefreshAssociations}
-              variant="secondary"
-              size="small"
-              disabled={isRefreshing}
-            >
-              {isRefreshing ? "Atualizando..." : "🔄 Atualizar dados de turma"}
-            </Button>
-          </Flex>
         </Flex>
 
         <Flex direction="row" justify="between" gap="medium">
