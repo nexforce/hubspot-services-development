@@ -103,6 +103,7 @@ exports.main = async (context = {}) => {
     cpf,
     numero_de_telefone,
     data_de_nascimento,
+    escolaridade_do_aluno,
     cep,
     rua,
     numero,
@@ -144,6 +145,11 @@ exports.main = async (context = {}) => {
       properties.numero_de_telefone = numero_de_telefone;
     if (data_de_nascimento !== undefined)
       properties.data_de_nascimento = +data_de_nascimento;
+    // A escolaridade passou a ser editável na Seção A do card. O valor é o
+    // mesmo texto que generateEnrollment grava nesta propriedade, para as duas
+    // escritas não deixarem o Negócio com dois formatos do mesmo dado.
+    if (escolaridade_do_aluno !== undefined)
+      properties.escolaridade_do_aluno = escolaridade_do_aluno;
     if (cep !== undefined) properties.cep = cep;
     if (rua !== undefined) properties.rua = rua;
     if (numero !== undefined) properties.numero = numero;
