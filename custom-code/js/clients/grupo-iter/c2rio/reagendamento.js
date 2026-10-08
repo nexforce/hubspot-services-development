@@ -20,7 +20,13 @@ const axios = require("axios");
 //     cf_hora_visita (horário local BR, UTC-3).
 //   - data_da_visita (deal, date) usa apenas cf_date_visit_expected.
 //   - cf_data_visita_anterior: DD-MM-YYYY -> YYYY-MM-DD.
+//   - cf_data_hora_visita (contato e deal, datetime): aceita timestamp em ms ou
+//     em segundos, ISO 8601 com fuso, e data DD-MM-YYYY ou YYYY-MM-DD com
+//     horário opcional. Sem horário, fixa 12:00 de Brasília (UTC-3).
 //   - cf_bilhetes: string com os IDs, gravada como recebida.
+//
+// A propriedade payload do contato guarda o payload recebido com as datas de
+// visita já legíveis ("DD/MM/YYYY HH:mm", horário de Brasília), não em timestamp.
 //
 // O token vem de ACTIVE.hubspotToken: secret HUBSPOT_TOKEN_SANDBOX_INTEGRACAO_SIG
 // em sandbox e HUBSPOT_TOKEN_INTEGRACAO_SIG em produção, nunca hardcoded.
@@ -56,7 +62,7 @@ const CONTACT_FIELDS = [
   { from: "cf_product", to: "cf_produto", type: "text" },
   { from: "cf_quantity", to: "quantidade_de_bilhetes", type: "number" },
   { from: "cf_bilhetes", to: "cf_bilhetes", type: "text" },
-  { from: "cf_data_hora_visita", to: "cf_data_hora_visita", type: "datetimeISO" },
+  { from: "cf_data_hora_visita", to: "cf_data_hora_visita", type: "visitDateTime" },
 ];
 
 const DEAL_FIELDS = [
@@ -69,7 +75,7 @@ const DEAL_FIELDS = [
   { from: "cf_date_visit_expected", to: "data_da_visita", type: "date" },
   { from: "cf_data_visita_anterior", to: "cf_data_visita_anterior", type: "date" },
   { from: "cf_bilhetes", to: "cf_bilhetes", type: "text" },
-  { from: "cf_data_hora_visita", to: "cf_data_hora_visita", type: "datetimeISO" },
+  { from: "cf_data_hora_visita", to: "cf_data_hora_visita", type: "visitDateTime" },
 ];
 
 const toNumber = (valor) => {
@@ -79,6 +85,10 @@ const toNumber = (valor) => {
 };
 
 const padNumber = (number) => String(number).padStart(2, "0");
+
+// Fuso de Brasília em ms. O Brasil não tem horário de verão desde 2019, então o
+// deslocamento é fixo em UTC-3 o ano inteiro.
+const BRASILIA_OFFSET_MS = 3 * 60 * 60 * 1000;
 
 // DD-MM-YYYY -> YYYY-MM-DD.
 const toDateString = (raw) => {
@@ -107,12 +117,71 @@ const toDateTimeMs = (rawDate, rawTime) => {
   const second = timeMatch && timeMatch[3] ? Number(timeMatch[3]) : 0;
   if (hour > 23 || minute > 59 || second > 59) return null;
 
-  return Date.UTC(year, month - 1, day, hour, minute, second) + 3 * 60 * 60 * 1000;
+  return Date.UTC(year, month - 1, day, hour, minute, second) + BRASILIA_OFFSET_MS;
 };
 
-const toDateTimeIsoMs = (raw) => {
-  const timestamp = Date.parse(String(raw || ""));
-  return Number.isFinite(timestamp) ? timestamp : null;
+// cf_data_hora_visita (datetime, contato e deal). Aceita os quatro formatos que
+// o SIG já enviou neste evento:
+//   - timestamp em milissegundos ("1792144800000") ou em segundos
+//     ("1792144800"), que já é um instante absoluto e entra sem ajuste de fuso;
+//   - ISO 8601 com fuso explícito ("2026-10-16T10:00:00Z"), usado como veio;
+//   - YYYY-MM-DD ou DD-MM-YYYY (hífen ou barra), com horário opcional
+//     HH:mm[:ss], lido como horário de Brasília (UTC-3).
+// Sem horário, fixa 12:00 de Brasília, evitando mudança de dia na exibição.
+// Valor ilegível retorna null (não grava).
+const toVisitDateTimeMs = (raw) => {
+  if (raw == null || raw === "") return null;
+  const text = String(raw).trim();
+  const epochMatch = /^\d{10}(\d{3})?$/.exec(text);
+  if (epochMatch) {
+    const epochValue = Number(text);
+    return epochMatch[1] ? epochValue : epochValue * 1000;
+  }
+  if (/[T\s]\d{1,2}:\d{2}.*(Z|[+-]\d{2}:?\d{2})$/i.test(text)) {
+    const timestamp = Date.parse(text.replace(" ", "T"));
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+  const isoDateMatch = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/.exec(text);
+  const brDateMatch = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/.exec(text);
+  if (!isoDateMatch && !brDateMatch) return null;
+  const year = Number(isoDateMatch ? isoDateMatch[1] : brDateMatch[3]);
+  const month = Number(isoDateMatch ? isoDateMatch[2] : brDateMatch[2]);
+  const day = Number(isoDateMatch ? isoDateMatch[3] : brDateMatch[1]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const timeMatch = /[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(text);
+  const hour = timeMatch ? Number(timeMatch[1]) : 12;
+  const minute = timeMatch ? Number(timeMatch[2]) : 0;
+  const second = timeMatch && timeMatch[3] ? Number(timeMatch[3]) : 0;
+  if (hour > 23 || minute > 59 || second > 59) return null;
+  return Date.UTC(year, month - 1, day, hour, minute, second) + BRASILIA_OFFSET_MS;
+};
+
+// Campos de data e hora de visita que vão legíveis para a propriedade payload
+// do contato, no lugar do valor cru recebido do SIG.
+const VISIT_DATETIME_PAYLOAD_FIELDS = ["cf_data_hora_visita", "cf_data_hora_visita_anterior"];
+
+// Timestamp em ms -> "DD/MM/YYYY HH:mm" em horário de Brasília.
+const toReadableDateTime = (timestampMs) => {
+  const brasiliaDate = new Date(timestampMs - BRASILIA_OFFSET_MS);
+  const day = padNumber(brasiliaDate.getUTCDate());
+  const month = padNumber(brasiliaDate.getUTCMonth() + 1);
+  const year = brasiliaDate.getUTCFullYear();
+  const hour = padNumber(brasiliaDate.getUTCHours());
+  const minute = padNumber(brasiliaDate.getUTCMinutes());
+  return `${day}/${month}/${year} ${hour}:${minute}`;
+};
+
+// Cópia do payload com as datas de visita já legíveis, para a propriedade
+// payload do contato. Não altera o objeto recebido, que continua sendo a fonte
+// das conversões. Campo ilegível fica como veio, para o diagnóstico não perder
+// o valor original.
+const buildReadablePayload = (payload) => {
+  const readablePayload = { ...payload };
+  for (const field of VISIT_DATETIME_PAYLOAD_FIELDS) {
+    const timestamp = toVisitDateTimeMs(readablePayload[field]);
+    if (timestamp != null) readablePayload[field] = toReadableDateTime(timestamp);
+  }
+  return readablePayload;
 };
 
 const convertField = (field, payload) => {
@@ -128,8 +197,8 @@ const convertField = (field, payload) => {
       return toDateString(valor);
     case "datetime":
       return toDateTimeMs(valor, payload[field.timeField]);
-    case "datetimeISO":
-      return toDateTimeIsoMs(valor);
+    case "visitDateTime":
+      return toVisitDateTimeMs(valor);
     default:
       return valor == null || valor === "" ? null : String(valor);
   }
@@ -221,7 +290,7 @@ exports.main = async (event, callback) => {
   });
 
   const contactProperties = buildContactProperties(CONTACT_FIELDS, payload);
-  contactProperties["payload"] = JSON.stringify(payload, null, 2);
+  contactProperties["payload"] = JSON.stringify(buildReadablePayload(payload), null, 2);
   contactProperties["reagendado"] = true;
   const dealProperties = buildDealProperties(DEAL_FIELDS, payload);
   dealProperties["reagendado"] = true;
