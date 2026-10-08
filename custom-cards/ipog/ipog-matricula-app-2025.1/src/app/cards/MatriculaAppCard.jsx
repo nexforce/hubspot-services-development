@@ -1142,11 +1142,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
         {/* Status discreto dos descontos elegíveis (substitui os pop-ups de sucesso) */}
         {legacyCategories !== null && (
           <Text format={{ fontSize: "small" }}>
-            {`Descontos elegíveis: ${legacyCategories.length} legado(s)` +
-              (objectDiscountsEvaluated
-                ? ` + ${objectDiscountCategories.length} do objeto`
-                : "") +
-              "."}
+            {`Descontos elegíveis: ${legacyCategories.length + objectDiscountCategories.length}.`}
           </Text>
         )}
         {selectedCategory.includes("aluno_diamante") &&
