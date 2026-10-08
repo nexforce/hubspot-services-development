@@ -15,6 +15,7 @@ import {
   Divider,
   Heading,
   Alert,
+  Input,
 } from "@hubspot/ui-extensions";
 import { hubspot } from "@hubspot/ui-extensions";
 import { useCrmProperties, useAssociations } from "@hubspot/ui-extensions/crm";
@@ -188,6 +189,13 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const [isEvaluatingObjectDiscounts, setIsEvaluatingObjectDiscounts] = useState(false);
   const [objectDiscountsEvaluated, setObjectDiscountsEvaluated] = useState(false);
 
+  // Consulta de matrículas por CPF. A API é a fonte única das contagens de ex-aluno;
+  // sem consulta feita, os descontos que dependem de matrículas não são ofertados.
+  const [cpfInput, setCpfInput] = useState("");
+  const [isSavingCpf, setIsSavingCpf] = useState(false);
+  const [isSearchingEnrollments, setIsSearchingEnrollments] = useState(false);
+  const [enrollmentData, setEnrollmentData] = useState(null);
+
   const turmaAtual = manualTurmaData || associatedTurmaResult[0];
 
   // Determina se é CEU ou Pós sem matrículas (para regra de limite de diamantes)
@@ -346,14 +354,17 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   // Verifica os descontos legados via custom code (réplica 1:1 do workflow
   // "v0 - Processos de descontos"). Executa ao abrir o card e pode ser reexecutada
   // pelo botão "Verificar descontos".
-  const handleVerifyDiscounts = async () => {
+  const handleVerifyDiscounts = async (countsOverride) => {
     setIsEvaluatingDiscounts(true);
     try {
+      const counts =
+        countsOverride !== undefined ? countsOverride : (enrollmentData?.counts ?? null);
       const { response } = await runServerless({
         name: "evaluateLegacyDiscounts",
         parameters: {
           dealId: context.crm.objectId,
           convenioObjectId: envConfig.convenioObjectId,
+          counts,
         },
       });
 
@@ -386,6 +397,105 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     handleVerifyDiscounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // CPF do aluno: espelha a propriedade cpf; grava no clique quando alterado; a busca
+  // de matrículas usa a API IPOG e alimenta as regras de ex-aluno.
+  const cpfDigits = (value) => String(value || "").replace(/\D/g, "");
+  const savedCpfDigits = cpfDigits(properties.cpf);
+  const typedCpfDigits = cpfDigits(cpfInput);
+  const cpfChanged = typedCpfDigits !== savedCpfDigits;
+  const cpfIsValid = typedCpfDigits.length === 11 || typedCpfDigits.length === 0;
+
+  useEffect(() => {
+    setCpfInput(properties.cpf || "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [properties.cpf]);
+
+  const handleSaveCpf = async () => {
+    if (!cpfIsValid) {
+      sendAlert({ type: "warning", message: "CPF deve ter 11 dígitos." });
+      return;
+    }
+    setIsSavingCpf(true);
+    try {
+      const { response } = await runServerless({
+        name: "saveDealCpf",
+        parameters: { dealId: context.crm.objectId, cpf: cpfInput },
+      });
+      if (response?.status === "SUCCESS") {
+        setCpfInput(response.response?.cpf || "");
+        // CPF novo invalida as matrículas anteriores: recalcula como "sem matrícula"
+        // até que a busca pelo CPF novo seja feita.
+        setEnrollmentData(null);
+        await handleVerifyDiscounts(null);
+        await actions.refreshObjectProperties();
+        sendAlert({ type: "success", message: "CPF salvo no negócio." });
+      } else {
+        sendAlert({
+          type: "warning",
+          message: formatOriginError(
+            response?.origin,
+            response?.message || "Não foi possível salvar o CPF.",
+          ),
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao salvar CPF:", error);
+      sendAlert({
+        type: "danger",
+        message: formatOriginError("SISTEMA", "Erro ao salvar o CPF. Tente novamente."),
+      });
+    } finally {
+      setIsSavingCpf(false);
+    }
+  };
+
+  const handleSearchEnrollments = async () => {
+    if (typedCpfDigits.length !== 11) {
+      sendAlert({
+        type: "warning",
+        message: "Informe um CPF com 11 dígitos para buscar as matrículas.",
+      });
+      return;
+    }
+    setIsSearchingEnrollments(true);
+    try {
+      const { response } = await runServerless({
+        name: "countEnrollmentsByCpf",
+        parameters: { cpf: typedCpfDigits },
+      });
+      if (response?.status === "SUCCESS" || response?.status === "NOT_FOUND") {
+        const data =
+          response.response || { counts: { pos: 0, graduacao: 0, ceu: 0 }, groups: [], total: 0 };
+        setEnrollmentData(data);
+        // Contagens da API passam a alimentar as regras de ex-aluno (fonte única).
+        await handleVerifyDiscounts(data.counts);
+        sendAlert({
+          type: "success",
+          message:
+            (data.total || 0) > 0
+              ? `Matrículas encontradas: ${data.total} (Ativas/Formadas).`
+              : "Nenhuma matrícula ativa ou formada encontrada para este CPF.",
+        });
+      } else {
+        sendAlert({
+          type: "warning",
+          message: formatOriginError(
+            response?.origin,
+            response?.message || "Não foi possível consultar as matrículas.",
+          ),
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao consultar matrículas:", error);
+      sendAlert({
+        type: "danger",
+        message: formatOriginError("SISTEMA", "Erro ao consultar as matrículas. Tente novamente."),
+      });
+    } finally {
+      setIsSearchingEnrollments(false);
+    }
+  };
 
   // Motor da etapa 2: avalia as regras do objeto Descontos contra o negócio e devolve
   // as categorias elegíveis. O benefício (tipo/valor) continua vindo da MuleSoft via
@@ -1049,6 +1159,65 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   return (
     <Card>
       <Flex direction="column" gap="medium">
+        {/* CPF do aluno: campo no topo. Os descontos de ex-aluno dependem da consulta
+            de matrículas por CPF (fonte única das contagens). */}
+        <Flex direction="column" gap="small">
+          <Flex direction="row" gap="small" align="end">
+            <Input
+              label="CPF do aluno"
+              name="cpf"
+              value={cpfInput}
+              onInput={(value) => setCpfInput(value)}
+              placeholder="000.000.000-00"
+            />
+            <Button
+              onClick={handleSaveCpf}
+              variant="secondary"
+              disabled={!cpfChanged || !cpfIsValid || isSavingCpf}
+            >
+              {isSavingCpf ? "Salvando..." : "Salvar CPF"}
+            </Button>
+            <Button
+              onClick={handleSearchEnrollments}
+              variant="primary"
+              disabled={typedCpfDigits.length !== 11 || isSearchingEnrollments}
+            >
+              {isSearchingEnrollments ? "Buscando..." : "Buscar matrículas"}
+            </Button>
+          </Flex>
+          <Text format={{ fontSize: "small" }}>
+            Sem matrículas buscadas, o aluno é tratado como sem vínculo IPOG (convênio/EAD R$50).
+            Salve o CPF e busque as matrículas para liberar 2ª/3ª/4ª Pós, Egresso Graduação e
+            CEU (2ª Pós).
+          </Text>
+          {enrollmentData && (
+            <>
+              <Divider />
+              <Heading>
+                {`Matrículas de ${enrollmentData.nomeAluno || "aluno"} (Ativas/Formadas)`}
+              </Heading>
+              {(enrollmentData.groups || []).length === 0 ? (
+                <Text format={{ fontSize: "small" }}>
+                  Nenhuma matrícula ativa ou formada encontrada para este CPF.
+                </Text>
+              ) : (
+                enrollmentData.groups.map((group) => (
+                  <Flex key={group.key} direction="column" gap="extra-small">
+                    <Text format={{ fontWeight: "demibold" }}>
+                      {`${group.label}: ${group.total} matrícula(s)`}
+                    </Text>
+                    {group.matriculas.map((mat) => (
+                      <Text key={mat.id} format={{ fontSize: "small" }}>
+                        {`${mat.id} | ${mat.statusLabel} | ${mat.curso}`}
+                      </Text>
+                    ))}
+                  </Flex>
+                ))
+              )}
+            </>
+          )}
+        </Flex>
+
         {/* Header Info */}
         <Flex direction="row" justify="between" gap="medium" align="end">
           <Flex direction="column" gap="extra-small">

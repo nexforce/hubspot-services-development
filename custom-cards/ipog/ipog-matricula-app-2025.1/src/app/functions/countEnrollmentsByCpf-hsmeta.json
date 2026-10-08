@@ -1,0 +1,12 @@
+{
+  "config": {
+    "entrypoint": "app/functions/countEnrollmentsByCpf.js",
+    "secretKeys": [
+      "MULESOFT_BASE_URL",
+      "MULESOFT_USERNAME",
+      "MULESOFT_PASSWORD"
+    ]
+  },
+  "uid": "countEnrollmentsByCpf",
+  "type": "app-function"
+}

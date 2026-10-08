@@ -136,4 +136,32 @@ check("nível desconhecido não gera categoria", {
   nivelDeInteresse: "Mestrado", modalidadeDeInteresse: "Presencial",
 }, []);
 
+// Sem consulta de matrículas por CPF: o deal é tratado como aluno SEM matrículas
+// (semântica do workflow v0: propriedade vazia = ramos de fallback).
+check("sem CPF: Pós presencial cai no convênio", {
+  nivelDeInteresse: POS, modalidadeDeInteresse: "Presencial",
+}, ["convenio"]);
+
+check("sem CPF: Pós presencial com indicações >= 5 = diamante", {
+  nivelDeInteresse: POS, modalidadeDeInteresse: "Presencial",
+  indicacoesPosgraduacao: [6],
+}, ["aluno_diamante"]);
+
+check("sem CPF: Pós EAD = ead_50", {
+  nivelDeInteresse: POS, modalidadeDeInteresse: "EAD",
+}, ["ead_50"]);
+
+check("sem CPF: CEU com indicações >= 5 mantém aluno_diamante", {
+  nivelDeInteresse: CEU, modalidadeDeInteresse: "Presencial",
+  indicacoesCeu: [5],
+}, ["aluno_diamante"]);
+
+check("sem CPF: CEU sem indicações = convenio_ceu", {
+  nivelDeInteresse: CEU, modalidadeDeInteresse: "Presencial",
+}, ["convenio_ceu"]);
+
+check("sem CPF: Graduação mantém graduacao_convenio", {
+  nivelDeInteresse: GRADUACAO, modalidadeDeInteresse: "Presencial",
+}, ["graduacao_convenio"]);
+
 console.log(`\n${passed} testes de paridade passaram.`);

@@ -130,7 +130,7 @@ exports.parseNumber = parseNumber;
 
 exports.main = async (context = {}) => {
   const { parameters = {} } = context;
-  const { dealId, convenioObjectId } = parameters;
+  const { dealId, convenioObjectId, counts } = parameters;
 
   const apiKey = process.env.HUBSPOT_API_KEY;
   if (!apiKey) {
@@ -171,7 +171,7 @@ exports.main = async (context = {}) => {
       headers,
       params: {
         properties:
-          "nivel_de_interesse,modalidade_de_interesse,matriculas_formadas_posgraduacao,matriculas_formadas_graduacao,categorias_aprovadas",
+          "nivel_de_interesse,modalidade_de_interesse,categorias_aprovadas",
       },
     });
     const dealProps = dealResponse.data.properties || {};
@@ -223,12 +223,15 @@ exports.main = async (context = {}) => {
       }
     }
 
-    // 4) Avaliação das regras legadas (árvore 1:1 do workflow v0).
+    // 4) Avaliação das regras legadas. As contagens de matrículas vêm SOMENTE da API
+    // de matrículas por CPF (decisão de 2026-10-08). Sem consulta feita (counts
+    // ausente), o deal é tratado como aluno SEM matrículas (semântica do workflow v0:
+    // propriedade vazia = cai nos ramos de fallback: convênio, ead_50, convenio_ceu).
     const result = evaluateLegacyDiscounts({
       nivelDeInteresse: dealProps.nivel_de_interesse,
       modalidadeDeInteresse: dealProps.modalidade_de_interesse,
-      matriculasFormadasPosgraduacao: dealProps.matriculas_formadas_posgraduacao,
-      matriculasFormadasGraduacao: dealProps.matriculas_formadas_graduacao,
+      matriculasFormadasPosgraduacao: counts ? counts.pos : null,
+      matriculasFormadasGraduacao: counts ? counts.graduacao : null,
       indicacoesPosgraduacao,
       indicacoesCeu,
       tiposDeConvenio,
