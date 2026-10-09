@@ -391,6 +391,18 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
       if (response?.status === "SUCCESS") {
         setLegacyCategories(response.response?.categories || []);
+        const diag = response.response || {};
+        if (diag.convenioReadError || diag.writeError) {
+          sendAlert({
+            type: "warning",
+            message: formatOriginError(
+              "SISTEMA",
+              `Convênios lidos: ${diag.convenioCount ?? "?"}. ${
+                diag.convenioReadError ? "Leitura: " + diag.convenioReadError + " " : ""
+              }${diag.writeError ? "Escrita: " + diag.writeError : ""}`,
+            ),
+          });
+        }
       } else {
         sendAlert({
           type: "warning",
