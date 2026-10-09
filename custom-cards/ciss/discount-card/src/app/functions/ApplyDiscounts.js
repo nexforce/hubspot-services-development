@@ -213,12 +213,19 @@ const resolveFieldsForItem = (item) =>
 // Por que o desconto não é gravado como razão, e por que a base precisa de mais
 // de 2 decimais: automation/verificacao/README.md.
 // ---------------------------------------------------------------------------
+// Categoria hora×valor (Treinamento, Desenvolvimento/DBA, Consultoria): a
+// propriedade base guarda o TOTAL da categoria e o CRM não a multiplica por
+// quantity. Leitura e escrita acontecem na MESMA propriedade, então não existe
+// fator nenhum entre as duas pontas: o valor/h digitado é o valor/h gravado, e
+// o card relê exatamente o que o vendedor viu na prévia. Dividir por quantity
+// aqui era o que fazia um valor/h de 300 virar 150 em item com 2 acessos
+// (relato de outubro/2026, Conciliador de Cartões e Data Center).
+// As categorias de valor fixo continuam divididas: lá a propriedade base é
+// unitária e o CRM remultiplica por quantity na propriedade calculada.
 const DECIMAIS_VALOR = 6;
 
 const fmtValor = (n) => String(parseFloat(n.toFixed(DECIMAIS_VALOR)));
 const emCentavos = (n) => Math.round(n * 100);
-// O amount do deal fecha em centavo inteiro: todo alvo já é centavo inteiro.
-const fmtMoeda = (n) => (emCentavos(n) / 100).toFixed(2);
 
 // Maior resto leva os centavos sobrantes, então a soma do retorno é exatamente
 // `alvoCent`. Devolve null quando não há peso onde alocar: categoria sem base em
@@ -323,7 +330,6 @@ const buildAllocation = (itens, alvos, propsGravaveis) => {
       }
       gruposHoras.get(rf.fieldName).participantes.push({
         id: item.id,
-        qty,
         horasItem: parseFloat(item.properties[rf.hoursProp] || 0),
         brutoBase: snapshot || valorItem,
         temSnapshotProp,
@@ -352,16 +358,18 @@ const buildAllocation = (itens, alvos, propsGravaveis) => {
       // recebe TODAS as horas e o valor cheio; os demais vão a zero. O snapshot
       // segue a mudança de escopo (valor/h ORIGINAL × horas novas). Os dois em
       // centavo inteiro, senão o bruto exibido no card passa a desviar.
+      // Nenhum dos dois é dividido por quantity: ver o bloco de categoria
+      // hora×valor no cabeçalho desta seção.
       const alvoCent = emCentavos(plano.alvoTotal);
       const snapCent = emCentavos(plano.unitOriginal * plano.hoursTarget);
       participantes.forEach((p, i) => {
         const acumulador = i === 0;
         guardar(horas, p.id, campo, {
           horas: acumulador ? plano.hoursTarget : 0,
-          valorBase: acumulador ? alvoCent / 100 / p.qty : 0,
+          valorBase: acumulador ? alvoCent / 100 : 0,
           snapshotBase: p.temSnapshotProp
             ? acumulador
-              ? snapCent / 100 / p.qty
+              ? snapCent / 100
               : 0
             : null,
         });
@@ -372,14 +380,14 @@ const buildAllocation = (itens, alvos, propsGravaveis) => {
     // Só desconto de valor/h: cada item mantém suas horas, e o snapshot é
     // idempotente porque nunca recebe um valor líquido.
     const cents = alocarCentavos(
-      participantes.map((p) => p.brutoBase * p.qty),
+      participantes.map((p) => p.brutoBase),
       emCentavos(plano.alvoTotal),
     );
     if (!cents) continue;
     participantes.forEach((p, i) =>
       guardar(horas, p.id, campo, {
         horas: p.horasItem,
-        valorBase: cents[i] / 100 / p.qty,
+        valorBase: cents[i] / 100,
         snapshotBase: p.temSnapshotProp ? p.brutoBase : null,
       }),
     );
@@ -925,28 +933,25 @@ exports.main = async (context) => {
 
     console.log("[applyDiscounts] line items atualizados:", updates.length);
 
-    // amount = price × quantity: o price é UNITÁRIO desde que o multiplicador
-    // de emissão migrou para a quantity (ver ciss-lancamento-contratos).
-    const newDealAmount = lineItems.reduce((acc, item) => {
-      const quantity = parseFloat(item.properties.quantity) || 1;
-      const update = updates.find((u) => u.id === item.id);
-      const price = update?.properties?.price ?? item.properties.price;
-      return acc + parseFloat(price || 0) * quantity;
-    }, 0);
-
-    console.log("[applyDiscounts] novo amount do deal:", newDealAmount);
-
-    await withStep("updateDealAmount", () =>
+    // O `amount` do deal NÃO é gravado aqui. Quem mantém esse campo é o
+    // portal: cada item de linha calcula `total_geral` (valor_locacao_calculado
+    // + valor_licenca_calculado + valor_mensalidade_calculado +
+    // valor_horas_desenvolvimento + valor_treinamento + valor_horas_consultoria),
+    // o rollup `total_geral_item_de_linha` soma os itens e um workflow copia o
+    // rollup para o `amount`. Nessa equação as categorias de hora entram pela
+    // propriedade BASE, sem multiplicar, que é a regra de negócio: o tipo de
+    // emissão multiplica Licença e Mensalidade/Locação e nunca toca em Horas
+    // Técnicas. Gravar `Σ price × quantity` aqui multiplicava a parcela de hora
+    // pela quantidade de emissão e deixava o deal exibindo um valor errado até a
+    // automação do portal corrigir (medido no portal em outubro/2026).
+    await withStep("limparRascunho", () =>
       hubspotClient.patch(`/crm/v3/objects/deals/${dealId}`, {
-        properties: {
-          amount: fmtMoeda(newDealAmount),
-          // Limpa o rascunho: o submit substitui o trabalho em andamento.
-          discount_draft: "",
-        },
+        // Limpa o rascunho: o submit substitui o trabalho em andamento.
+        properties: { discount_draft: "" },
       }),
     );
 
-    console.log("[applyDiscounts] amount do deal atualizado com sucesso");
+    console.log("[applyDiscounts] rascunho limpo");
 
     return {
       statusCode: 200,
