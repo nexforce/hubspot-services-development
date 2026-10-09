@@ -45,10 +45,10 @@ check("4ª pós", {
   matriculasFormadasPosgraduacao: 3,
 }, ["ex_aluno_4"]);
 
-check("pos >= 4 sem categoria de titulação, diamante por indicações", {
+check("pos >= 3 vira ex_aluno_4 (com diamante por indicações)", {
   nivelDeInteresse: POS, modalidadeDeInteresse: "Presencial",
   matriculasFormadasPosgraduacao: 5, indicacoesPosgraduacao: [2],
-}, ["aluno_diamante"]);
+}, ["ex_aluno_4", "aluno_diamante"]);
 
 check("pós sem matrículas com indicações >= 5 = diamante", {
   nivelDeInteresse: POS, modalidadeDeInteresse: "Presencial",

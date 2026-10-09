@@ -56,7 +56,7 @@ function evaluateLegacyDiscounts(ctx = {}) {
       if (equalTo(pos, 1)) categories.push("ex_aluno_2");
       else if (atLeast(grad, 1) && equalTo(pos, 0)) categories.push("ex_aluno_2_graduacao");
       else if (equalTo(pos, 2)) categories.push("ex_aluno_3");
-      else if (equalTo(pos, 3)) categories.push("ex_aluno_4");
+      else if (atLeast(pos, 3)) categories.push("ex_aluno_4");
       if (categories.length) trace.push(`categoria: ${categories[categories.length - 1]}`);
       if (atLeast(maxIndPos, 1)) {
         categories.push("aluno_diamante");
@@ -76,7 +76,7 @@ function evaluateLegacyDiscounts(ctx = {}) {
       if (equalTo(pos, 1)) categories.push("ex_aluno_2");
       else if (atLeast(grad, 1) && equalTo(pos, 0)) categories.push("ex_aluno_2_graduacao");
       else if (equalTo(pos, 2)) categories.push("ex_aluno_3");
-      else if (equalTo(pos, 3)) categories.push("ex_aluno_4");
+      else if (atLeast(pos, 3)) categories.push("ex_aluno_4");
       if (categories.length) trace.push(`categoria: ${categories[categories.length - 1]}`);
       if (atLeast(maxIndPos, 1)) {
         categories.push("aluno_diamante");
