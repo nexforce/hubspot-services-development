@@ -14,6 +14,8 @@ const axios = require("axios");
 
 const STATUS_CONTAM = ["AT", "FO"];
 const STATUS_LABELS = { AT: "Ativo", FO: "Formado" };
+// Ordem de exibição dentro de cada grupo: Formado primeiro, depois Ativo.
+const STATUS_ORDER = { FO: 0, AT: 1 };
 const LEVEL_ORDER = ["pos", "graduacao", "ceu", "outros"];
 const LEVEL_LABELS = {
   pos: "Pós-graduação",
@@ -78,6 +80,13 @@ function summarizeEnrollments(matriculas) {
     });
     if (key in counts) counts[key] += 1;
     total += 1;
+  }
+
+  // Exibição: dentro de cada grupo, formadas antes das ativas (ordem estável).
+  for (const key of Object.keys(buckets)) {
+    buckets[key].sort(
+      (a, b) => (STATUS_ORDER[a.statusCode] ?? 9) - (STATUS_ORDER[b.statusCode] ?? 9),
+    );
   }
 
   const groups = LEVEL_ORDER.filter((key) => (buckets[key] || []).length > 0).map((key) => ({

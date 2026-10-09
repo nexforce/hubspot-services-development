@@ -89,4 +89,18 @@ check("lista vazia retorna zeros", () => {
   assert.deepStrictEqual(r.groups, []);
 });
 
+check("grupos exibem formadas antes das ativas", () => {
+  const list = [
+    { matricula: "A1", nomeCurso: "Curso 1", nivelEducacional: "Pós-Graduação", siglaNivelEducacional: "PO", situacaoMatricula: "AT" },
+    { matricula: "F1", nomeCurso: "Curso 2", nivelEducacional: "Pós-Graduação", siglaNivelEducacional: "PO", situacaoMatricula: "FO" },
+    { matricula: "A2", nomeCurso: "Curso 3", nivelEducacional: "Pós-Graduação", siglaNivelEducacional: "PO", situacaoMatricula: "AT" },
+    { matricula: "F2", nomeCurso: "Curso 4", nivelEducacional: "Pós-Graduação", siglaNivelEducacional: "PO", situacaoMatricula: "FO" },
+  ];
+  const r = summarizeEnrollments(list);
+  assert.deepStrictEqual(
+    r.groups[0].matriculas.map((m) => m.id),
+    ["F1", "F2", "A1", "A2"],
+  );
+});
+
 console.log(`\n${passed} testes de contagem de matrículas passaram.`);
