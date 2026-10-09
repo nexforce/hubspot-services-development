@@ -144,6 +144,19 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     },
   );
 
+  // Convênio(s) associados ao negócio. A função legada lê os convênios no momento em
+  // que roda; observamos a associação aqui para reavaliar quando ela muda.
+  const { results: convenioResults } = useAssociations(
+    {
+      toObjectType: envConfig.convenioObjectId,
+      properties: ["tipo_de_convenio"],
+      pageLength: 10,
+    },
+    {
+      propertiesToFormat: "all",
+    },
+  );
+
   // useAssociations tem retornado `toObjectId` em alguns resultados e `id` em outros.
   // Normalize ambos, preservando o formato de origem para o resto do card.
   const firstContactAssociation = contactResults?.[0];
@@ -401,10 +414,64 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     }
   };
 
+  // Persiste as categorias selecionadas no negócio (propriedade categoriacondicao).
+  const persistSelectedCategories = async (categories) => {
+    try {
+      await runServerless({
+        name: "saveDealCategories",
+        parameters: {
+          dealId: context.crm.objectId,
+          categories: categories.join(";"),
+        },
+      });
+    } catch (error) {
+      console.error("Erro ao salvar as categorias do desconto:", error);
+    }
+  };
+
+  // Chave de reavaliação: nível e modalidade (deal) + contato(s) + convênio(s) associados.
+  // Regrava os descontos legados sempre que qualquer um muda, para a categoria não ficar
+  // presa ao estado anterior (ex.: trocar convênio normal -> especial).
+  const contactAssocKey = (contactResults || [])
+    .map((r) => r.toObjectId ?? r.id)
+    .filter(Boolean)
+    .sort()
+    .join(",");
+  const convenioAssocKey = (convenioResults || [])
+    .map((r) => r.toObjectId ?? r.id)
+    .filter(Boolean)
+    .sort()
+    .join(",");
+  const legacyReevalKey = [
+    properties.nivel_de_interesse || "",
+    properties.modalidade_de_interesse || "",
+    contactAssocKey,
+    convenioAssocKey,
+  ].join("|");
+
   useEffect(() => {
     handleVerifyDiscounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [legacyReevalKey]);
+
+  // Reconcilia a seleção com o conjunto elegível: remove categorias que deixaram de ser
+  // elegíveis e limpa o categoriacondicao, para a seleção antiga não continuar liberando
+  // o desconto errado (ex.: convênio normal -> especial).
+  useEffect(() => {
+    if (legacyCategories === null) return;
+    const eligibleValues = new Set([
+      ...legacyCategories,
+      ...objectDiscountCategories.map((o) => o.value),
+    ]);
+    setSelectedCategory((prev) => {
+      const filtered = prev.filter((c) => eligibleValues.has(c));
+      if (filtered.length !== prev.length) {
+        persistSelectedCategories(filtered);
+      }
+      return filtered;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [legacyCategories, objectDiscountCategories, properties.categoriacondicao]);
 
   // CPF do aluno: espelha a propriedade cpf; grava no clique quando alterado; a busca
   // de matrículas usa a API IPOG e alimenta as regras de ex-aluno.
