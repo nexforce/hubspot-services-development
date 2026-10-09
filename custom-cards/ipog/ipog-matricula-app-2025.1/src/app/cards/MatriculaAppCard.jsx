@@ -195,7 +195,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   // "v0 - Processos de descontos"). null = ainda não avaliado / falhou (fallback para
   // properties.categorias_aprovadas); array = resultado da última avaliação.
   const [legacyCategories, setLegacyCategories] = useState(null);
-  const [legacyDebug, setLegacyDebug] = useState(null);
   const [isEvaluatingDiscounts, setIsEvaluatingDiscounts] = useState(false);
 
   // Descontos do objeto "Descontos" (etapa 2) elegíveis para o negócio. Entram no mesmo
@@ -393,7 +392,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       if (response?.status === "SUCCESS") {
         setLegacyCategories(response.response?.categories || []);
         const diag = response.response || {};
-        setLegacyDebug(diag);
         if (diag.convenioReadError || diag.writeError) {
           sendAlert({
             type: "warning",
@@ -1408,11 +1406,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
         {legacyCategories !== null && (
           <Text format={{ fontSize: "small" }}>
             {`Descontos elegíveis: ${discountCategoryOptions.length}.`}
-          </Text>
-        )}
-        {legacyDebug && (
-          <Text format={{ fontSize: "small" }}>
-            {`DEBUG eval -> cats=[${(legacyDebug.categories || []).join(",")}] | convObj=${legacyDebug.convenioObjectId} | convN=${legacyDebug.convenioCount} | rErr=${legacyDebug.convenioReadError || "-"} | wErr=${legacyDebug.writeError || "-"}`}
           </Text>
         )}
         {selectedCategory.includes("aluno_diamante") &&

@@ -217,6 +217,7 @@ exports.main = async (context = {}) => {
             url: `https://api.hubapi.com/crm/v3/objects/${convenioObjectId}/batch/read`,
             headers,
             data: {
+              properties: ["tipo_de_convenio"],
               inputs: convenioIds.slice(0, 100).map((id) => ({ id: String(id) })),
             },
           });
