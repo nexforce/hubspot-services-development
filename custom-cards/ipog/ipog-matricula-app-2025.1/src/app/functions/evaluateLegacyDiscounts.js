@@ -56,7 +56,7 @@ function evaluateLegacyDiscounts(ctx = {}) {
       if (equalTo(pos, 1)) categories.push("ex_aluno_2");
       else if (atLeast(grad, 1) && equalTo(pos, 0)) categories.push("ex_aluno_2_graduacao");
       else if (equalTo(pos, 2)) categories.push("ex_aluno_3");
-      else if (equalTo(pos, 3)) categories.push("ex_aluno_4");
+      else if (atLeast(pos, 3)) categories.push("ex_aluno_4");
       if (categories.length) trace.push(`categoria: ${categories[categories.length - 1]}`);
       if (atLeast(maxIndPos, 1)) {
         categories.push("aluno_diamante");
@@ -76,7 +76,7 @@ function evaluateLegacyDiscounts(ctx = {}) {
       if (equalTo(pos, 1)) categories.push("ex_aluno_2");
       else if (atLeast(grad, 1) && equalTo(pos, 0)) categories.push("ex_aluno_2_graduacao");
       else if (equalTo(pos, 2)) categories.push("ex_aluno_3");
-      else if (equalTo(pos, 3)) categories.push("ex_aluno_4");
+      else if (atLeast(pos, 3)) categories.push("ex_aluno_4");
       if (categories.length) trace.push(`categoria: ${categories[categories.length - 1]}`);
       if (atLeast(maxIndPos, 1)) {
         categories.push("aluno_diamante");
@@ -98,7 +98,7 @@ function evaluateLegacyDiscounts(ctx = {}) {
       categories.push("aluno_diamante");
       trace.push("categoria: aluno_diamante (indicações CEU >= 5)");
     } else if (atLeast(grad, 1) || atLeast(pos, 1)) {
-      const categoria = equalTo(pos, 2) ? "ex_aluno_ceu" : "convenio_especial_ceu";
+      const categoria = atLeast(pos, 2) ? "ex_aluno_ceu" : "convenio_especial_ceu";
       categories.push(categoria);
       trace.push(`categoria: ${categoria} (aluno IPOG)`);
     } else {
@@ -130,7 +130,7 @@ exports.parseNumber = parseNumber;
 
 exports.main = async (context = {}) => {
   const { parameters = {} } = context;
-  const { dealId, convenioObjectId } = parameters;
+  const { dealId, convenioObjectId, counts } = parameters;
 
   const apiKey = process.env.HUBSPOT_API_KEY;
   if (!apiKey) {
@@ -171,7 +171,7 @@ exports.main = async (context = {}) => {
       headers,
       params: {
         properties:
-          "nivel_de_interesse,modalidade_de_interesse,matriculas_formadas_posgraduacao,matriculas_formadas_graduacao,categorias_aprovadas",
+          "nivel_de_interesse,modalidade_de_interesse,categorias_aprovadas",
       },
     });
     const dealProps = dealResponse.data.properties || {};
@@ -203,54 +203,79 @@ exports.main = async (context = {}) => {
     }
 
     // 3) Convênios associados (tipo_de_convenio; ausência de associação = ramo default).
+    // Falha na leitura de convênios NÃO derruba a avaliação (best-effort + registro).
     let tiposDeConvenio = [];
+    let convenioReadError = null;
     if (convenioObjectId) {
-      const convenioIds = await listAssociatedIds(
-        `deals/${dealId}/associations/${convenioObjectId}`,
-      );
-      if (convenioIds.length > 0) {
-        const batchResponse = await axios({
-          method: "POST",
-          url: `https://api.hubapi.com/crm/v3/objects/${convenioObjectId}/batch/read`,
-          headers,
-          data: {
-            inputs: convenioIds.slice(0, 100).map((id) => ({ id: String(id) })),
-          },
-        });
-        tiposDeConvenio = (batchResponse.data.results || []).map(
-          (r) => r.properties?.tipo_de_convenio,
+      try {
+        const convenioIds = await listAssociatedIds(
+          `deals/${dealId}/associations/${convenioObjectId}`,
         );
+        if (convenioIds.length > 0) {
+          const batchResponse = await axios({
+            method: "POST",
+            url: `https://api.hubapi.com/crm/v3/objects/${convenioObjectId}/batch/read`,
+            headers,
+            data: {
+              properties: ["tipo_de_convenio"],
+              inputs: convenioIds.slice(0, 100).map((id) => ({ id: String(id) })),
+            },
+          });
+          tiposDeConvenio = (batchResponse.data.results || []).map(
+            (r) => r.properties?.tipo_de_convenio,
+          );
+        }
+      } catch (error) {
+        convenioReadError =
+          error.response?.data?.message || error.message || "Falha ao ler convênios.";
+        console.error("Falha ao ler convênios associados:", convenioReadError);
       }
     }
 
-    // 4) Avaliação das regras legadas (árvore 1:1 do workflow v0).
+    // 4) Avaliação das regras legadas. As contagens de matrículas vêm SOMENTE da API
+    // de matrículas por CPF (decisão de 2026-10-08). Sem consulta feita (counts
+    // ausente), o deal é tratado como aluno SEM matrículas (semântica do workflow v0:
+    // propriedade vazia = cai nos ramos de fallback: convênio, ead_50, convenio_ceu).
     const result = evaluateLegacyDiscounts({
       nivelDeInteresse: dealProps.nivel_de_interesse,
       modalidadeDeInteresse: dealProps.modalidade_de_interesse,
-      matriculasFormadasPosgraduacao: dealProps.matriculas_formadas_posgraduacao,
-      matriculasFormadasGraduacao: dealProps.matriculas_formadas_graduacao,
+      matriculasFormadasPosgraduacao: counts ? counts.pos : null,
+      matriculasFormadasGraduacao: counts ? counts.graduacao : null,
       indicacoesPosgraduacao,
       indicacoesCeu,
       tiposDeConvenio,
     });
     console.log(
       "Avaliação de descontos legados:",
-      JSON.stringify({ categories: result.categories, trace: result.trace }),
+      JSON.stringify({
+        categories: result.categories,
+        trace: result.trace,
+        convenioObjectId,
+        convenioCount: tiposDeConvenio.length,
+        tiposDeConvenio,
+      }),
     );
 
-    // 5) Gravação com paridade: o workflow limpa e anexa; o resultado líquido é o SET
-    // do valor final. Escrita pulada quando o valor já está igual (menos ruído de histórico).
+    // 5) Gravação idempotente: só grava quando o valor muda. Falha de escrita NÃO
+    // derruba a avaliação: o card usa a resposta e a categoria deixa de ficar presa.
     const targetValue = result.categories.join(";");
     const currentValue = dealProps.categorias_aprovadas || "";
     let updated = false;
+    let writeError = null;
     if (targetValue !== currentValue) {
-      await axios({
-        method: "PATCH",
-        url: `https://api.hubapi.com/crm/v3/objects/deals/${dealId}`,
-        headers,
-        data: { properties: { categorias_aprovadas: targetValue } },
-      });
-      updated = true;
+      try {
+        await axios({
+          method: "PATCH",
+          url: `https://api.hubapi.com/crm/v3/objects/deals/${dealId}`,
+          headers,
+          data: { properties: { categorias_aprovadas: targetValue } },
+        });
+        updated = true;
+      } catch (error) {
+        writeError =
+          error.response?.data?.message || error.message || "Falha ao gravar categorias_aprovadas.";
+        console.error("Falha ao gravar categorias_aprovadas:", writeError);
+      }
     }
 
     return {
@@ -259,6 +284,10 @@ exports.main = async (context = {}) => {
         categories: result.categories,
         trace: result.trace,
         updated,
+        convenioObjectId: convenioObjectId || null,
+        convenioCount: tiposDeConvenio.length,
+        convenioReadError,
+        writeError,
       },
     };
   } catch (error) {

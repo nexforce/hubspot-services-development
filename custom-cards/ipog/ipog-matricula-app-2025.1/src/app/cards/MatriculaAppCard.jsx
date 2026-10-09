@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Box,
   Card,
   Flex,
   Text,
@@ -15,6 +16,7 @@ import {
   Divider,
   Heading,
   Alert,
+  Input,
 } from "@hubspot/ui-extensions";
 import { hubspot } from "@hubspot/ui-extensions";
 import { useCrmProperties, useAssociations } from "@hubspot/ui-extensions/crm";
@@ -74,6 +76,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     "categoriacondicao",
     "desconto_aprovado",
     "categorias_aprovadas",
+    "cpf",
     "nivel_de_interesse",
     "modalidade_de_interesse",
     "matriculas_formadas_posgraduacao",
@@ -141,6 +144,19 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     },
   );
 
+  // Convênio(s) associados ao negócio. A função legada lê os convênios no momento em
+  // que roda; observamos a associação aqui para reavaliar quando ela muda.
+  const { results: convenioResults } = useAssociations(
+    {
+      toObjectType: envConfig.convenioObjectId,
+      properties: ["tipo_de_convenio"],
+      pageLength: 10,
+    },
+    {
+      propertiesToFormat: "all",
+    },
+  );
+
   // useAssociations tem retornado `toObjectId` em alguns resultados e `id` em outros.
   // Normalize ambos, preservando o formato de origem para o resto do card.
   const firstContactAssociation = contactResults?.[0];
@@ -188,13 +204,26 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const [isEvaluatingObjectDiscounts, setIsEvaluatingObjectDiscounts] = useState(false);
   const [objectDiscountsEvaluated, setObjectDiscountsEvaluated] = useState(false);
 
+  // Consulta de matrículas por CPF. A API é a fonte única das contagens de ex-aluno;
+  // sem consulta feita, os descontos que dependem de matrículas não são ofertados.
+  const [cpfInput, setCpfInput] = useState("");
+  const [isSavingCpf, setIsSavingCpf] = useState(false);
+  const [isSearchingEnrollments, setIsSearchingEnrollments] = useState(false);
+  const [enrollmentData, setEnrollmentData] = useState(null);
+
   const turmaAtual = manualTurmaData || associatedTurmaResult[0];
 
-  // Determina se é CEU ou Pós sem matrículas (para regra de limite de diamantes)
+  // Determina se é CEU ou Pós sem matrículas (para regra de limite de diamantes).
+  // Fonte única = contagens da API de matrículas por CPF (mesma base do motor legado);
+  // sem busca feita (counts ausente) o aluno é tratado como sem matrícula.
+  // "Com matrícula" em Pós espelha o motor: pos >= 1 OU graduação >= 1.
+  const posCount = enrollmentData?.counts?.pos ?? 0;
+  const gradCount = enrollmentData?.counts?.graduacao ?? 0;
   const isCeuOrPosSemMatricula =
     properties.nivel_de_interesse === NIVEL_INTERESSE_CEU ||
     (properties.nivel_de_interesse === "Pós-graduação" &&
-      (parseInt(properties.matriculas_formadas_posgraduacao, 10) || 0) === 0);
+      posCount < 1 &&
+      gradCount < 1);
 
   // Categoria do desconto de pagamento à vista (Ação Comercial) por nível de interesse:
   // CEU -> acao_comercial_ceu | Pós-graduação (e fallback) -> acao_comercial_pos.
@@ -346,19 +375,34 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   // Verifica os descontos legados via custom code (réplica 1:1 do workflow
   // "v0 - Processos de descontos"). Executa ao abrir o card e pode ser reexecutada
   // pelo botão "Verificar descontos".
-  const handleVerifyDiscounts = async () => {
+  const handleVerifyDiscounts = async (countsOverride) => {
     setIsEvaluatingDiscounts(true);
     try {
+      const counts =
+        countsOverride !== undefined ? countsOverride : (enrollmentData?.counts ?? null);
       const { response } = await runServerless({
         name: "evaluateLegacyDiscounts",
         parameters: {
           dealId: context.crm.objectId,
           convenioObjectId: envConfig.convenioObjectId,
+          counts,
         },
       });
 
       if (response?.status === "SUCCESS") {
         setLegacyCategories(response.response?.categories || []);
+        const diag = response.response || {};
+        if (diag.convenioReadError || diag.writeError) {
+          sendAlert({
+            type: "warning",
+            message: formatOriginError(
+              "SISTEMA",
+              `Convênios lidos: ${diag.convenioCount ?? "?"}. ${
+                diag.convenioReadError ? "Leitura: " + diag.convenioReadError + " " : ""
+              }${diag.writeError ? "Escrita: " + diag.writeError : ""}`,
+            ),
+          });
+        }
       } else {
         sendAlert({
           type: "warning",
@@ -382,10 +426,167 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     }
   };
 
+  // Persiste as categorias selecionadas no negócio (propriedade categoriacondicao).
+  const persistSelectedCategories = async (categories) => {
+    try {
+      await runServerless({
+        name: "saveDealCategories",
+        parameters: {
+          dealId: context.crm.objectId,
+          categories: categories.join(";"),
+        },
+      });
+    } catch (error) {
+      console.error("Erro ao salvar as categorias do desconto:", error);
+    }
+  };
+
+  // Chave de reavaliação: nível e modalidade (deal) + contato(s) + convênio(s) associados.
+  // Regrava os descontos legados sempre que qualquer um muda, para a categoria não ficar
+  // presa ao estado anterior (ex.: trocar convênio normal -> especial).
+  const contactAssocKey = (contactResults || [])
+    .map((r) => r.toObjectId ?? r.id)
+    .filter(Boolean)
+    .sort()
+    .join(",");
+  const convenioAssocKey = (convenioResults || [])
+    .map((r) => r.toObjectId ?? r.id)
+    .filter(Boolean)
+    .sort()
+    .join(",");
+  const legacyReevalKey = [
+    properties.nivel_de_interesse || "",
+    properties.modalidade_de_interesse || "",
+    contactAssocKey,
+    convenioAssocKey,
+  ].join("|");
+
   useEffect(() => {
     handleVerifyDiscounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [legacyReevalKey]);
+
+  // Reconcilia a seleção com o conjunto elegível: remove categorias que deixaram de ser
+  // elegíveis e limpa o categoriacondicao, para a seleção antiga não continuar liberando
+  // o desconto errado (ex.: convênio normal -> especial).
+  useEffect(() => {
+    if (legacyCategories === null) return;
+    const eligibleValues = new Set([
+      ...legacyCategories,
+      ...objectDiscountCategories.map((o) => o.value),
+    ]);
+    setSelectedCategory((prev) => {
+      const filtered = prev.filter((c) => eligibleValues.has(c));
+      if (filtered.length !== prev.length) {
+        persistSelectedCategories(filtered);
+      }
+      return filtered;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [legacyCategories, objectDiscountCategories, properties.categoriacondicao]);
+
+  // CPF do aluno: espelha a propriedade cpf; grava no clique quando alterado; a busca
+  // de matrículas usa a API IPOG e alimenta as regras de ex-aluno.
+  const cpfDigits = (value) => String(value || "").replace(/\D/g, "");
+  const savedCpfDigits = cpfDigits(properties.cpf);
+  const typedCpfDigits = cpfDigits(cpfInput);
+  const cpfChanged = typedCpfDigits !== savedCpfDigits;
+
+  useEffect(() => {
+    setCpfInput(properties.cpf || "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [properties.cpf]);
+
+  // Salva o CPF digitado (se mudou) e, em seguida, busca as matrículas e reavalia os
+  // descontos de ex-aluno. Um único clique executa as duas etapas em sequência.
+  const handleSaveAndSearch = async () => {
+    if (typedCpfDigits.length !== 11) {
+      sendAlert({ type: "warning", message: "Informe um CPF com 11 dígitos." });
+      return;
+    }
+
+    if (cpfChanged) {
+      setIsSavingCpf(true);
+      try {
+        const { response } = await runServerless({
+          name: "saveDealCpf",
+          parameters: { dealId: context.crm.objectId, cpf: cpfInput },
+        });
+        if (response?.status !== "SUCCESS") {
+          sendAlert({
+            type: "warning",
+            message: formatOriginError(
+              response?.origin,
+              response?.message || "Não foi possível salvar o CPF.",
+            ),
+          });
+          return;
+        }
+        setCpfInput(response.response?.cpf || "");
+        // CPF novo invalida as matrículas anteriores; a busca abaixo recarrega.
+        setEnrollmentData(null);
+        await actions.refreshObjectProperties();
+      } catch (error) {
+        console.error("Erro ao salvar CPF:", error);
+        sendAlert({
+          type: "danger",
+          message: formatOriginError("SISTEMA", "Erro ao salvar o CPF. Tente novamente."),
+        });
+        return;
+      } finally {
+        setIsSavingCpf(false);
+      }
+    }
+
+    await handleSearchEnrollments();
+  };
+
+  const handleSearchEnrollments = async () => {
+    if (typedCpfDigits.length !== 11) {
+      sendAlert({
+        type: "warning",
+        message: "Informe um CPF com 11 dígitos para buscar as matrículas.",
+      });
+      return;
+    }
+    setIsSearchingEnrollments(true);
+    try {
+      const { response } = await runServerless({
+        name: "countEnrollmentsByCpf",
+        parameters: { cpf: typedCpfDigits },
+      });
+      if (response?.status === "SUCCESS" || response?.status === "NOT_FOUND") {
+        const data =
+          response.response || { counts: { pos: 0, graduacao: 0, ceu: 0 }, groups: [], total: 0 };
+        setEnrollmentData(data);
+        // Contagens da API passam a alimentar as regras de ex-aluno (fonte única).
+        await handleVerifyDiscounts(data.counts);
+        sendAlert({
+          type: "success",
+          message:
+            (data.total || 0) > 0
+              ? `Matrículas encontradas: ${data.total} (Ativas/Formadas).`
+              : "Nenhuma matrícula ativa ou formada encontrada para este CPF.",
+        });
+      } else {
+        sendAlert({
+          type: "warning",
+          message: formatOriginError(
+            response?.origin,
+            response?.message || "Não foi possível consultar as matrículas.",
+          ),
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao consultar matrículas:", error);
+      sendAlert({
+        type: "danger",
+        message: formatOriginError("SISTEMA", "Erro ao consultar as matrículas. Tente novamente."),
+      });
+    } finally {
+      setIsSearchingEnrollments(false);
+    }
+  };
 
   // Motor da etapa 2: avalia as regras do objeto Descontos contra o negócio e devolve
   // as categorias elegíveis. O benefício (tipo/valor) continua vindo da MuleSoft via
@@ -1049,7 +1250,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   return (
     <Card>
       <Flex direction="column" gap="medium">
-        {/* Header Info */}
+        {/* Header Info: turma, unidade e atualização de dados no topo */}
         <Flex direction="row" justify="between" gap="medium" align="end">
           <Flex direction="column" gap="extra-small">
             <Text format={{ fontWeight: "regular" }}>Turma</Text>
@@ -1075,6 +1276,68 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               {isRefreshing ? "Atualizando..." : "🔄 Atualizar dados de turma"}
             </Button>
           </Flex>
+        </Flex>
+
+        {/* CPF do aluno e matrículas: no meio. Os descontos de ex-aluno dependem da
+            consulta de matrículas por CPF (fonte única das contagens). */}
+        <Flex direction="column" gap="small">
+          <Flex direction="row" gap="small" align="end">
+            <Input
+              label="CPF do aluno"
+              name="cpf"
+              value={cpfInput}
+              onInput={(value) => setCpfInput(value)}
+              placeholder="000.000.000-00"
+            />
+            <Button
+              onClick={handleSaveAndSearch}
+              variant="primary"
+              disabled={typedCpfDigits.length !== 11 || isSavingCpf || isSearchingEnrollments}
+            >
+              {isSavingCpf
+                ? "Salvando..."
+                : isSearchingEnrollments
+                ? "Buscando matrículas..."
+                : "Salvar e buscar matrículas"}
+            </Button>
+          </Flex>
+          <Text format={{ fontSize: "small" }}>
+            Digite o CPF para validar descontos de ex aluno.
+          </Text>
+          {enrollmentData && (
+            <>
+              <Divider />
+              <Heading>
+                {`Matrículas de ${enrollmentData.nomeAluno || "aluno"} (Ativas/Formadas)`}
+              </Heading>
+              {(enrollmentData.groups || []).length === 0 ? (
+                <Text format={{ fontSize: "small" }}>
+                  Nenhuma matrícula ativa ou formada encontrada para este CPF.
+                </Text>
+              ) : (
+                enrollmentData.groups.map((group) => (
+                  <Box
+                    key={group.key}
+                    border="thin"
+                    borderColor="default"
+                    borderRadius="medium"
+                    padding="medium"
+                  >
+                    <Flex direction="column" gap="extra-small">
+                      <Text format={{ fontWeight: "demibold" }}>
+                        {`${group.label}: ${group.total} matrícula(s)`}
+                      </Text>
+                      {group.matriculas.map((mat) => (
+                        <Text key={mat.id} format={{ fontSize: "small" }}>
+                          {`${mat.id} | ${mat.statusLabel} | ${mat.curso}`}
+                        </Text>
+                      ))}
+                    </Flex>
+                  </Box>
+                ))
+              )}
+            </>
+          )}
         </Flex>
 
         <Flex direction="row" justify="between" gap="medium">
@@ -1257,7 +1520,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               <Text format={{ fontSize: "small" }}>
                 Nenhum desconto disponível para a quantidade de indicações.
               </Text>
-            ) : isCeuOrPosSemMatricula && diamondIndications.length >= 10 && diamondTier === null ? (
+            ) : isCeuOrPosSemMatricula && diamondIndications.length >= 5 && diamondTier === null ? (
               <>
                 <Text format={{ fontSize: "small" }}>
                   Selecione o tier de desconto para visualizar as indicações.
@@ -1270,18 +1533,20 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                   >
                     50% de desconto (5 indicações)
                   </Button>
-                  <Button
-                    onClick={() => handleSelectDiamondTier(10)}
-                    variant={diamondTier === 10 ? "primary" : "secondary"}
-                    size="small"
-                  >
-                    100% de desconto (10 indicações)
-                  </Button>
+                  {diamondIndications.length >= 10 && (
+                    <Button
+                      onClick={() => handleSelectDiamondTier(10)}
+                      variant={diamondTier === 10 ? "primary" : "secondary"}
+                      size="small"
+                    >
+                      100% de desconto (10 indicações)
+                    </Button>
+                  )}
                 </Flex>
               </>
             ) : (
               <>
-                {isCeuOrPosSemMatricula && diamondIndications.length >= 10 && diamondTier !== null && (
+                {isCeuOrPosSemMatricula && diamondTier !== null && (
                   <Flex direction="row" gap="small" wrap="wrap">
                     <Button
                       onClick={() => handleSelectDiamondTier(5)}
@@ -1290,13 +1555,15 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                     >
                       50% de desconto (5 indicações)
                     </Button>
-                    <Button
-                      onClick={() => handleSelectDiamondTier(10)}
-                      variant={diamondTier === 10 ? "primary" : "secondary"}
-                      size="small"
-                    >
-                      100% de desconto (10 indicações)
-                    </Button>
+                    {diamondIndications.length >= 10 && (
+                      <Button
+                        onClick={() => handleSelectDiamondTier(10)}
+                        variant={diamondTier === 10 ? "primary" : "secondary"}
+                        size="small"
+                      >
+                        100% de desconto (10 indicações)
+                      </Button>
+                    )}
                   </Flex>
                 )}
                 <Flex direction="row" gap="small" wrap="wrap">
