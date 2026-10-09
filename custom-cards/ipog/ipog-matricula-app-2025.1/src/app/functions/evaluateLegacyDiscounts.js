@@ -98,7 +98,7 @@ function evaluateLegacyDiscounts(ctx = {}) {
       categories.push("aluno_diamante");
       trace.push("categoria: aluno_diamante (indicações CEU >= 5)");
     } else if (atLeast(grad, 1) || atLeast(pos, 1)) {
-      const categoria = equalTo(pos, 2) ? "ex_aluno_ceu" : "convenio_especial_ceu";
+      const categoria = atLeast(pos, 2) ? "ex_aluno_ceu" : "convenio_especial_ceu";
       categories.push(categoria);
       trace.push(`categoria: ${categoria} (aluno IPOG)`);
     } else {

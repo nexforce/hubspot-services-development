@@ -167,7 +167,7 @@ scenario("2026-06-03", "CEU aluno IPOG com 1 pós (à vista)", {
   matriculasFormadasPosgraduacao: 1,
 }, ["convenio_especial_ceu"]);
 
-// "2+ pós": o código reconhece ex_aluno_ceu apenas com pos == 2 exato.
+// "2+ pós": ex_aluno_ceu a partir de 2 pós (pos >= 2).
 scenario("2026-07-03", "CEU aluno IPOG com 2 pós = ex_aluno_ceu", {
   nivelDeInteresse: CEU, modalidadeDeInteresse: "Presencial",
   matriculasFormadasPosgraduacao: 2,
@@ -176,6 +176,11 @@ scenario("2026-07-03", "CEU aluno IPOG com 2 pós = ex_aluno_ceu", {
 scenario("2026-08-03", "CEU aluno IPOG com 2 pós (à vista) = ex_aluno_ceu", {
   nivelDeInteresse: CEU, modalidadeDeInteresse: "Presencial",
   matriculasFormadasPosgraduacao: 2,
+}, ["ex_aluno_ceu"]);
+
+scenario("2026-07-03b", "CEU aluno IPOG com 3 pós também = ex_aluno_ceu (pos >= 2)", {
+  nivelDeInteresse: CEU, modalidadeDeInteresse: "Presencial",
+  matriculasFormadasPosgraduacao: 3,
 }, ["ex_aluno_ceu"]);
 
 console.log(`\n${passed} cenários da planilha passaram.`);
