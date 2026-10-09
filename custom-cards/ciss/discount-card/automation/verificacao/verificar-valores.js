@@ -19,6 +19,7 @@
  */
 const Module = require("module");
 const path = require("path");
+const { pathToFileURL } = require("url");
 
 const RAIZ = path.resolve(__dirname, "../..");
 const PIPELINE = "872876959"; // Franquia - SMB, alçada 10%
@@ -30,14 +31,17 @@ const SISTEMA = "sisA";
 // ---------------------------------------------------------------------------
 
 // valor_*_calculado = valor base × quantity, resolvido pelo CRM. É o que o card
-// lê como "Valor Bruto"/"Líquido", e o que o caminho de escrita não pode desviar.
+// lê como "Valor Bruto"/"Líquido" nas categorias de valor FIXO, e o que o
+// caminho de escrita não pode desviar.
+//
+// As categorias hora×valor NÃO entram aqui: o portal não as multiplica por
+// quantity, e é por isso que o card lê e grava direto na propriedade base.
+// Modelá-las como multiplicadas foi o que escondeu o relato de outubro/2026,
+// em que um valor/h de 300 digitado voltava 150 em item com 2 acessos.
 const CALCULADAS = {
   valor_mensalidade_calculado: "valor_glt",
   valor_locacao_calculado: "valor_locacao",
   valor_licenca_calculado: "valor_licenca",
-  valor_treinamento_calculado: "valor_treinamento",
-  valor_horas_desenvolvimento_calculado: "valor_horas_desenvolvimento",
-  valor_horas_contabeis_calculado: "valor_horas_consultoria",
 };
 
 // Props de valor: as que o modo `truncar2` prende a 2 decimais, para simular um
@@ -531,8 +535,12 @@ const main = async () => {
   let M;
   let R;
   try {
-    M = await import(path.join(RAIZ, "src/app/cards/discountMath.ts"));
-    R = await import(path.join(RAIZ, "src/app/cards/discountResumo.ts"));
+    M = await import(
+      pathToFileURL(path.join(RAIZ, "src/app/cards/discountMath.ts")).href
+    );
+    R = await import(
+      pathToFileURL(path.join(RAIZ, "src/app/cards/discountResumo.ts")).href
+    );
   } catch (err) {
     console.error(
       "Não foi possível importar discountMath.ts. Precisa de node >= 22.18 " +
@@ -558,8 +566,11 @@ const main = async () => {
     conferirInvariante(`rota ${rota}`, r.previa, r.depois);
     eq(`rota ${rota}: mensalidade`, cent(r.depois.mensalidade.liquido), 140000);
     eq(`rota ${rota}: licença`, cent(r.depois.licenca.liquido), 1350000);
-    // O deal é só estas duas categorias: amount = 1400 + 13500.
-    eq(`rota ${rota}: amount do deal`, s.crm.deal.amount, "14900.00");
+    // O card não grava o amount. Quem mantém esse campo é a automação do
+    // portal, que soma o total_geral dos itens de linha, e nessa equação a
+    // parcela de hora entra sem ser multiplicada pela quantidade de emissão.
+    // Gravar Σ price × quantity aqui multiplicava essa parcela.
+    eq(`rota ${rota}: amount do deal intacto`, s.crm.deal.amount, "0");
   }
   {
     // O card manda os dois sistemas para aprovação, então a rota "auto" acima é
@@ -595,11 +606,13 @@ const main = async () => {
 
   // -------------------------------------------------------------------------
   secao("Hora×valor: desconto de valor/h, horas intactas");
-  // bruto = 500×1 + 3100×5 = 16000 em 30h -> valor/h 533,3333.
+  // bruto = 500 + 15500 = 16000 em 30h -> valor/h 533,3333. A quantity dos
+  // itens não entra na conta: categoria hora×valor não é multiplicada pelo CRM,
+  // e H-2 está com quantity 5 justamente para travar isso.
   // valor/h novo 450 -> líquido 450 × 30 = 13500.
   const HORAS = () => [
     item("H-1", 1, { valor_treinamento: "500", horas_treinamento: "10" }),
-    item("H-2", 5, { valor_treinamento: "3100", horas_treinamento: "20" }),
+    item("H-2", 5, { valor_treinamento: "15500", horas_treinamento: "20" }),
   ];
   {
     const s = await criarSessao(M, HORAS());
@@ -610,13 +623,47 @@ const main = async () => {
   }
 
   // -------------------------------------------------------------------------
+  secao("Hora×valor em item com acessos: o valor/h digitado é o que fica");
+  // Relato de operações (outubro/2026), Conciliador de Cartões e Data Center:
+  // em item com 2 acessos, digitar 300 no "Valor/h Novo" gravava 150, e o card
+  // relia 150 nas duas colunas. A escrita dividia pela quantity do item, mas a
+  // categoria hora×valor não é multiplicada pelo CRM: não há o que dividir.
+  // Repor a divisão aqui faz as quatro asserções caírem.
+  const ACESSOS = () => [
+    item("Q-1", 2, { valor_treinamento: "4400", horas_treinamento: "10" }),
+  ];
+  for (const rota of ["auto", "aprovacao"]) {
+    const s = await criarSessao(M, ACESSOS());
+    const r = await s.aplicar({ treinamentoValorUnitario: 300 }, rota);
+    conferirInvariante(`acessos (${rota})`, r.previa, r.depois);
+    eq(`acessos (${rota}): valor/h padrão continua 440`, cent(r.depois.servicos.bruto), 440000);
+    eq(`acessos (${rota}): valor/h novo continua 300`, cent(r.depois.servicos.liquido), 300000);
+    eq(
+      `acessos (${rota}): a base recebe o total digitado`,
+      s.crm.itens.get("Q-1").valor_treinamento,
+      "3000",
+    );
+    eq(
+      `acessos (${rota}): o snapshot guarda o bruto inteiro`,
+      s.crm.itens.get("Q-1").valor_treinamento_original,
+      "4400",
+    );
+    eq(
+      `acessos (${rota}): horas intactas`,
+      s.crm.itens.get("Q-1").horas_treinamento,
+      "10",
+    );
+  }
+
+  // -------------------------------------------------------------------------
   secao("Hora×valor: consolidação de horas no acumulador (quantity 7)");
-  // O acumulador é o primeiro item da categoria e tem quantity 7, então o alvo
-  // é dividido por 7 na escala BASE: 10800 ÷ 7 = 1542,857143.
+  // O acumulador é o primeiro item da categoria. A quantity 7 dele não entra na
+  // conta: o alvo inteiro, 10800, vai para a propriedade base. Antes de
+  // outubro/2026 ele era dividido por 7 e virava 1542,857143.
   {
     const s = await criarSessao(M, [
       item("A-1", 7, { valor_treinamento: "500", horas_treinamento: "10" }),
-      item("A-2", 5, { valor_treinamento: "3100", horas_treinamento: "20" }),
+      item("A-2", 5, { valor_treinamento: "15500", horas_treinamento: "20" }),
     ]);
     const r = await s.aplicar(
       { treinamentoValorUnitario: 450, treinamentoHoras: 24 },
@@ -626,7 +673,7 @@ const main = async () => {
     eq("consolidação: serviços", cent(r.depois.servicos.liquido), 1080000);
     eq("consolidação: acumulador concentra as horas", s.crm.itens.get("A-1").horas_treinamento, "24");
     eq("consolidação: o outro item zera", s.crm.itens.get("A-2").valor_treinamento, "0");
-    eq("consolidação: base do acumulador", s.crm.itens.get("A-1").valor_treinamento, "1542.857143");
+    eq("consolidação: base do acumulador", s.crm.itens.get("A-1").valor_treinamento, "10800");
   }
 
   // -------------------------------------------------------------------------
@@ -772,9 +819,9 @@ const main = async () => {
   // a prop existe e a resposta a omite quando vazia, ou a prop não existe.
   const CONSULTORIA = () => [
     item("C-1", 1, { valor_horas_consultoria: "500", horas_consultoria: "10" }),
-    item("C-2", 5, { valor_horas_consultoria: "3100", horas_consultoria: "20" }),
+    item("C-2", 5, { valor_horas_consultoria: "15500", horas_consultoria: "20" }),
   ];
-  // Bruto = 500×1 + 3100×5 = 16000 em 30h (valor/h 533,33). A 450/h: 13500,
+  // Bruto = 500 + 15500 = 16000 em 30h (valor/h 533,33). A 450/h: 13500,
   // 15,625% de desconto.
   const EDICAO_CONSULTORIA = { consultoriaValorUnitario: 450 };
 
