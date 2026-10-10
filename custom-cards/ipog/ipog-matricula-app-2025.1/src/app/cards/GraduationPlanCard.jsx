@@ -14,9 +14,26 @@ import {
   Divider,
   Heading,
   Alert,
+  Icon,
+  Image,
 } from "@hubspot/ui-extensions";
 import { hubspot } from "@hubspot/ui-extensions";
 import { useCrmProperties, useAssociations } from "@hubspot/ui-extensions/crm";
+import ipogLogo from "./assets/ipog-logo.png";
+
+// Cabeçalho de marca do card: logo do IPOG + título e subtítulo. Fonte única do
+// título/subtítulo, para os cards não divergirem no texto.
+const BRAND_SUBTITLE = "IPOG Instituto de Pós-Graduação & Graduação";
+
+const BrandHeader = ({ title }) => (
+  <Flex direction="row" gap="medium" align="center">
+    <Image src={ipogLogo} alt="IPOG" height={48} />
+    <Flex direction="column" gap="extra-small">
+      <Heading>{title}</Heading>
+      <Text variant="microcopy">{BRAND_SUBTITLE}</Text>
+    </Flex>
+  </Flex>
+);
 
 hubspot.extend(({ context, runServerlessFunction, actions }) => (
   <Extension
@@ -422,6 +439,8 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   return (
     <Card>
       <Flex direction="column" gap="medium">
+        <BrandHeader title="Gerar plano financeiro | Graduação" />
+
         {/* Header Info */}
         <Flex direction="row" justify="between" gap="medium" align="end">
           <Flex direction="column" gap="extra-small">
@@ -438,7 +457,8 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               size="small"
               disabled={isRefreshing}
             >
-              {isRefreshing ? "Atualizando..." : "🔄 Atualizar dados de turma"}
+              <Icon name="refresh" />
+              {isRefreshing ? "Atualizando..." : "Atualizar dados de turma"}
             </Button>
           </Flex>
         </Flex>

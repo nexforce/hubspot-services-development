@@ -12,6 +12,9 @@ import {
   Accordion,
   Select,
   hubspot,
+  Heading,
+  Icon,
+  Image,
   Link,
   LoadingButton,
   Modal,
@@ -25,6 +28,21 @@ import {
   TableCell,
 } from "@hubspot/ui-extensions";
 import { useCrmProperties } from "@hubspot/ui-extensions/crm";
+import ipogLogo from "./assets/ipog-logo.png";
+
+// Cabeçalho de marca do card: logo do IPOG + título e subtítulo. Fonte única do
+// título/subtítulo, para os três cards não divergirem no texto.
+const BRAND_SUBTITLE = "IPOG Instituto de Pós-Graduação & Graduação";
+
+const BrandHeader = ({ title }) => (
+  <Flex direction="row" gap="medium" align="center">
+    <Image src={ipogLogo} alt="IPOG" height={48} />
+    <Flex direction="column" gap="extra-small">
+      <Heading>{title}</Heading>
+      <Text variant="microcopy">{BRAND_SUBTITLE}</Text>
+    </Flex>
+  </Flex>
+);
 
 // Contagens de dígitos exigidas pelos campos mascarados. O gate, a microcopy e a
 // mensagem inline do telefone são montados a partir delas, para que a regra e o
@@ -572,6 +590,11 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
 
   const [studentStartModule, setStudentStartModule] = useState("");
   const [studentStartDate, setStudentStartDate] = useState(null);
+
+  // Loading dos botões de copiar (ID da matrícula e link de checkout). Cada um
+  // tem o seu, para o spinner de um não aparecer no outro.
+  const [loadingCopyEnrollmentId, setLoadingCopyEnrollmentId] = useState(false);
+  const [loadingCopyCheckoutLink, setLoadingCopyCheckoutLink] = useState(false);
 
   const today = new Date();
   const minDay = String(today.getDate()).padStart(2, "0");
@@ -1299,6 +1322,48 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   // o onChange continua ligado ao mesmo handler: ele é o caminho do submit e
   // reaplica a máscara sobre o valor confirmado. As duas chamadas são seguras
   // porque formatCpf e formatPhoneNumber são idempotentes.
+
+  // Cópia via ação nativa do SDK (actions.copyTextToClipboard), não
+  // navigator.clipboard: a ação é gerenciada pelo HubSpot e não depende de
+  // permissão de clipboard do iframe. O LoadingButton só dá o feedback visual.
+  const handleCopyEnrollmentId = async () => {
+    setLoadingCopyEnrollmentId(true);
+    try {
+      await actions.copyTextToClipboard(String(enrollmentId));
+      setAlertMessage({
+        type: "success",
+        message: "ID da matrícula copiado para a área de transferência.",
+      });
+    } catch (error) {
+      console.error("Erro ao copiar o ID da matrícula:", error);
+      setAlertMessage({
+        type: "danger",
+        message: "Não foi possível copiar o ID da matrícula.",
+      });
+    } finally {
+      setLoadingCopyEnrollmentId(false);
+    }
+  };
+
+  const handleCopyCheckoutLink = async () => {
+    setLoadingCopyCheckoutLink(true);
+    try {
+      await actions.copyTextToClipboard(String(link));
+      setAlertMessage({
+        type: "success",
+        message: "Link de checkout copiado para a área de transferência.",
+      });
+    } catch (error) {
+      console.error("Erro ao copiar o link de checkout:", error);
+      setAlertMessage({
+        type: "danger",
+        message: "Não foi possível copiar o link de checkout.",
+      });
+    } finally {
+      setLoadingCopyCheckoutLink(false);
+    }
+  };
+
   const handleCpfInput = (value) => setCpf(formatCpf(value));
 
   const handlePhoneNumberInput = (value) =>
@@ -1331,9 +1396,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
 
   return (
     <Flex direction="column" gap="medium">
-      <Text format={{ fontWeight: "bold" }} variant="microcopy">
-        Cartão de Checkout - Gestão de Matrículas
-      </Text>
+      <BrandHeader title="Cadastrar alunos e gerar matrículas" />
 
       {alertMessage && (
         <Alert title={alertMessage.message} variant={alertMessage.type}>
@@ -1341,7 +1404,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
         </Alert>
       )}
 
-      <Accordion title="Seção A: Cadastro de Aluno" defaultOpen={true}>
+      <Accordion title="Cadastro de aluno" defaultOpen={true}>
         <Flex direction="column" gap="small">
           <Input
             label={SECTION_A_LABELS.fullName}
@@ -1541,7 +1604,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
 
       <Divider size="medium" />
 
-      <Accordion title="Seção B: Geração de Matrícula" defaultOpen={true}>
+      <Accordion title="Geração de matrícula" defaultOpen={true}>
         <Flex direction="column" gap="small">
           {enrollmentId && (
             <Box
@@ -1551,10 +1614,13 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
               borderRadius="medium"
               padding="medium"
             >
-              <Flex direction="column" gap="small" align="center">
-                <Text format={{ fontWeight: "bold", fontSize: "large" }}>
-                  Aluno matriculado!
-                </Text>
+              <Flex direction="column" gap="small" align="center" justify="center">
+                <Flex direction="row" gap="extra-small" align="center" justify="center">
+                  <Icon name="success" color="success" />
+                  <Text format={{ fontWeight: "bold", fontSize: "large" }}>
+                    Aluno matriculado!
+                  </Text>
+                </Flex>
                 <Flex direction="row" gap="extra-small" align="center">
                   <Text format={{ fontWeight: "regular" }}>
                     ID da Matrícula:
@@ -1568,6 +1634,18 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
                   >
                     {enrollmentId}
                   </Text>
+                  <LoadingButton
+                    type="button"
+                    variant="transparent"
+                    size="small"
+                    loading={loadingCopyEnrollmentId}
+                    onClick={handleCopyEnrollmentId}
+                  >
+                    <Icon
+                      name="copy"
+                      screenReaderText="Copiar ID da matrícula"
+                    />
+                  </LoadingButton>
                 </Flex>
 
                 {link && (
@@ -1584,6 +1662,18 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
                       >
                         {link}
                       </Link>
+                      <LoadingButton
+                        type="button"
+                        variant="transparent"
+                        size="small"
+                        loading={loadingCopyCheckoutLink}
+                        onClick={handleCopyCheckoutLink}
+                      >
+                        <Icon
+                          name="copy"
+                          screenReaderText="Copiar link de checkout"
+                        />
+                      </LoadingButton>
                     </Flex>
                   </>
                 )}
