@@ -16,7 +16,7 @@ Roda o código real de produção na ordem em que o usuário final o exercita, n
 ## Por que existe
 
 O CRM falso do `../desconto-decisao/verificar.js` não modela propriedade calculada, e é uma lacuna que ele declara no próprio cabeçalho.
-Era exatamente ali que o bug de centavos morava: o desconto era gravado como razão sobre o valor base de cada item, arredondado a 2 decimais, e o CRM recompunha `valor_*_calculado = base × quantity`, multiplicando o erro de meio centavo de cada item pela `quantity` dele.
+Era exatamente ali que o bug de centavos morava: o desconto era gravado como razão sobre o valor base de cada item, arredondado a 2 decimais, e o CRM recompunha `valor_*_calculado = base × quantity` nas categorias de valor fixo, multiplicando o erro de meio centavo de cada item pela `quantity` dele.
 R$ 1.400,00 digitado voltava R$ 1.399,99 no totalizador; R$ 13.500,00 voltava R$ 13.500,03.
 Reportado por operações em agosto de 2026.
 O CRM falso daqui resolve as calculadas, então o desvio aparece em vez de passar.

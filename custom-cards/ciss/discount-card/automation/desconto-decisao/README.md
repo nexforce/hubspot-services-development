@@ -110,7 +110,7 @@ Ele vem vazio quando o aprovador reprova sem escrever nada, o que é permitido.
 
 | status | Quando | Ramo do workflow |
 |---|---|---|
-| `aprovado` | Desconto aplicado nos line items | **Ramificar por pipeline e mover o estágio para "aprovação aprovada"**, coluna própria na tabela: não é o estágio de proposta do ramo `reprovado`. Opcional: notificar o proprietário do negócio com `aprovador` e `novo_amount` |
+| `aprovado` | Desconto aplicado nos line items | **Ramificar por pipeline e mover o estágio para "aprovação aprovada"**, coluna própria na tabela: não é o estágio de proposta do ramo `reprovado`. Opcional: notificar o proprietário do negócio com `aprovador` |
 | `reprovado` | Reprovação registrada no histórico, com ou sem motivo | Ramificar por pipeline e mover o estágio de volta para proposta. Depois, notificar com o campo de saída `motivo` |
 | `ignorado` | Não havia nada em `pending_discounts`. Limpa `proposta_aprovada` e `observacoes` para rearmar o gatilho, e não toca em line item, histórico ou pendente | Nada. Termine o ramo |
 | `erro` | Autor não identificado, autor sem owner no portal, autor não é aprovador do pipeline, decisão divergente da propriedade, valor de decisão fora do par esperado, ou falha de API | **Criar tarefa para operações** com o campo de saída `erro` |
@@ -263,8 +263,8 @@ Um acima da alçada passa por aqui. Os dois têm que gravar o mesmo valor: mudou
 Line item que saiu do negócio entre o envio e a decisão é descartado com aviso no log.
 Não é zelo: um id que não existe mais devolve 400 no `batch/update` e derruba a chamada inteira, levando junto o desconto de todos os sistemas.
 
-O ramo **não** grava `price` e **não** recalcula o `amount` a partir dos equipamentos, porque o card de equipamentos nunca gravou nenhum dos dois: o `amount` é mantido por automação externa ao card.
-O PATCH do passo 7 continua escrevendo `amount` num negócio aprovado, calculado como `Σ price × quantity` com o `price` armazenado dos equipamentos.
+O ramo **não** grava `price` e **não** recalcula o `amount` a partir dos equipamentos, porque o card de equipamentos nunca gravou nenhum dos dois: o `amount` é mantido por automação do portal, que soma o `total_geral` dos itens de linha.
+Desde outubro/2026 o PATCH do passo 7 também não escreve `amount`, nem para equipamentos nem para sistemas: a conta `Σ price × quantity` multiplicava a parcela de Horas Técnicas pela quantidade de emissão, que é o que a regra de negócio proíbe.
 Quem escrever por último entre esse PATCH e a automação externa vence. Vale conferir isso no portal.
 
 O `sistemas_processados` do `outputFields` conta **entradas**, sistemas e equipamentos juntos, não só sistemas.
@@ -298,9 +298,9 @@ A reaplicação, se ela acontecer por retry ou reinscrição, é idempotente por
 3. Resolve o autor para email e confere que é aprovador do pipeline.
 4. Guarda de idempotência: pendente vazio sai como `ignorado`.
 5. Se aprovado, aplica todos os sistemas em um único `batch/update`.
-6. PATCH único com `pending_discounts`, `discounts_history`, `amount`, e a limpeza de `resumo_descontos_aplicados`, `proposta_aprovada` e `observacoes`.
+6. PATCH único com `pending_discounts`, `discounts_history`, e a limpeza de `resumo_descontos_aplicados`, `proposta_aprovada` e `observacoes`. O `amount` não entra: quem o mantém é a automação do portal.
 
-O PATCH é único de propósito: com dois, existe uma janela em que o `amount` já está descontado e `pending_discounts` ainda está cheio.
+O PATCH é único de propósito: com dois, existe uma janela em que o histórico já registra a decisão e `pending_discounts` ainda está cheio.
 
 Limpar `proposta_aprovada` e `observacoes` é o que permite um segundo ciclo de desconto no mesmo deal.
 Sem isso o deal fica marcado como aprovado para sempre e o gatilho nunca dispara de novo.
@@ -312,9 +312,9 @@ node automation/desconto-decisao/verificar.js
 ```
 
 Sem dependências, sem `npm install`, sem portal: o `axios` do código sob teste é substituído por um CRM falso.
-120 asserções cobrindo o que quebra em silêncio: dois sistemas com horas editadas concentrando no próprio item, desconto sobre o snapshot imutável num segundo ciclo, item Locação(C) descontando `valor_locacao` e não `valor_glt`, `amount` como soma de `price × quantity`, escala de percentual, prepend do histórico, reprovação com e sem motivo, e os oito caminhos que não escrevem no CRM, sete de erro mais a idempotência.
+120 asserções cobrindo o que quebra em silêncio: dois sistemas com horas editadas concentrando no próprio item, desconto sobre o snapshot imutável num segundo ciclo, item Locação(C) descontando `valor_locacao` e não `valor_glt`, `amount` que o card não toca, escala de percentual, prepend do histórico, reprovação com e sem motivo, e os oito caminhos que não escrevem no CRM, sete de erro mais a idempotência.
 
-O script foi validado por mutação: onze alterações deliberadas no `customCode.js` (acumulador fora do laço, desconto sobre o líquido, snapshot reescrito, classificação C ignorada, `amount` sem `quantity`, histórico sem ignorar entradas vazias, percentual como fração, `throw` no `catch`, autorização removida, idempotência removida, reprovação aplicando desconto) e as onze foram detectadas.
+O script foi validado por mutação: onze alterações deliberadas no `customCode.js` (acumulador fora do laço, desconto sobre o líquido, snapshot reescrito, classificação C ignorada, histórico sem ignorar entradas vazias, percentual como fração, `throw` no `catch`, autorização removida, idempotência removida, reprovação aplicando desconto) e as onze foram detectadas.
 As asserções de equipamento foram validadas do mesmo jeito, em sete mutações, todas detectadas: ramo de equipamento removido (13 asserções caem), laço iterando a entrada em vez de `entry.itens` (18), só o primeiro item do conjunto aplicado (4), guarda de id fora do negócio removida (2), total gravado sem multiplicar pela quantidade (2), e snapshot sobrescrito com o líquido (1).
 
 Rode antes de colar o código na ação, e de novo depois de qualquer alteração.
@@ -324,7 +324,7 @@ O CRM falso não valida nomes de propriedade e não conhece o comportamento real
 O que ele prova é a lógica de laço e de decisão.
 
 Ele também **não** resolve propriedade calculada, e era nessa lacuna que morava o bug de centavos de agosto de 2026.
-Os valores gravados são verificados em `automation/verificacao/verificar-valores.js`, que modela `valor_*_calculado = base × quantity` e roda as duas rotas de escrita comparando uma com a outra.
+Os valores gravados são verificados em `automation/verificacao/verificar-valores.js`, que modela `valor_*_calculado = base × quantity` nas categorias de valor fixo (as de hora×valor o portal não multiplica, e o card lê a base direto) e roda as duas rotas de escrita comparando uma com a outra.
 Rode os dois scripts.
 
 ## Cuidado ao mexer no código
