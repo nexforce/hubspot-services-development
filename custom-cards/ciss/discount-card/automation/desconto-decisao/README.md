@@ -329,7 +329,7 @@ Rode os dois scripts.
 
 ## Cuidado ao mexer no código
 
-O alvo digitado é distribuído em centavos entre os line items por `buildAllocation`, e esse bloco é **byte-idêntico** ao de `src/app/functions/ApplyDiscounts.js`, com a constante `DECIMAIS_VALOR = 6`.
+O alvo digitado é distribuído em centavos entre os line items por `buildAllocation`, e esse bloco é **byte-idêntico** ao de `src/app/functions/ApplyDiscounts.js`, com a constante `DECIMAIS_VALOR = 6` somada a uma casa por dígito da `quantity` do item (`decimaisPara`).
 Não é enfeite: gravar o valor base com 2 decimais devolve o desvio de centavos que operações reportou, porque o CRM remultiplica a base pela `quantity`.
 A consolidação de horas (todas as horas da categoria num item acumulador, os demais zerados) mora dentro dessa mesma função, e o acumulador é resolvido **por sistema**, porque `buildAllocation` recebe só os itens de um sistema por chamada.
 Compartilhar a alocação entre sistemas faz o segundo sistema concentrar as horas no line item do primeiro.
