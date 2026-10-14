@@ -536,10 +536,10 @@ const main = async () => {
   let R;
   try {
     M = await import(
-      pathToFileURL(path.join(RAIZ, "src/app/cards/discountMath.ts")).href
+      pathToFileURL(path.join(RAIZ, "src/app/cards/discountMath.ts")).href,
     );
     R = await import(
-      pathToFileURL(path.join(RAIZ, "src/app/cards/discountResumo.ts")).href
+      pathToFileURL(path.join(RAIZ, "src/app/cards/discountResumo.ts")).href,
     );
   } catch (err) {
     console.error(
@@ -582,14 +582,14 @@ const main = async () => {
 
   // -------------------------------------------------------------------------
   secao("Item único com quantity 3: alvo inalcançável com a base em 2 decimais");
-  // 1400 ÷ 3 = 466,666667. Com a base presa a 2 decimais os valores possíveis
+  // 1400 ÷ 3 = 466,6666667. Com a base presa a 2 decimais os valores possíveis
   // andam de 3 em 3 centavos (1399,98 ou 1400,01), nunca 1400,00.
   {
     const s = await criarSessao(M, [item("U-1", 3, { valor_glt: "600" })]);
     const r = await s.aplicar({ glt: 1400 }, "aprovacao");
     conferirInvariante("quantity 3", r.previa, r.depois);
     eq("quantity 3: mensalidade", cent(r.depois.mensalidade.liquido), 140000);
-    eq("quantity 3: base gravada", s.crm.itens.get("U-1").valor_glt, "466.666667");
+    eq("quantity 3: base gravada", s.crm.itens.get("U-1").valor_glt, "466.6666667");
   }
 
   // -------------------------------------------------------------------------
@@ -657,9 +657,8 @@ const main = async () => {
 
   // -------------------------------------------------------------------------
   secao("Hora×valor: consolidação de horas no acumulador (quantity 7)");
-  // O acumulador é o primeiro item da categoria. A quantity 7 dele não entra na
-  // conta: o alvo inteiro, 10800, vai para a propriedade base. Antes de
-  // outubro/2026 ele era dividido por 7 e virava 1542,857143.
+  // O acumulador é o primeiro item da categoria e tem quantity 7, então o alvo
+  // é dividido por 7 na escala BASE: 10800 ÷ 7 = 1542,8571429.
   {
     const s = await criarSessao(M, [
       item("A-1", 7, { valor_treinamento: "500", horas_treinamento: "10" }),
@@ -673,7 +672,7 @@ const main = async () => {
     eq("consolidação: serviços", cent(r.depois.servicos.liquido), 1080000);
     eq("consolidação: acumulador concentra as horas", s.crm.itens.get("A-1").horas_treinamento, "24");
     eq("consolidação: o outro item zera", s.crm.itens.get("A-2").valor_treinamento, "0");
-    eq("consolidação: base do acumulador", s.crm.itens.get("A-1").valor_treinamento, "10800");
+    eq("consolidação: base do acumulador", s.crm.itens.get("A-1").valor_treinamento, "1542.8571429");
   }
 
   // -------------------------------------------------------------------------
@@ -700,7 +699,7 @@ const main = async () => {
     const r = await s.aplicar({ glt: 1400 }, "aprovacao");
     const p = s.crm.itens.get("C-1");
     conferirInvariante("locação C", r.previa, r.depois);
-    eq("locação C: alvo cai em valor_locacao", p.valor_locacao, "466.666667");
+    eq("locação C: alvo cai em valor_locacao", p.valor_locacao, "466.6666667");
     eq("locação C: valor_glt intocado", p.valor_glt, "100");
     eq("locação C: satélite da família locacao", p.locacao_descontado, "22.2222");
     eq("locação C: snapshot da família locacao", p.valor_locacao_original, "600");
@@ -1176,6 +1175,61 @@ const main = async () => {
     const texto = s.crm.deal.resumo_descontos_aplicados;
     contem("resumo legado: bloco preservado", texto, "Balança Toledo");
     naoContem("resumo legado: marcador de fim removido", texto, "=== FIM EQUIPAMENTOS ===");
+  }
+
+  // -------------------------------------------------------------------------
+  secao("Quantity alta: valor digitado sem desvio abaixo do centavo");
+  // Relato de outubro/2026: com quantity na casa dos milhares, o valor gravado
+  // desviava R$ 0,002 para cima ou para baixo do digitado.
+  // `cent()` arredonda e esconderia esse desvio, então aqui a comparação é com
+  // o valor calculado cru, tolerância de 1e-6.
+  {
+    const calc = (s) =>
+      [...s.crm.itens.entries()].reduce((acc, [id]) => {
+        const g = s.crm.itens.get(id);
+        const base = g.classificacao_do_contrato === "C" ? g.valor_locacao : g.valor_glt;
+        return acc + parseFloat(base || 0) * (parseFloat(g.quantity) || 1);
+      }, 0);
+    const CENARIOS = [
+      ["1 item, quantity 1", () => [item("M-1", 1, { valor_glt: "4800" })]],
+      ["1 item, quantity 3", () => [item("M-1", 3, { valor_glt: "1600" })]],
+      ["1 item, quantity 7", () => [item("M-1", 7, { valor_glt: "685.71" })]],
+      [
+        "3 itens, quantities 1/3/12",
+        () => [
+          item("M-1", 1, { valor_glt: "1234.56" }),
+          item("M-2", 3, { valor_glt: "511.11" }),
+          item("M-3", 12, { valor_glt: "199.99" }),
+        ],
+      ],
+      [
+        // Com 6 casas fixas, o alvo do item de quantity 8000 (R$ 1.395,35)
+        // virava base 0.174419, e 0.174419 × 8000 = 1395,352.
+        "quantities 1 e 8000",
+        () => [
+          item("M-1", 1, { valor_glt: "120" }),
+          item("M-2", 8000, { valor_glt: "0.2" }),
+        ],
+      ],
+      [
+        "item Locação (C), quantity 3",
+        () => [
+          item("M-1", 3, { valor_locacao: "1600", classificacao_do_contrato: "C" }),
+        ],
+      ],
+    ];
+    for (const [nome, itens] of CENARIOS) {
+      for (const rota of ["aprovacao", "auto"]) {
+        const s = await criarSessao(M, itens());
+        const r = await s.aplicar({ glt: 1500 }, rota);
+        eq(
+          `${nome}, rota ${rota}: calculado exato`,
+          Math.abs(calc(s) - 1500) < 1e-6,
+          true,
+        );
+        eq(`${nome}, rota ${rota}: card reaberto`, cent(r.depois.mensalidade.liquido), 150000);
+      }
+    }
   }
 
   console.log(

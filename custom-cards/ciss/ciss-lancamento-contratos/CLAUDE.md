@@ -52,7 +52,7 @@ The staging table's "Sistemas" column shows the `sistema` property of each queue
 
 ### createContract pipeline
 
-1. **Expand to SKUs.** Each lançamento becomes a list of SKUs: from `modelsMap[modelo_de_vendas]` (a large hardcoded model → SKU-list table) for model launches, or by splitting `item_modulo` on `;` for manual ones.
+1. **Expand to SKUs.** Each lançamento becomes a list of SKUs: from `modelsMap[modelo_de_vendas]` (a large hardcoded model → SKU-list table, keyed by the model **ID** ("ID Modelo Proposta" in CISS's model export), which is the internal value of the `deals.modelo_de_vendas` options; the model name sits in a comment above each key) for model launches, or by splitting `item_modulo` on `;` for manual ones.
 2. **Fetch products** by `hs_sku` via the products search API, chunked in batches of 100.
 3. **Build a line item per (lançamento, SKU)** with `buildLineItem`, driven by two lookup tables:
    - `rule`: product `tipo_emissao` (`T`/`F`/`L`/`R`/`N`) → which deal quantity field supplies the **multiplier** (`quantos_televendas`, `quantos_pdvs`, `quantos_cnpjs`, `quantas_retaguardas`; `N` = no multiplier).

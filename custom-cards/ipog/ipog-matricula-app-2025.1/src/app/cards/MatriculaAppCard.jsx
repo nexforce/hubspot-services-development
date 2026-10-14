@@ -17,9 +17,26 @@ import {
   Heading,
   Alert,
   Input,
+  Icon,
+  Image,
 } from "@hubspot/ui-extensions";
 import { hubspot } from "@hubspot/ui-extensions";
 import { useCrmProperties, useAssociations } from "@hubspot/ui-extensions/crm";
+import ipogLogo from "./assets/ipog-logo.png";
+
+// Cabeçalho de marca do card: logo do IPOG + título e subtítulo. Fonte única do
+// título/subtítulo, para os cards não divergirem no texto.
+const BRAND_SUBTITLE = "IPOG Instituto de Pós-Graduação & Graduação";
+
+const BrandHeader = ({ title }) => (
+  <Flex direction="row" gap="medium" align="center">
+    <Image src={ipogLogo} alt="IPOG" height={48} />
+    <Flex direction="column" gap="extra-small">
+      <Heading>{title}</Heading>
+      <Text variant="microcopy">{BRAND_SUBTITLE}</Text>
+    </Flex>
+  </Flex>
+);
 
 hubspot.extend(({ context, runServerlessFunction, actions }) => (
   <Extension
@@ -463,7 +480,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
   useEffect(() => {
     handleVerifyDiscounts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [legacyReevalKey]);
 
   // Reconcilia a seleção com o conjunto elegível: remove categorias que deixaram de ser
@@ -482,7 +498,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       }
       return filtered;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [legacyCategories, objectDiscountCategories, properties.categoriacondicao]);
 
   // CPF do aluno: espelha a propriedade cpf; grava no clique quando alterado; a busca
@@ -494,7 +509,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
   useEffect(() => {
     setCpfInput(properties.cpf || "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [properties.cpf]);
 
   // Salva o CPF digitado (se mudou) e, em seguida, busca as matrículas e reavalia os
@@ -1250,6 +1264,8 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   return (
     <Card>
       <Flex direction="column" gap="medium">
+        <BrandHeader title="Gerar plano financeiro" />
+
         {/* Header Info: turma, unidade e atualização de dados no topo */}
         <Flex direction="row" justify="between" gap="medium" align="end">
           <Flex direction="column" gap="extra-small">
@@ -1273,7 +1289,8 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               size="small"
               disabled={isRefreshing}
             >
-              {isRefreshing ? "Atualizando..." : "🔄 Atualizar dados de turma"}
+              <Icon name="refresh" />
+              {isRefreshing ? "Atualizando..." : "Atualizar dados de turma"}
             </Button>
           </Flex>
         </Flex>

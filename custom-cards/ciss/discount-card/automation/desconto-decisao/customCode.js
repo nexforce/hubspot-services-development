@@ -149,7 +149,16 @@ const RATE_HOURS_FIELDS = [
 // unitária e o CRM remultiplica por quantity na propriedade calculada.
 const DECIMAIS_VALOR = 6;
 
-const fmtValor = (n) => String(parseFloat(n.toFixed(DECIMAIS_VALOR)));
+// A base gravada é `alvo ÷ quantity`, e o CRM a remultiplica por `quantity`
+// em `valor_*_calculado`: o erro de arredondamento da base sai multiplicado
+// por `quantity`. Com casas fixas, uma `quantity` na casa dos milhares fazia o
+// líquido desviar R$ 0,002 do digitado (relato de outubro/2026). Somar os dígitos de `quantity` às
+// casas mantém o erro do calculado abaixo de 5e-7 qualquer que seja ela.
+const decimaisPara = (qty) =>
+  Math.min(DECIMAIS_VALOR + Math.max(0, Math.ceil(Math.log10(qty))), 20);
+
+const fmtValor = (n, qty = 1) =>
+  String(parseFloat(n.toFixed(decimaisPara(qty))));
 const emCentavos = (n) => Math.round(n * 100);
 
 // Maior resto leva os centavos sobrantes, então a soma do retorno é exatamente
@@ -617,6 +626,8 @@ const applyAllPendingSystems = async (dealId, pending, hubspotClient) => {
       const properties = {};
       let totalDiscountedValue = 0;
       let hasDiscount = false;
+      // Casas da base: ver `decimaisPara`.
+      const qty = parseFloat(item.properties.quantity) || 1;
 
       for (const {
         fieldName,
@@ -640,7 +651,7 @@ const applyAllPendingSystems = async (dealId, pending, hubspotClient) => {
         const { liquidoBase, brutoBase, temSnapshot } = plano;
         const discountAmount = brutoBase - liquidoBase;
 
-        properties[originalValueProp] = fmtValor(liquidoBase);
+        properties[originalValueProp] = fmtValor(liquidoBase, qty);
 
         // Desconto negativo = "over": grava o preço, não registra desconto.
         if (discountAmount > 0) {
@@ -649,10 +660,10 @@ const applyAllPendingSystems = async (dealId, pending, hubspotClient) => {
           properties[discountPercentProp] = parseFloat(
             ((discountAmount / brutoBase) * 100).toFixed(4),
           );
-          properties[discountAmountProp] = fmtValor(discountAmount);
+          properties[discountAmountProp] = fmtValor(discountAmount, qty);
         }
         if (!temSnapshot) {
-          properties[originalSnapshotProp] = fmtValor(brutoBase);
+          properties[originalSnapshotProp] = fmtValor(brutoBase, qty);
         }
 
         totalDiscountedValue += liquidoBase;
@@ -664,9 +675,9 @@ const applyAllPendingSystems = async (dealId, pending, hubspotClient) => {
         if (!plano) continue;
 
         properties[rateField.hoursProp] = fmtValor(plano.horas);
-        properties[rateField.valueProp] = fmtValor(plano.valorBase);
+        properties[rateField.valueProp] = fmtValor(plano.valorBase, qty);
         if (plano.snapshotBase !== null) {
-          properties[rateField.snapshotProp] = fmtValor(plano.snapshotBase);
+          properties[rateField.snapshotProp] = fmtValor(plano.snapshotBase, qty);
         }
 
         totalDiscountedValue += plano.valorBase;
@@ -674,7 +685,7 @@ const applyAllPendingSystems = async (dealId, pending, hubspotClient) => {
       }
 
       if (hasDiscount) {
-        properties["price"] = fmtValor(totalDiscountedValue);
+        properties["price"] = fmtValor(totalDiscountedValue, qty);
         updates.push({ id: item.id, properties });
       }
     }
