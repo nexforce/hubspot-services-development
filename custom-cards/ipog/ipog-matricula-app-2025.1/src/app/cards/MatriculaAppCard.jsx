@@ -81,6 +81,45 @@ const isPagamentoAVista = (tipoPagamento) =>
 // (PIX, A_VISTA, PARCELADO, RECORRENTE, BOLETO), então o valor do card é enviado
 // ao motor sem tradução.
 
+// Avalia uma quantidade de parcelas contra o critério de um desconto.
+// Retorna true quando não há critério (não restringe) ou quando atende.
+const installmentsMatchCriteria = (qtdeParcelas, criterio) => {
+  if (!criterio || !criterio.operador) return true;
+  const actual = Number(qtdeParcelas);
+  if (Number.isNaN(actual)) return false;
+  const expected = criterio.valor === null || criterio.valor === undefined ? null : Number(criterio.valor);
+  const expected2 = criterio.valor2 === null || criterio.valor2 === undefined ? null : Number(criterio.valor2);
+  switch (criterio.operador) {
+    case "igual_a":
+      return expected !== null && actual === expected;
+    case "diferente_de":
+      return expected !== null && actual !== expected;
+    case "menor_que":
+      return expected !== null && actual < expected;
+    case "menor_ou_igual":
+      return expected !== null && actual <= expected;
+    case "maior_que":
+      return expected !== null && actual > expected;
+    case "maior_ou_igual":
+      return expected !== null && actual >= expected;
+    case "entre":
+      return expected !== null && expected2 !== null && actual >= expected && actual <= expected2;
+    default:
+      return false;
+  }
+};
+
+// Um plano é compatível quando atende ao critério de parcelas de TODOS os descontos
+// selecionados que têm critério (interseção). Devolve a lista de descontos que o
+// plano NÃO atende, para montar o motivo do bloqueio.
+const planIncompatibleDiscounts = (qtdeParcelas, selectedCategories, objectDiscountCategories) => {
+  const selected = new Set(selectedCategories || []);
+  return (objectDiscountCategories || [])
+    .filter((item) => selected.has(item.value) && item.condicaoParcelas)
+    .filter((item) => !installmentsMatchCriteria(qtdeParcelas, item.condicaoParcelas))
+    .map((item) => item.label || item.value);
+};
+
 const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const { properties } = useCrmProperties([
     "dealname",
@@ -601,8 +640,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   // fetchDiscount com o categoria_sei de cada regra.
   // `formaPagamento` é recebida por parâmetro (não lida do estado) para o recálculo
   // disparado no onChange do Tipo de Pagamento usar o valor novo imediatamente, sem
-  // depender do clique em Simular.
-  const refreshObjectDiscounts = async (formaPagamento = null, qtdeParcelas = null) => {
+  // depender do clique em Simular. A elegibilidade não depende mais do plano escolhido:
+  // o critério de parcelas é aplicado no bloqueio dos planos, não aqui.
+  const refreshObjectDiscounts = async (formaPagamento = null) => {
     if (!envConfig.discountsObjectId) return;
     setIsEvaluatingObjectDiscounts(true);
     try {
@@ -612,7 +652,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
           dealId: context.crm.objectId,
           discountsObjectId: envConfig.discountsObjectId,
           formaPagamento: formaPagamento || null,
-          qtdeParcelas,
         },
       });
 
@@ -996,8 +1035,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
   const handleSelectCondition = (condition) => {
     setSelectedCondition(condition);
-    // O critério de parcelas do objeto Descontos é avaliado por condição escolhida.
-    refreshObjectDiscounts(selectedTipoPagamento || null, condition?.qtdeParcelas ?? null);
+    // A elegibilidade do desconto não depende mais do plano escolhido: o critério de
+    // parcelas é aplicado no bloqueio dos planos (planIncompatibleDiscounts), não aqui.
+    refreshObjectDiscounts(selectedTipoPagamento || null);
   };
 
   const calculateAntecipationValue = (
@@ -1666,6 +1706,14 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                       ...(diamondLabel ? [diamondLabel] : []),
                       ...(discountData.allDiscounts || []).filter(d => d.categoria !== "aluno_diamante").map(d => d.name)
                     ];
+                    // Planos incompatíveis com o critério de parcelas dos descontos
+                    // selecionados: continuam visíveis, mas não podem ser escolhidos.
+                    const incompatibleDiscounts = planIncompatibleDiscounts(
+                      condition.qtdeParcelas,
+                      selectedCategory,
+                      objectDiscountCategories,
+                    );
+                    const isPlanBlocked = incompatibleDiscounts.length > 0;
                     return (
                     <TableRow key={condition.codigoCondicao}>
                       <TableCell>{condition.qtdeParcelas}</TableCell>
@@ -1691,18 +1739,28 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                         {formatCurrency(discountData.finalValue)}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          onClick={() => handleSelectCondition(condition)}
-                          variant={
-                            selectedCondition === condition
-                              ? "primary"
-                              : "secondary"
-                          }
-                        >
-                          {selectedCondition === condition
-                            ? "Selecionado"
-                            : "Selecionar"}
-                        </Button>
+                        <Flex direction="column" gap="extra-small">
+                          <Button
+                            onClick={() => handleSelectCondition(condition)}
+                            variant={
+                              selectedCondition === condition
+                                ? "primary"
+                                : "secondary"
+                            }
+                            disabled={isPlanBlocked}
+                          >
+                            {selectedCondition === condition
+                              ? "Selecionado"
+                              : "Selecionar"}
+                          </Button>
+                          {isPlanBlocked && (
+                            <Text format={{ color: "danger" }}>
+                              {`Plano não compatível com desconto:\n${incompatibleDiscounts
+                                .map((name) => `• ${name}`)
+                                .join("\n")}`}
+                            </Text>
+                          )}
+                        </Flex>
                       </TableCell>
                     </TableRow>
                   )})}

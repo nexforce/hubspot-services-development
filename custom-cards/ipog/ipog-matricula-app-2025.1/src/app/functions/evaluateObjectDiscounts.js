@@ -14,7 +14,9 @@ const axios = require("axios");
  *   curinga: aquele critério deixa de restringir (2026-10-15).
  * - Status Ativo e vigência válida são obrigatórios.
  * - `forma_pagamento` vem da seleção do card (Tipo de Pagamento), não da propriedade
- *   do negócio. `condicao_parcelas` vem da condição escolhida na simulação.
+ *   do negócio. `condicao_parcelas` NÃO bloqueia mais a elegibilidade: o desconto é
+ *   liberado e o critério de parcelas é devolvido em `condicaoParcelas` para o card
+ *   bloquear os planos financeiros incompatíveis (2026-10-15).
  * - `forma_pagamento` usa o mesmo vocabulário de `tipopagamento` do negócio
  *   (PIX, A_VISTA, PARCELADO, RECORRENTE, BOLETO), sem tradução no card (2026-10-15).
  * - `prioridade` menor vence quando o mesmo `categoria_sei` aparece em mais de uma regra.
@@ -117,45 +119,49 @@ function matchTextValue(ruleRaw, dealValue) {
   return { applies: true, matched: deal !== "" && deal === ruleValue };
 }
 
-/** Quantidade de parcelas. Sem `parcelas` informada, a regra fica pendente (não elegível ainda). */
-function matchInstallments(operator, value, value2, installments) {
+/**
+ * Avalia uma quantidade de parcelas contra um critério (operador, valor, valor2).
+ * Retorna `null` quando não há critério (a regra não restringe parcelas).
+ * Retorna `true`/`false` quando há critério e a quantidade é conhecida.
+ * Retorna `undefined` quando há critério mas a quantidade não foi informada
+ * (o card decide o que fazer; o motor não bloqueia mais por isso).
+ */
+function evaluateInstallments(operator, value, value2, installments) {
   const op = String(operator || "").trim();
-  if (!op) return { applies: false, matched: true, pending: false };
-  if (installments === null || installments === undefined || installments === "") {
-    return { applies: true, matched: false, pending: true };
-  }
+  if (!op) return null;
+  const actual = parseNumber(installments);
+  if (actual === null) return undefined;
   const expected = parseNumber(value);
   const expected2 = parseNumber(value2);
-  const actual = parseNumber(installments);
-  if (actual === null) return { applies: true, matched: false, pending: false };
-  let matched = false;
   switch (op) {
     case "igual_a":
-      matched = expected !== null && actual === expected;
-      break;
+      return expected !== null && actual === expected;
     case "diferente_de":
-      matched = expected !== null && actual !== expected;
-      break;
+      return expected !== null && actual !== expected;
     case "menor_que":
-      matched = expected !== null && actual < expected;
-      break;
+      return expected !== null && actual < expected;
     case "menor_ou_igual":
-      matched = expected !== null && actual <= expected;
-      break;
+      return expected !== null && actual <= expected;
     case "maior_que":
-      matched = expected !== null && actual > expected;
-      break;
+      return expected !== null && actual > expected;
     case "maior_ou_igual":
-      matched = expected !== null && actual >= expected;
-      break;
+      return expected !== null && actual >= expected;
     case "entre":
-      matched =
-        expected !== null && expected2 !== null && actual >= expected && actual <= expected2;
-      break;
+      return expected !== null && expected2 !== null && actual >= expected && actual <= expected2;
     default:
-      matched = false;
+      return false;
   }
-  return { applies: true, matched, pending: false };
+}
+
+/** Extrai o critério de parcelas de uma regra, ou null quando não há. */
+function extractInstallmentCriteria(rule) {
+  const operador = String(rule.condicao_parcelas_operador || "").trim();
+  if (!operador) return null;
+  return {
+    operador,
+    valor: parseNumber(rule.condicao_parcelas_valor),
+    valor2: parseNumber(rule.condicao_parcelas_valor_2),
+  };
 }
 
 function isWithinValidity(startRaw, endRaw, referenceDate) {
@@ -186,7 +192,6 @@ function evaluateObjectDiscounts(ctx = {}) {
   const referenceDate = toReferenceDate(referencia);
   const trace = [];
   const eligible = [];
-  const pendingInstallments = [];
 
   for (const rule of rules) {
     const nome = rule.nome_do_desconto || rule.codigo_desconto || "(sem nome)";
@@ -219,25 +224,19 @@ function evaluateObjectDiscounts(ctx = {}) {
       continue;
     }
 
-    const installments = matchInstallments(
+    // A condição de parcelas NÃO bloqueia mais a elegibilidade: o desconto é liberado
+    // e o critério é devolvido para o card filtrar os planos financeiros. Quando a
+    // quantidade de parcelas é informada (avaliação por plano), o critério é aplicado
+    // aqui também, para o resultado refletir o plano escolhido.
+    const condicaoParcelas = extractInstallmentCriteria(rule);
+    const installments = evaluateInstallments(
       rule.condicao_parcelas_operador,
       rule.condicao_parcelas_valor,
       rule.condicao_parcelas_valor_2,
       qtdeParcelas,
     );
-    if (installments.applies && !installments.matched) {
-      if (installments.pending) {
-        pendingInstallments.push({
-          value: categoria,
-          label: nome,
-          operador: rule.condicao_parcelas_operador || null,
-          valor: parseNumber(rule.condicao_parcelas_valor),
-          valor2: parseNumber(rule.condicao_parcelas_valor_2),
-        });
-        trace.push(`pendente de parcelas: ${nome}`);
-      } else {
-        trace.push(`ignorada (parcelas): ${nome}`);
-      }
+    if (installments === false) {
+      trace.push(`ignorada (parcelas): ${nome}`);
       continue;
     }
 
@@ -247,6 +246,7 @@ function evaluateObjectDiscounts(ctx = {}) {
       codigoDesconto: rule.codigo_desconto || "",
       prioridade: parseNumber(rule.prioridade),
       permiteAcumulacao: normalize(rule.permite_acumulacao) === "true",
+      condicaoParcelas,
     });
     trace.push(`elegível: ${nome} → ${categoria}`);
   }
@@ -277,11 +277,12 @@ function evaluateObjectDiscounts(ctx = {}) {
     allAccumulate = allAccumulate && item.permiteAcumulacao;
   }
 
-  return { categories, pendingInstallments, trace };
+  return { categories, trace };
 }
 
 exports.evaluateObjectDiscounts = evaluateObjectDiscounts;
 exports.parseNumber = parseNumber;
+exports.evaluateInstallments = evaluateInstallments;
 
 /**
  * Ponto de entrada serverless.
@@ -358,7 +359,6 @@ exports.main = async (context = {}) => {
       JSON.stringify({
         regras: rules.length,
         categorias: result.categories.map((item) => item.value),
-        pending: result.pendingInstallments.map((item) => item.value),
       }),
     );
 
@@ -366,7 +366,6 @@ exports.main = async (context = {}) => {
       status: "SUCCESS",
       response: {
         categories: result.categories,
-        pendingInstallments: result.pendingInstallments,
         trace: result.trace,
         rulesEvaluated: rules.length,
       },

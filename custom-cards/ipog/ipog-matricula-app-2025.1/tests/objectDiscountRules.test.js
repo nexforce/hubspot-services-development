@@ -135,14 +135,24 @@ run(
   (r) => assert.deepStrictEqual(values(r), []),
 );
 
-// 8. Parcelas
+// 8. Parcelas: a condição NÃO bloqueia mais a elegibilidade; o critério é devolvido
+// em condicaoParcelas para o card bloquear os planos incompatíveis.
 run(
-  "regra com parcelas fica pendente sem quantidade informada",
+  "regra com parcelas é liberada sem quantidade informada e devolve o critério",
   { rules: [baseRule({ condicao_parcelas_operador: "menor_que", condicao_parcelas_valor: "5" })] },
   (r) => {
-    assert.deepStrictEqual(values(r), []);
-    assert.deepStrictEqual(r.pendingInstallments.map((item) => item.value), ["CAT_TESTE"]);
+    assert.deepStrictEqual(values(r), ["CAT_TESTE"]);
+    assert.deepStrictEqual(r.categories[0].condicaoParcelas, {
+      operador: "menor_que",
+      valor: 5,
+      valor2: null,
+    });
   },
+);
+run(
+  "regra sem parcelas devolve condicaoParcelas null",
+  { rules: [baseRule()] },
+  (r) => assert.strictEqual(r.categories[0].condicaoParcelas, null),
 );
 run(
   "parcelas menor que 5 casa com 3",
@@ -239,7 +249,6 @@ run("categoria_sei vazia é ignorada", { rules: [baseRule({ categoria_sei: "" })
 });
 run("sem regras não retorna nada", { rules: [] }, (r) => {
   assert.deepStrictEqual(values(r), []);
-  assert.deepStrictEqual(r.pendingInstallments, []);
 }, { checkTrace: false });
 
 // 12. "Todas as opções" como curinga nos critérios de elegibilidade
@@ -292,5 +301,26 @@ run(
   { rules: [baseRule({ forma_pagamento: "PIX" })], formaPagamento: "BOLETO" },
   (r) => assert.deepStrictEqual(values(r), []),
 );
+
+// 13. Helper evaluateInstallments (usado pelo card para bloquear planos)
+const { evaluateInstallments } = require("../src/app/functions/evaluateObjectDiscounts");
+run("evaluateInstallments: sem operador devolve null", {}, (r) => {
+  assert.strictEqual(evaluateInstallments("", "5", "", 3), null);
+}, { checkTrace: false });
+run("evaluateInstallments: sem quantidade devolve undefined", {}, (r) => {
+  assert.strictEqual(evaluateInstallments("menor_ou_igual", "6", "", null), undefined);
+}, { checkTrace: false });
+run("evaluateInstallments: menor_ou_igual 6 com 6 = true", {}, (r) => {
+  assert.strictEqual(evaluateInstallments("menor_ou_igual", "6", "", 6), true);
+}, { checkTrace: false });
+run("evaluateInstallments: menor_ou_igual 6 com 7 = false", {}, (r) => {
+  assert.strictEqual(evaluateInstallments("menor_ou_igual", "6", "", 7), false);
+}, { checkTrace: false });
+run("evaluateInstallments: entre 3 e 6 com 4 = true", {}, (r) => {
+  assert.strictEqual(evaluateInstallments("entre", "3", "6", 4), true);
+}, { checkTrace: false });
+run("evaluateInstallments: entre 3 e 6 com 7 = false", {}, (r) => {
+  assert.strictEqual(evaluateInstallments("entre", "3", "6", 7), false);
+}, { checkTrace: false });
 
 console.log(`\n${passed} testes do motor de descontos do objeto passaram.`);
