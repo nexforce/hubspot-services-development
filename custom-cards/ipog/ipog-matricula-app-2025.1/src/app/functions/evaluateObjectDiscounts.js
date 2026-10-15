@@ -10,9 +10,13 @@ const axios = require("axios");
  * Regras confirmadas com o consultor (2026-10-07):
  * - Campo vazio não restringe; multisseleção casa por qualquer opção (OR); campos
  *   diferentes combinam com E.
+ * - A opção "Todas as opções" em qualquer critério de elegibilidade funciona como
+ *   curinga: aquele critério deixa de restringir (2026-10-15).
  * - Status Ativo e vigência válida são obrigatórios.
  * - `forma_pagamento` vem da seleção do card (Tipo de Pagamento), não da propriedade
  *   do negócio. `condicao_parcelas` vem da condição escolhida na simulação.
+ * - `forma_pagamento` usa o mesmo vocabulário de `tipopagamento` do negócio
+ *   (PIX, A_VISTA, PARCELADO, RECORRENTE, BOLETO), sem tradução no card (2026-10-15).
  * - `prioridade` menor vence quando o mesmo `categoria_sei` aparece em mais de uma regra.
  * - Acumulação é verificada apenas entre descontos do objeto; desconto novo sempre pode
  *   acumular com desconto legado (pendente de validação com o cliente).
@@ -22,6 +26,12 @@ const axios = require("axios");
  */
 
 const STATUS_ATIVO = "Ativo";
+
+// Valor de regra que funciona como curinga: quando presente em um critério de
+// elegibilidade, aquele critério deixa de restringir (casa com qualquer valor do
+// negócio). Vale para unidade_ensino, nivel_interesse, modalidade_ensino,
+// forma_pagamento e equipe.
+const TODAS_AS_OPCOES = "todas as opções";
 
 const DEAL_PROPERTIES = [
   "unidade",
@@ -83,10 +93,13 @@ function toDate(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-/** Multisseleção: vazio não restringe; casa se QUALQUER opção da regra existir no negócio. */
+/** Multisseleção: vazio não restringe; "Todas as opções" é curinga; casa se QUALQUER opção da regra existir no negócio. */
 function matchMultiValues(ruleRaw, dealValue) {
   const ruleValues = splitValues(ruleRaw);
   if (ruleValues.length === 0) return { applies: false, matched: true };
+  if (ruleValues.some((ruleValue) => normalize(ruleValue) === TODAS_AS_OPCOES)) {
+    return { applies: false, matched: true };
+  }
   const dealValues = splitValues(dealValue);
   if (dealValues.length === 0) return { applies: true, matched: false };
   const matched = ruleValues.some((ruleValue) =>
@@ -95,10 +108,11 @@ function matchMultiValues(ruleRaw, dealValue) {
   return { applies: true, matched };
 }
 
-/** Texto simples (turma): comparação exata normalizada; vazio não restringe. */
+/** Texto simples (turma): comparação exata normalizada; vazio e "Todas as opções" não restringem. */
 function matchTextValue(ruleRaw, dealValue) {
   const ruleValue = normalize(ruleRaw);
   if (!ruleValue) return { applies: false, matched: true };
+  if (ruleValue === TODAS_AS_OPCOES) return { applies: false, matched: true };
   const deal = normalize(dealValue);
   return { applies: true, matched: deal !== "" && deal === ruleValue };
 }
@@ -274,7 +288,7 @@ exports.parseNumber = parseNumber;
  * Parâmetros (via runServerless):
  *  - dealId (obrigatório)
  *  - discountsObjectId: objectTypeId do objeto Descontos no portal atual
- *  - formaPagamento: valor de forma de pagamento já traduzido pelo card (Pix, Boleto bancário, Cartão de crédito)
+ *  - formaPagamento: valor de `tipopagamento` do negócio (PIX, A_VISTA, PARCELADO, RECORRENTE, BOLETO), enviado pelo card sem tradução
  *  - qtdeParcelas: quantidade de parcelas da condição escolhida (opcional)
  *  - referencia: data de referência YYYY-MM-DD (opcional; padrão hoje UTC)
  */

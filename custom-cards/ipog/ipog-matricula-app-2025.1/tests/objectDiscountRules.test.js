@@ -242,4 +242,55 @@ run("sem regras não retorna nada", { rules: [] }, (r) => {
   assert.deepStrictEqual(r.pendingInstallments, []);
 }, { checkTrace: false });
 
+// 12. "Todas as opções" como curinga nos critérios de elegibilidade
+run(
+  "unidade 'Todas as opções' casa com qualquer unidade",
+  { rules: [baseRule({ unidade_ensino: "Todas as opções" })], unidade: "Recife" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
+);
+run(
+  "nível 'Todas as opções' casa com qualquer nível",
+  { rules: [baseRule({ nivel_interesse: "Todas as opções" })], nivelDeInteresse: "Graduação" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
+);
+run(
+  "modalidade 'Todas as opções' casa com qualquer modalidade",
+  { rules: [baseRule({ modalidade_ensino: "Todas as opções" })], modalidadeDeInteresse: "EAD" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
+);
+run(
+  "forma de pagamento 'Todas as opções' casa com qualquer forma",
+  { rules: [baseRule({ forma_pagamento: "Todas as opções" })], formaPagamento: "BOLETO" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
+);
+run(
+  "equipe 'Todas as opções' casa com qualquer equipe",
+  { rules: [baseRule({ equipe: "Todas as opções" })], equipe: "EAD A" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
+);
+run(
+  "turma 'Todas as opções' casa com qualquer turma",
+  { rules: [baseRule({ turma: "Todas as opções" })], turma: "ADM11262M" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
+);
+run(
+  "curinga junto de valor concreto continua não restringindo",
+  { rules: [baseRule({ unidade_ensino: "Todas as opções;Goiânia" })], unidade: "Recife" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
+);
+run(
+  "curinga em um campo não afeta o E entre campos distintos",
+  {
+    rules: [baseRule({ unidade_ensino: "Todas as opções", modalidade_ensino: "Presencial" })],
+    unidade: "Recife",
+    modalidadeDeInteresse: "EAD",
+  },
+  (r) => assert.deepStrictEqual(values(r), []),
+);
+run(
+  "forma de pagamento concreta ainda restringe (sem curinga)",
+  { rules: [baseRule({ forma_pagamento: "PIX" })], formaPagamento: "BOLETO" },
+  (r) => assert.deepStrictEqual(values(r), []),
+);
+
 console.log(`\n${passed} testes do motor de descontos do objeto passaram.`);

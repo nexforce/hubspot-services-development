@@ -77,15 +77,9 @@ const NIVEL_INTERESSE_CEU = "Curso de extensão universitária";
 const isPagamentoAVista = (tipoPagamento) =>
   tipoPagamento === "PIX" || tipoPagamento === "A_VISTA";
 
-// Traduz o Tipo de Pagamento do card para o vocabulário de forma_pagamento
-// do objeto Descontos (valores espelhados da propriedade forma_de_pagamento_list).
-const FORMA_PAGAMENTO_POR_TIPO = {
-  PIX: "Pix",
-  BOLETO: "Boleto bancário",
-  A_VISTA: "Cartão de crédito",
-  PARCELADO: "Cartão de crédito",
-  RECORRENTE: "Cartão de crédito",
-};
+// O objeto Descontos usa o mesmo vocabulário de `tipopagamento` do negócio
+// (PIX, A_VISTA, PARCELADO, RECORRENTE, BOLETO), então o valor do card é enviado
+// ao motor sem tradução.
 
 const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const { properties } = useCrmProperties([
@@ -605,7 +599,10 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   // Motor da etapa 2: avalia as regras do objeto Descontos contra o negócio e devolve
   // as categorias elegíveis. O benefício (tipo/valor) continua vindo da MuleSoft via
   // fetchDiscount com o categoria_sei de cada regra.
-  const refreshObjectDiscounts = async (qtdeParcelas = null) => {
+  // `formaPagamento` é recebida por parâmetro (não lida do estado) para o recálculo
+  // disparado no onChange do Tipo de Pagamento usar o valor novo imediatamente, sem
+  // depender do clique em Simular.
+  const refreshObjectDiscounts = async (formaPagamento = null, qtdeParcelas = null) => {
     if (!envConfig.discountsObjectId) return;
     setIsEvaluatingObjectDiscounts(true);
     try {
@@ -614,7 +611,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
         parameters: {
           dealId: context.crm.objectId,
           discountsObjectId: envConfig.discountsObjectId,
-          formaPagamento: FORMA_PAGAMENTO_POR_TIPO[selectedTipoPagamento] || null,
+          formaPagamento: formaPagamento || null,
           qtdeParcelas,
         },
       });
@@ -711,7 +708,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     // Motores da etapa 2 + legado: reavaliam os descontos elegíveis no clique único
     // (legado roda também ao abrir o card; aqui garante frescor com o tipo selecionado).
     handleVerifyDiscounts();
-    refreshObjectDiscounts(FORMA_PAGAMENTO_POR_TIPO[selectedTipoPagamento] || null);
+    refreshObjectDiscounts(selectedTipoPagamento || null);
 
     try {
       const promises =
@@ -1000,7 +997,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const handleSelectCondition = (condition) => {
     setSelectedCondition(condition);
     // O critério de parcelas do objeto Descontos é avaliado por condição escolhida.
-    refreshObjectDiscounts(condition?.qtdeParcelas ?? null);
+    refreshObjectDiscounts(selectedTipoPagamento || null, condition?.qtdeParcelas ?? null);
   };
 
   const calculateAntecipationValue = (
@@ -1376,8 +1373,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               });
             }
             // Motor da etapa 2: reavalia as regras do objeto Descontos com a forma de
-            // pagamento escolhida, antes de qualquer simulação.
-            refreshObjectDiscounts(FORMA_PAGAMENTO_POR_TIPO[newTipo] || null);
+            // pagamento escolhida, antes de qualquer simulação. Passa o valor novo
+            // diretamente (o estado ainda não atualizou neste ponto).
+            refreshObjectDiscounts(newTipo || null);
           }}
               options={paymentTypeOptions}
               placeholder="Selecione o tipo"
