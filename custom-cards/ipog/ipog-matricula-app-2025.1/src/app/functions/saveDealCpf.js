@@ -2,14 +2,17 @@ const axios = require("axios");
 
 /**
  * Grava o CPF digitado no card na propriedade `cpf` do negócio, no mesmo padrão do
- * card de Graduação (mascarado). A comparação de "mudou" é feita por dígitos, para
- * regravar o mesmo CPF não contar como alteração. O portal tem workflow que normaliza
- * o CPF (remove máscara) na propriedade, então ambos os formatos são aceitos na leitura.
+ * card de Graduação (mascarado). O portal tem workflow que normaliza o CPF (remove
+ * máscara) na propriedade, então ambos os formatos são aceitos na leitura.
  *
- * Também grava o mesmo CPF em `cpf_desconto_avaliado`, que registra QUAL CPF originou a
- * avaliação de descontos. Essa propriedade trava a troca de CPF no Checkout Card e valida
- * a matrícula: o desconto só vale para o CPF que o gerou. Quando o CPF é limpo, a
- * propriedade é limpa junto.
+ * A gravação é feita em duas etapas: primeiro LIMPA `cpf` e `cpf_desconto_avaliado`,
+ * depois grava o valor informado. Isso garante que o workflow do portal detecte a
+ * alteração mesmo quando o CPF digitado é igual ao que já estava no negócio, e que
+ * `cpf_desconto_avaliado` nunca fique desatualizado em relação a `cpf`.
+ *
+ * `cpf_desconto_avaliado` registra QUAL CPF originou a avaliação de descontos. Essa
+ * propriedade trava a troca de CPF no Checkout Card e valida a matrícula: o desconto
+ * só vale para o CPF que o gerou. Quando o CPF é limpo, a propriedade é limpa junto.
  *
  * Autenticação: HUBSPOT_API_KEY (secret da conta, padrão de todas as functions do app).
  */
@@ -42,16 +45,28 @@ exports.main = async (context = {}) => {
   const dealUrl = `https://api.hubapi.com/crm/v3/objects/deals/${dealId}`;
 
   try {
-    const currentResponse = await axios({ method: "GET", url: `${dealUrl}?properties=cpf,cpf_desconto_avaliado`, headers });
+    const currentResponse = await axios({ method: "GET", url: `${dealUrl}?properties=cpf`, headers });
     const currentDigits = String(currentResponse.data?.properties?.cpf || "").replace(/\D/g, "");
     const changed = digits !== currentDigits;
 
+    // Etapa 1: limpa as duas propriedades.
     await axios({
       method: "PATCH",
       url: dealUrl,
       headers,
-      data: { properties: { cpf: maskedCpf, cpf_desconto_avaliado: maskedCpf } },
+      data: { properties: { cpf: "", cpf_desconto_avaliado: "" } },
     });
+
+    // Etapa 2: grava o valor informado (quando houver). Com o campo vazio, o CPF
+    // permanece limpo e o desconto passa a ser avaliado sem histórico de matrículas.
+    if (maskedCpf) {
+      await axios({
+        method: "PATCH",
+        url: dealUrl,
+        headers,
+        data: { properties: { cpf: maskedCpf, cpf_desconto_avaliado: maskedCpf } },
+      });
+    }
 
     return { status: "SUCCESS", response: { cpf: maskedCpf, changed } };
   } catch (error) {

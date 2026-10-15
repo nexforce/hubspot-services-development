@@ -533,56 +533,68 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     });
   }, [legacyCategories, objectDiscountCategories, properties.categoriacondicao]);
 
-  // CPF do aluno: espelha a propriedade cpf; grava no clique quando alterado; a busca
-  // de matrículas usa a API IPOG e alimenta as regras de ex-aluno.
+  // CPF do aluno: espelha a propriedade cpf; grava no clique; a busca de matrículas
+  // usa a API IPOG e alimenta as regras de ex-aluno.
   const cpfDigits = (value) => String(value || "").replace(/\D/g, "");
-  const savedCpfDigits = cpfDigits(properties.cpf);
   const typedCpfDigits = cpfDigits(cpfInput);
-  const cpfChanged = typedCpfDigits !== savedCpfDigits;
 
   useEffect(() => {
     setCpfInput(properties.cpf || "");
   }, [properties.cpf]);
 
-  // Salva o CPF digitado (se mudou) e, em seguida, busca as matrículas e reavalia os
-  // descontos de ex-aluno. Um único clique executa as duas etapas em sequência.
+  // Salva o CPF digitado e, em seguida, busca as matrículas e reavalia os descontos
+  // de ex-aluno. Um único clique executa as duas etapas em sequência.
+  // Com o campo vazio, o clique LIMPA o CPF do negócio e reavalia os descontos sem
+  // histórico de matrículas (não há o que buscar).
   const handleSaveAndSearch = async () => {
-    if (typedCpfDigits.length !== 11) {
+    const isClearing = typedCpfDigits.length === 0;
+
+    if (!isClearing && typedCpfDigits.length !== 11) {
       sendAlert({ type: "warning", message: "Informe um CPF com 11 dígitos." });
       return;
     }
 
-    if (cpfChanged) {
-      setIsSavingCpf(true);
-      try {
-        const { response } = await runServerless({
-          name: "saveDealCpf",
-          parameters: { dealId: context.crm.objectId, cpf: cpfInput },
-        });
-        if (response?.status !== "SUCCESS") {
-          sendAlert({
-            type: "warning",
-            message: formatOriginError(
-              response?.origin,
-              response?.message || "Não foi possível salvar o CPF.",
-            ),
-          });
-          return;
-        }
-        setCpfInput(response.response?.cpf || "");
-        // CPF novo invalida as matrículas anteriores; a busca abaixo recarrega.
-        setEnrollmentData(null);
-        await actions.refreshObjectProperties();
-      } catch (error) {
-        console.error("Erro ao salvar CPF:", error);
+    // Grava sempre (mesmo com o CPF igual): a function limpa e regrava, para o
+    // `cpf_desconto_avaliado` nunca ficar desatualizado em relação ao `cpf`.
+    setIsSavingCpf(true);
+    try {
+      const { response } = await runServerless({
+        name: "saveDealCpf",
+        parameters: { dealId: context.crm.objectId, cpf: cpfInput },
+      });
+      if (response?.status !== "SUCCESS") {
         sendAlert({
-          type: "danger",
-          message: formatOriginError("SISTEMA", "Erro ao salvar o CPF. Tente novamente."),
+          type: "warning",
+          message: formatOriginError(
+            response?.origin,
+            response?.message || "Não foi possível salvar o CPF.",
+          ),
         });
         return;
-      } finally {
-        setIsSavingCpf(false);
       }
+      setCpfInput(response.response?.cpf || "");
+      // CPF novo (ou limpo) invalida as matrículas anteriores.
+      setEnrollmentData(null);
+      await actions.refreshObjectProperties();
+    } catch (error) {
+      console.error("Erro ao salvar CPF:", error);
+      sendAlert({
+        type: "danger",
+        message: formatOriginError("SISTEMA", "Erro ao salvar o CPF. Tente novamente."),
+      });
+      return;
+    } finally {
+      setIsSavingCpf(false);
+    }
+
+    if (isClearing) {
+      // Sem CPF não há matrículas a buscar: reavalia os descontos sem histórico.
+      await handleVerifyDiscounts();
+      sendAlert({
+        type: "success",
+        message: "CPF removido. Descontos reavaliados sem histórico de matrículas.",
+      });
+      return;
     }
 
     await handleSearchEnrollments();
@@ -1346,17 +1358,24 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
             <Button
               onClick={handleSaveAndSearch}
               variant="primary"
-              disabled={typedCpfDigits.length !== 11 || isSavingCpf || isSearchingEnrollments}
+              disabled={
+                (typedCpfDigits.length !== 0 && typedCpfDigits.length !== 11) ||
+                isSavingCpf ||
+                isSearchingEnrollments
+              }
             >
               {isSavingCpf
                 ? "Salvando..."
                 : isSearchingEnrollments
                 ? "Buscando matrículas..."
+                : typedCpfDigits.length === 0
+                ? "Limpar CPF"
                 : "Salvar e buscar matrículas"}
             </Button>
           </Flex>
           <Text format={{ fontSize: "small" }}>
-            Digite o CPF para validar descontos de ex aluno.
+            Digite o CPF para validar descontos de ex aluno. Deixe vazio e clique para
+            remover o CPF.
           </Text>
           {enrollmentData && (
             <>
