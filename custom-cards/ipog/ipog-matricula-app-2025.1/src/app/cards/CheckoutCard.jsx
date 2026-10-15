@@ -578,6 +578,9 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const [disciplinasData, setDisciplinasData] = useState(null);
   const [disciplinasError, setDisciplinasError] = useState("");
   const [alertMessage, setAlertMessage] = useState(null);
+  // Aviso do gate de CPF do desconto, exibido junto ao botão de gerar matrícula
+  // (não no topo do card, onde ficam os avisos gerais).
+  const [cpfGateMessage, setCpfGateMessage] = useState(null);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [educationType, setEducationType] = useState("");
   const [registeredCpf, setRegisteredCpf] = useState(null);
@@ -1099,14 +1102,13 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       hasDiscountEvaluatedCpf &&
       normalizeDigits(studentCpf) !== normalizeDigits(discountEvaluatedCpf)
     ) {
-      setAlertMessage({
-        type: "danger",
-        message:
-          "O desconto foi calculado para outro CPF. Refaça a avaliação dos descontos no card Plano Financeiro com o CPF correto antes de gerar a matrícula.",
-      });
+      setCpfGateMessage(
+        "O desconto foi calculado para outro CPF. Refaça a avaliação dos descontos no card Plano Financeiro com o CPF correto antes de gerar a matrícula.",
+      );
       return;
     }
 
+    setCpfGateMessage(null);
     setLoadingEnrollment(true);
     setAlertMessage(null);
 
@@ -1389,7 +1391,11 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     }
   };
 
-  const handleCpfInput = (value) => setCpf(formatCpf(value));
+  const handleCpfInput = (value) => {
+    setCpf(formatCpf(value));
+    // Corrigir o CPF limpa o aviso do gate, que só faz sentido sobre o valor atual.
+    setCpfGateMessage(null);
+  };
 
   const handlePhoneNumberInput = (value) =>
     setPhoneNumber(formatPhoneNumber(value));
@@ -1851,6 +1857,12 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
             <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
               {missingEnrollmentFieldsMessage(missingEnrollmentDealFields)}
             </Text>
+          )}
+
+          {cpfGateMessage && (
+            <Alert title={cpfGateMessage} variant="danger">
+              {cpfGateMessage}
+            </Alert>
           )}
 
           <Flex direction="row" gap="small">
