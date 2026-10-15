@@ -518,6 +518,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     "numero_de_telefone",
     "usuarioresponsavel",
     "cpf",
+    "cpf_desconto_avaliado",
     "geracaodeparcelaautomatica",
     "tipo_de_matricula",
     "datamatricula",
@@ -619,6 +620,15 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const enrollmentType = dealProperties.tipo_de_matricula || "";
   const enrollmentDate = dealProperties.datamatricula || "";
   const studentCpf = dealProperties.cpf || "";
+  // CPF que originou a avaliação de descontos no card Plano Financeiro. Quando existe,
+  // o desconto só vale para esse CPF: o campo fica travado e a matrícula é validada
+  // contra ele. Vazio significa que não houve avaliação por CPF (ex.: desconto de
+  // convênio), e o campo permanece editável.
+  const discountEvaluatedCpf = dealProperties.cpf_desconto_avaliado || "";
+  const hasDiscountEvaluatedCpf = normalizeDigits(discountEvaluatedCpf).length === CPF_DIGITS;
+  const cpfLockedByDiscount =
+    hasDiscountEvaluatedCpf &&
+    normalizeDigits(discountEvaluatedCpf) === normalizeDigits(studentCpf);
   const consultantEmail = dealProperties.consultoremail || "";
   const responsibleUser = String(dealProperties.usuarioresponsavel || "");
   const conditionCode = dealProperties.codigocondicao || "";
@@ -1082,6 +1092,21 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   };
 
   const handleGenerateEnrollment = async () => {
+    // Gate de integridade do desconto: se houve avaliação por CPF, a matrícula só pode
+    // sair com o MESMO CPF que gerou o desconto. Bloqueia a troca de CPF entre a
+    // avaliação (card Plano Financeiro) e a matrícula (este card).
+    if (
+      hasDiscountEvaluatedCpf &&
+      normalizeDigits(studentCpf) !== normalizeDigits(discountEvaluatedCpf)
+    ) {
+      setAlertMessage({
+        type: "danger",
+        message:
+          "O desconto foi calculado para outro CPF. Refaça a avaliação dos descontos no card Plano Financeiro com o CPF correto antes de gerar a matrícula.",
+      });
+      return;
+    }
+
     setLoadingEnrollment(true);
     setAlertMessage(null);
 
@@ -1435,6 +1460,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
               required={true}
               error={cpfError}
               validationMessage={cpfValidationMessage}
+              readOnly={cpfLockedByDiscount}
             />
             <Input
               label={SECTION_A_LABELS.phoneNumber}

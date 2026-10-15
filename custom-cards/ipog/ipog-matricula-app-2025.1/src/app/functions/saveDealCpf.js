@@ -6,6 +6,11 @@ const axios = require("axios");
  * regravar o mesmo CPF não contar como alteração. O portal tem workflow que normaliza
  * o CPF (remove máscara) na propriedade, então ambos os formatos são aceitos na leitura.
  *
+ * Também grava o mesmo CPF em `cpf_desconto_avaliado`, que registra QUAL CPF originou a
+ * avaliação de descontos. Essa propriedade trava a troca de CPF no Checkout Card e valida
+ * a matrícula: o desconto só vale para o CPF que o gerou. Quando o CPF é limpo, a
+ * propriedade é limpa junto.
+ *
  * Autenticação: HUBSPOT_API_KEY (secret da conta, padrão de todas as functions do app).
  */
 exports.main = async (context = {}) => {
@@ -37,7 +42,7 @@ exports.main = async (context = {}) => {
   const dealUrl = `https://api.hubapi.com/crm/v3/objects/deals/${dealId}`;
 
   try {
-    const currentResponse = await axios({ method: "GET", url: `${dealUrl}?properties=cpf`, headers });
+    const currentResponse = await axios({ method: "GET", url: `${dealUrl}?properties=cpf,cpf_desconto_avaliado`, headers });
     const currentDigits = String(currentResponse.data?.properties?.cpf || "").replace(/\D/g, "");
     const changed = digits !== currentDigits;
 
@@ -45,7 +50,7 @@ exports.main = async (context = {}) => {
       method: "PATCH",
       url: dealUrl,
       headers,
-      data: { properties: { cpf: maskedCpf } },
+      data: { properties: { cpf: maskedCpf, cpf_desconto_avaliado: maskedCpf } },
     });
 
     return { status: "SUCCESS", response: { cpf: maskedCpf, changed } };
