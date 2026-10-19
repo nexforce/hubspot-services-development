@@ -61,9 +61,16 @@ Mapeamento de campos (input do workflow para o corpo da API):
 | `inscricao_estadual` | `inscricao_estadual_produtor` |
 | `contribuinte_import` | `contribuinte` |
 | `numero_de_telefone` | `telefone` |
-| `estado`, `cidade`, `email`, `estado_civil`, `profissao`, `cep`, `logradouro`, `numero`, `complemento`, `bairro`, `razao_social`, `praca_id`, `hubspot_owner_id` | mesmo nome |
+| `estado`, `cidade`, `email`, `estado_civil`, `profissao`, `cep`, `logradouro`, `numero`, `complemento`, `bairro`, `razao_social`, `praca_id`, `hubspot_owner_id`, `banco`, `agencia`, `tipoconta`, `nome_do_dealer` | mesmo nome |
+| `conta` (sem o dígito) | `conta` |
+| `conta` (dígito, separado do número pelo `-`) | `digitoConta` |
 | (owner do deal, via API) | `comercial_id` |
 | (ID do deal) | `hubspot_id` |
+
+O input `conta` chega com o dígito verificador junto ao número, separado por `-` (ex.:
+`12345-6`). O script separa os dois com uma regex antes de montar o corpo da API: o
+número vai em `conta` e o dígito em `digitoConta`. Se o valor não tiver `-`, o script
+envia o que recebeu em `conta` e deixa `digitoConta` vazio, sem quebrar.
 
 ### `painel/proposalNotification.js`
 

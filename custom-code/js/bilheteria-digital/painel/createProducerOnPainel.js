@@ -1,3 +1,9 @@
+// Custom code de ação de workflow baseado em negócio (deal), cliente Bilheteria Digital.
+// Evento: criação do produtor no painel próprio da Bilheteria Digital, a partir dos
+// dados cadastrais preenchidos no negócio. Gatilho: workflow de negócio no estágio em
+// que o produtor deve ser cadastrado no painel.
+// Secrets usadas: BD_SERVICE_KEY (x-api-key da API do painel) e BD_HUBSPOT_TOKEN
+// (private app do HubSpot, leitura do owner do negócio).
 const axios = require("axios");
 
 // Códigos de erro da API de produtores do painel, usados quando a resposta vem sem "message"
@@ -26,6 +32,22 @@ function parseApiError(error) {
 
 function onlyDigits(value) {
   return value ? value.replace(/\D/g, "").replace(/^55/, "") : value;
+}
+
+// A conta chega do input field com o dígito verificador junto, separado por "-"
+// (ex.: "12345-6"). O painel espera o número da conta e o dígito em campos separados.
+function splitContaDigito(conta) {
+  if (!conta) {
+    return { conta: undefined, digitoConta: undefined };
+  }
+
+  const match = /^(.+)-(\w+)$/.exec(String(conta).trim());
+  if (!match) {
+    // Sem "-" no valor: envia a conta como veio e deixa o dígito vazio
+    return { conta: conta, digitoConta: undefined };
+  }
+
+  return { conta: match[1], digitoConta: match[2] };
 }
 
 async function getOwnerId(accessToken, dealId) {
@@ -67,7 +89,12 @@ exports.main = async (event, callback) => {
     bairro,
     razao_social,
     praca_id,
-    hubspot_owner_id
+    hubspot_owner_id,
+    banco,
+    agencia,
+    tipoconta,
+    nome_do_dealer,
+    conta
   } = event.inputFields;
   const apiKey = process.env.BD_SERVICE_KEY;
   const accessToken = process.env.BD_HUBSPOT_TOKEN;
@@ -82,6 +109,7 @@ exports.main = async (event, callback) => {
   try {
     // Dentro do try para que a falha no HubSpot também saia nos output fields de erro
     const ownerId = await getOwnerId(accessToken, dealId);
+    const { conta: contaSemDigito, digitoConta } = splitContaDigito(conta);
 
     const body = {
       tipo_produtor: tipo_de_produtor,
@@ -106,7 +134,13 @@ exports.main = async (event, callback) => {
       bairro,
       razao_social,
       praca_id,
-      hubspot_owner_id
+      hubspot_owner_id,
+      banco,
+      agencia,
+      tipoconta,
+      nome_do_dealer,
+      conta: contaSemDigito,
+      digitoConta
     };
 
     const bodyFiltered = Object.fromEntries(
