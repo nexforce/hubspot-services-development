@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   AutoGrid,
   Flex,
@@ -591,6 +591,9 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const [cpfError, setCpfError] = useState(false);
   const [cpfValidationMessage, setCpfValidationMessage] = useState("");
   const [cpf, setCpf] = useState("");
+  // Marca se o consultor alterou o campo de CPF desde a última sincronização com a
+  // propriedade do Negócio, para a sincronização não sobrescrever o que ele digitou.
+  const cpfDirtyRef = useRef(false);
   const [birthDate, setBirthDate] = useState(undefined);
   const [postalCode, setPostalCode] = useState("");
   const [state, setState] = useState("");
@@ -966,6 +969,24 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       setInitialLoadDone(true);
     }
   }, [dealProperties, initialLoadDone]);
+
+  // O CPF do Negócio pode mudar depois do carregamento inicial (o card Plano
+  // Financeiro grava a propriedade). O campo precisa refletir esse valor sem F5.
+  // Só sobrescreve quando o consultor NÃO alterou o campo desde a última
+  // sincronização: se ele digitou algo, o valor digitado é preservado.
+  useEffect(() => {
+    if (!initialLoadDone) return;
+    const propertyCpf = formatCpf(dealProperties.cpf || "");
+    if (propertyCpf === cpf) {
+      // Campo e propriedade coincidem: o consultor não tem edição pendente.
+      cpfDirtyRef.current = false;
+      return;
+    }
+    // O consultor alterou o campo e o valor difere da propriedade: preserva o que
+    // ele digitou. A sincronização volta a valer quando os dois coincidirem.
+    if (cpfDirtyRef.current) return;
+    setCpf(propertyCpf);
+  }, [dealProperties.cpf, initialLoadDone, cpf]);
 
   // A propriedade do Negócio manda enquanto chega preenchida. Quando vem vazia,
   // o Select da Seção A fica à disposição do consultor, e o fallback para string
@@ -1527,6 +1548,9 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
 
   const handleCpfInput = (value) => {
     setCpf(formatCpf(value));
+    // O consultor assumiu o campo: a sincronização com a propriedade não sobrescreve
+    // mais o valor digitado até os dois coincidirem.
+    cpfDirtyRef.current = true;
     // Corrigir o CPF limpa o aviso do gate, que só faz sentido sobre o valor atual.
     setCpfGateMessage(null);
   };
