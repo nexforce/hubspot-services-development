@@ -63,7 +63,7 @@ run(
 // 3. Campo vazio não restringe
 run(
   "equipe vazia não restringe",
-  { rules: [baseRule({ equipe: "" })], equipe: "Goiânia" },
+  { rules: [baseRule({ equipe: "" })], equipeTime: "3.1.1.1.3. Goiânia" },
   (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
 );
 
@@ -274,7 +274,7 @@ run(
 );
 run(
   "equipe 'Todas as opções' casa com qualquer equipe",
-  { rules: [baseRule({ equipe: "Todas as opções" })], equipe: "EAD A" },
+  { rules: [baseRule({ equipe: "Todas as opções" })], equipeTime: "3.1.4.1. Pós EAD A" },
   (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
 );
 run(
@@ -300,6 +300,33 @@ run(
   "forma de pagamento concreta ainda restringe (sem curinga)",
   { rules: [baseRule({ forma_pagamento: "PIX" })], formaPagamento: "BOLETO" },
   (r) => assert.deepStrictEqual(values(r), []),
+);
+
+// 12b. Equipe por time HubSpot do negócio, comparação por CONTER
+run(
+  "equipe casa por conter no nome do time HubSpot",
+  { rules: [baseRule({ equipe: "Teresina" })], equipeTime: "3.1.1.1.7. Teresina" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
+);
+run(
+  "equipe casa com time de gestor (sem filtro de gestor)",
+  { rules: [baseRule({ equipe: "Acelera A" })], equipeTime: "3.1.1.1.1. Acelera A - Gestor" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
+);
+run(
+  "equipe não casa quando o time não contém o nome",
+  { rules: [baseRule({ equipe: "Teresina" })], equipeTime: "3.1.1.1.3. Goiânia" },
+  (r) => assert.deepStrictEqual(values(r), []),
+);
+run(
+  "equipe não casa quando o negócio não tem time",
+  { rules: [baseRule({ equipe: "Teresina" })], equipeTime: null },
+  (r) => assert.deepStrictEqual(values(r), []),
+);
+run(
+  "equipe multisseleção casa por qualquer opção no nome do time",
+  { rules: [baseRule({ equipe: "Goiânia;Teresina" })], equipeTime: "3.1.1.1.7. Teresina" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
 );
 
 // 13. Helper evaluateInstallments (usado pelo card para bloquear planos)
