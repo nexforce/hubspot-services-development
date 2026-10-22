@@ -366,33 +366,44 @@ const formatTimestampToBr = (timestamp) => {
   return dateObject ? formatDateObjectToBr(dateObject) : "-";
 };
 
-// A disciplina de ingresso vem da API do IPOG. A grade da MuleSoft pode repetir
-// a mesma disciplina em ciclos diferentes, então a chave é código + mês, nunca
-// só código. Itens anteriores ao ingresso ficam fora do cronograma do aluno novo.
-const buildDemaisDisciplinas = (primeira, grade) => {
-  const monthKey = (disciplina) => {
-    if (disciplina.dataInicioTimestamp == null) return "";
-    const date = new Date(disciplina.dataInicioTimestamp);
-    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-  };
-  const chave = (disciplina) =>
-    `${String(disciplina.codigo)}|${monthKey(disciplina)}`;
+const formatPeriodo = (disciplina) => {
+  if (disciplina.dataInicioTimestamp == null) return disciplina.periodo || "-";
+  const date = new Date(disciplina.dataInicioTimestamp);
+  return `${MONTH_LABELS[date.getUTCMonth()]}/${date.getUTCFullYear()}`;
+};
+const formatCronogramaText = (data, classIdentifier) => {
+  if (!data?.primeira) return "";
 
-  const vistos = new Set([chave(primeira)]);
-  const demais = [];
-
-  for (const disciplina of grade) {
-    if (disciplina.dataInicioTimestamp == null) continue;
-    if (disciplina.dataInicioTimestamp < primeira.dataInicioTimestamp) continue;
-
-    const key = chave(disciplina);
-    if (vistos.has(key)) continue;
-
-    vistos.add(key);
-    demais.push(disciplina);
+  const lines = [];
+  lines.push(`*CRONOGRAMA DO CURSO*`);
+  if (classIdentifier) {
+    lines.push(`Turma: ${classIdentifier}`);
+  }
+  lines.push("");
+  lines.push(`*DISCIPLINA QUE IRÁ INICIAR:*`);
+  const dataInicioPrimeira = formatTimestampToBr(
+    data.primeira.dataInicioTimestamp,
+  );
+  lines.push(`▶ *${dataInicioPrimeira}* - ${data.primeira.nome}`);
+  if (data.primeira.periodoAula) {
+    lines.push(`   Período de aulas: ${data.primeira.periodoAula}`);
   }
 
-  return demais.sort((a, b) => a.dataInicioTimestamp - b.dataInicioTimestamp);
+  if (data.demais && data.demais.length > 0) {
+    lines.push("");
+    lines.push(`*DEMAIS DISCIPLINAS:*`);
+    data.demais.forEach((disciplina) => {
+      const dataInicio = formatTimestampToBr(disciplina.dataInicioTimestamp);
+      const nome =
+        disciplina.nome ||
+        disciplina.descricao ||
+        disciplina.disciplina ||
+        "-";
+      lines.push(`• ${dataInicio} - ${nome}`);
+    });
+  }
+
+  return lines.join("\n");
 };
 
 const CronogramaModal = ({
@@ -401,6 +412,8 @@ const CronogramaModal = ({
   classCode,
   classIdentifier,
   closeOverlay,
+  onCopyCronograma,
+  loadingCopyCronograma,
 }) => (
   <Modal id={CRONOGRAMA_MODAL_ID} title="Cronograma do aluno" width="lg">
     <ModalBody>
@@ -417,21 +430,33 @@ const CronogramaModal = ({
         </Text>
       ) : (
         <Flex direction="column" gap="medium">
-          <Text variant="microcopy">
-            {classIdentifier} · turma {classCode || "-"} · ingresso{" "}
-            {formatMesIngresso(data.mesIngresso)} · {1 + data.demais.length}{" "}
-            disciplina(s)
-          </Text>
+          <Flex direction="row" justify="between" align="center">
+            <Text variant="microcopy">
+              {classIdentifier} · turma {classCode || "-"} · ingresso{" "}
+              {formatMesIngresso(data.mesIngresso)} · {1 + data.demais.length}{" "}
+              disciplina(s)
+            </Text>
+            {onCopyCronograma && (
+              <LoadingButton
+                size="extra-small"
+                variant="secondary"
+                loading={loadingCopyCronograma}
+                onClick={onCopyCronograma}
+              >
+                <Flex direction="row" gap="extra-small" align="center">
+                  <Icon name="copy" />
+                  <Text format={{ fontSize: "small" }}>Copiar cronograma</Text>
+                </Flex>
+              </LoadingButton>
+            )}
+          </Flex>
 
           <Alert title="Disciplina que irá iniciar" variant="success">
             <Text format={{ fontWeight: "demibold" }}>{data.primeira.nome}</Text>
             <Text variant="microcopy">
-              {data.primeira.periodo || "-"} · início{" "}
+              {formatPeriodo(data.primeira)} · início{" "}
               {formatTimestampToBr(data.primeira.dataInicioTimestamp)}
               {data.primeira.modalidade ? ` · ${data.primeira.modalidade}` : ""}
-              {data.primeira.cargaHoraria
-                ? ` · ${data.primeira.cargaHoraria}`
-                : ""}
             </Text>
             {data.primeira.periodoAula ? (
               <Text variant="microcopy">
@@ -439,12 +464,6 @@ const CronogramaModal = ({
               </Text>
             ) : null}
           </Alert>
-
-          {data.gradeErro && (
-            <Alert title="Grade incompleta" variant="warning">
-              {data.gradeErro} As demais disciplinas não foram carregadas.
-            </Alert>
-          )}
 
           <Flex direction="column" gap="extra-small">
             <Text format={{ fontWeight: "demibold" }}>Demais disciplinas</Text>
@@ -459,7 +478,6 @@ const CronogramaModal = ({
                     <TableHeader>Período</TableHeader>
                     <TableHeader>Disciplina</TableHeader>
                     <TableHeader>Modalidade</TableHeader>
-                    <TableHeader>Carga horária</TableHeader>
                     <TableHeader>Início</TableHeader>
                     <TableHeader>Período de aulas</TableHeader>
                   </TableRow>
@@ -469,7 +487,7 @@ const CronogramaModal = ({
                     <TableRow
                       key={`${disciplina.codigo}-${disciplina.dataInicio}-${index}`}
                     >
-                      <TableCell>{disciplina.periodo || "-"}</TableCell>
+                      <TableCell>{formatPeriodo(disciplina)}</TableCell>
                       <TableCell>
                         {disciplina.nome ||
                           disciplina.descricao ||
@@ -477,7 +495,6 @@ const CronogramaModal = ({
                           "-"}
                       </TableCell>
                       <TableCell>{disciplina.modalidade || "-"}</TableCell>
-                      <TableCell>{disciplina.cargaHoraria || "-"}</TableCell>
                       <TableCell>
                         {formatTimestampToBr(disciplina.dataInicioTimestamp)}
                       </TableCell>
@@ -501,7 +518,6 @@ const CronogramaModal = ({
     </ModalFooter>
   </Modal>
 );
-
 // Modal de retorno do cancelamento. Sucesso mostra a mensagem de confirmação;
 // erro mostra o texto recebido na propriedade `message` da resposta da API
 // (validação de status centralizada no IPOG), sem reescrever o motivo, além do
@@ -635,6 +651,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   // tem o seu, para o spinner de um não aparecer no outro.
   const [loadingCopyEnrollmentId, setLoadingCopyEnrollmentId] = useState(false);
   const [loadingCopyCheckoutLink, setLoadingCopyCheckoutLink] = useState(false);
+  const [loadingCopyCronograma, setLoadingCopyCronograma] = useState(false);
 
   const today = new Date();
   const anoAtual = today.getFullYear();
@@ -810,9 +827,9 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     resetCronograma();
   };
 
-  // As duas APIs rodam em paralelo. A do IPOG decide a disciplina de ingresso;
-  // a MuleSoft completa a grade. Se a MuleSoft falhar, a primeira continua
-  // visível e o consultor é avisado, sem bloquear a matrícula.
+  // A API do IPOG devolve o cronograma completo em ordem cronológica para o
+  // mês de ingresso pedido. A primeira disciplina é o ingresso; as seguintes
+  // são as demais disciplinas do curso. Não é necessário consultar a MuleSoft.
   const consultarCronograma = async () => {
     if (!mesValido || !classIdentifier) return;
 
@@ -824,23 +841,10 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     setCronograma(null);
 
     try {
-      const [ingressoResult, gradeResult] = await Promise.allSettled([
-        runServerless({
-          name: "fetchDisciplinasIngresso",
-          parameters: { identificadorTurma: classIdentifier, mesIngresso },
-        }),
-        classCode
-          ? runServerless({
-              name: "fetchTurmaDisciplinas",
-              parameters: { classCode },
-            })
-          : Promise.resolve(null),
-      ]);
-
-      const ingressoResponse =
-        ingressoResult.status === "fulfilled"
-          ? ingressoResult.value?.response
-          : null;
+      const { response: ingressoResponse } = await runServerless({
+        name: "fetchDisciplinasIngresso",
+        parameters: { identificadorTurma: classIdentifier, mesIngresso },
+      });
 
       if (!ingressoResponse) {
         setCronogramaError(
@@ -869,41 +873,20 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
           mesIngresso,
           primeira: null,
           demais: [],
-          gradeErro: null,
         });
         return;
       }
 
-      const gradeResponse =
-        gradeResult.status === "fulfilled" ? gradeResult.value?.response : null;
-
-      let gradeErro = null;
-      let demais = [];
-
-      if (classCode) {
-        if (!gradeResponse) {
-          gradeErro =
-            "Tempo de resposta esgotado ao consultar as demais disciplinas.";
-        } else if (gradeResponse.status !== "SUCCESS") {
-          gradeErro = formatOriginError(
-            gradeResponse?.origin,
-            gradeResponse?.message ||
-              "Não foi possível carregar as demais disciplinas.",
-          );
-        } else {
-          demais = buildDemaisDisciplinas(
-            primeira,
-            gradeResponse.response?.disciplinas || [],
-          );
-        }
-      }
+      // Demais disciplinas são as posições 1 em diante da mesma resposta,
+      // que já chegam em ordem cronológica de dataInicio e com substituir = N.
+      const todas = ingressoServidor.disciplinas || [];
+      const demais = todas.slice(1);
 
       setCronograma({
         identificadorTurma: classIdentifier,
         mesIngresso,
         primeira,
         demais,
-        gradeErro,
       });
     } catch (error) {
       console.error("Erro ao consultar o cronograma:", error);
@@ -917,7 +900,6 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       setLoadingCronograma(false);
     }
   };
-
   useEffect(() => {
     const hasLoadedProperties =
       dealProperties && Object.keys(dealProperties).length > 0;
@@ -1527,6 +1509,26 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     }
   };
 
+  const handleCopyCronograma = async () => {
+    if (!cronograma?.primeira) return;
+    setLoadingCopyCronograma(true);
+    try {
+      const texto = formatCronogramaText(cronograma, classIdentifier);
+      await actions.copyTextToClipboard(texto);
+      setAlertMessage({
+        type: "success",
+        message: "Cronograma copiado com sucesso!",
+      });
+    } catch (error) {
+      console.error("Erro ao copiar cronograma:", error);
+      setAlertMessage({
+        type: "danger",
+        message: "Não foi possível copiar o cronograma.",
+      });
+    } finally {
+      setLoadingCopyCronograma(false);
+    }
+  };
   const handleCopyCheckoutLink = async () => {
     setLoadingCopyCheckoutLink(true);
     try {
@@ -1945,17 +1947,11 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
               readOnly={true}
             />
 
-            {isEadPos && (
-              <Flex direction="column" gap="extra-small">
-                <Select
-                  label="Mês de ingresso"
-                  name="studentStartMonth"
-                  required={true}
-                  value={studentStartMonth ? String(studentStartMonth) : ""}
-                  onChange={handleMonthChange}
-                  options={monthOptionsForYear}
-                  placeholder="Selecione o mês"
-                />
+          </AutoGrid>
+
+          {isEadPos && (
+            <Flex direction="column" gap="extra-small">
+              <AutoGrid columnWidth={240} gap="small" flexible={true}>
                 <Select
                   label="Ano de ingresso"
                   name="studentStartYear"
@@ -1965,42 +1961,58 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
                   options={yearOptions}
                   placeholder="Selecione o ano"
                 />
-                <LoadingButton
-                  type="button"
-                  variant="secondary"
-                  disabled={!classIdentifier || !mesValido}
-                  loading={loadingCronograma}
-                  onClick={consultarCronograma}
-                  overlayOptions={{ openBehavior: "onLoadingFinish" }}
-                  overlay={
-                    <CronogramaModal
-                      error={cronogramaError}
-                      data={cronograma}
-                      classCode={classCode}
-                      classIdentifier={classIdentifier}
-                      closeOverlay={(id) => actions.closeOverlay(id)}
-                    />
+                <Select
+                  label="Mês de ingresso"
+                  name="studentStartMonth"
+                  required={true}
+                  disabled={!studentStartYear}
+                  value={studentStartMonth ? String(studentStartMonth) : ""}
+                  onChange={handleMonthChange}
+                  options={monthOptionsForYear}
+                  placeholder={
+                    studentStartYear
+                      ? "Selecione o mês"
+                      : "Selecione o ano primeiro"
                   }
-                >
-                  Consultar cronograma
-                </LoadingButton>
-                {cronograma?.primeira && (
-                  <Text variant="microcopy">
-                    Disciplina que irá iniciar: {cronograma.primeira.nome} ·
-                    início{" "}
-                    {formatTimestampToBr(
-                      cronograma.primeira.dataInicioTimestamp,
-                    )}
-                  </Text>
-                )}
-                {!classIdentifier && (
-                  <Text variant="microcopy">
-                    Confirme o plano financeiro para liberar a consulta.
-                  </Text>
-                )}
-              </Flex>
-            )}
-          </AutoGrid>
+                />
+              </AutoGrid>
+              <LoadingButton
+                type="button"
+                variant="secondary"
+                disabled={!classIdentifier || !mesValido}
+                loading={loadingCronograma}
+                onClick={consultarCronograma}
+                overlayOptions={{ openBehavior: "onLoadingFinish" }}
+                overlay={
+                  <CronogramaModal
+                    error={cronogramaError}
+                    data={cronograma}
+                    classCode={classCode}
+                    classIdentifier={classIdentifier}
+                    closeOverlay={(id) => actions.closeOverlay(id)}
+                    onCopyCronograma={handleCopyCronograma}
+                    loadingCopyCronograma={loadingCopyCronograma}
+                  />
+                }
+              >
+                Consultar cronograma
+              </LoadingButton>
+              {cronograma?.primeira && (
+                <Text variant="microcopy">
+                  Disciplina que irá iniciar: {cronograma.primeira.nome} ·
+                  início{" "}
+                  {formatTimestampToBr(
+                    cronograma.primeira.dataInicioTimestamp,
+                  )}
+                </Text>
+              )}
+              {!classIdentifier && (
+                <Text variant="microcopy">
+                  Confirme o plano financeiro para liberar a consulta.
+                </Text>
+              )}
+            </Flex>
+          )}
 
           {(typeOfInterest === "Ao Vivo" || typeOfInterest === "Presencial") &&
             levelOfInterest === "Pós-graduação" && (
