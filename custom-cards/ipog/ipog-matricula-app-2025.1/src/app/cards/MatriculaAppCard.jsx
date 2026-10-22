@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Box,
   Card,
   Flex,
   Text,
@@ -15,9 +16,27 @@ import {
   Divider,
   Heading,
   Alert,
+  Input,
+  Icon,
+  Image,
 } from "@hubspot/ui-extensions";
 import { hubspot } from "@hubspot/ui-extensions";
 import { useCrmProperties, useAssociations } from "@hubspot/ui-extensions/crm";
+import ipogLogo from "./assets/ipog-logo.png";
+
+// Cabeçalho de marca do card: logo do IPOG + título e subtítulo. Fonte única do
+// título/subtítulo, para os cards não divergirem no texto.
+const BRAND_SUBTITLE = "IPOG Instituto de Pós-Graduação & Graduação";
+
+const BrandHeader = ({ title }) => (
+  <Flex direction="row" gap="medium" align="center">
+    <Image src={ipogLogo} alt="IPOG" height={48} />
+    <Flex direction="column" gap="extra-small">
+      <Heading>{title}</Heading>
+      <Text variant="microcopy">{BRAND_SUBTITLE}</Text>
+    </Flex>
+  </Flex>
+);
 
 hubspot.extend(({ context, runServerlessFunction, actions }) => (
   <Extension
@@ -58,14 +77,47 @@ const NIVEL_INTERESSE_CEU = "Curso de extensão universitária";
 const isPagamentoAVista = (tipoPagamento) =>
   tipoPagamento === "PIX" || tipoPagamento === "A_VISTA";
 
-// Traduz o Tipo de Pagamento do card para o vocabulário de forma_pagamento
-// do objeto Descontos (valores espelhados da propriedade forma_de_pagamento_list).
-const FORMA_PAGAMENTO_POR_TIPO = {
-  PIX: "Pix",
-  BOLETO: "Boleto bancário",
-  A_VISTA: "Cartão de crédito",
-  PARCELADO: "Cartão de crédito",
-  RECORRENTE: "Cartão de crédito",
+// O objeto Descontos usa o mesmo vocabulário de `tipopagamento` do negócio
+// (PIX, A_VISTA, PARCELADO, RECORRENTE, BOLETO), então o valor do card é enviado
+// ao motor sem tradução.
+
+// Avalia uma quantidade de parcelas contra o critério de um desconto.
+// Retorna true quando não há critério (não restringe) ou quando atende.
+const installmentsMatchCriteria = (qtdeParcelas, criterio) => {
+  if (!criterio || !criterio.operador) return true;
+  const actual = Number(qtdeParcelas);
+  if (Number.isNaN(actual)) return false;
+  const expected = criterio.valor === null || criterio.valor === undefined ? null : Number(criterio.valor);
+  const expected2 = criterio.valor2 === null || criterio.valor2 === undefined ? null : Number(criterio.valor2);
+  switch (criterio.operador) {
+    case "igual_a":
+      return expected !== null && actual === expected;
+    case "diferente_de":
+      return expected !== null && actual !== expected;
+    case "menor_que":
+      return expected !== null && actual < expected;
+    case "menor_ou_igual":
+      return expected !== null && actual <= expected;
+    case "maior_que":
+      return expected !== null && actual > expected;
+    case "maior_ou_igual":
+      return expected !== null && actual >= expected;
+    case "entre":
+      return expected !== null && expected2 !== null && actual >= expected && actual <= expected2;
+    default:
+      return false;
+  }
+};
+
+// Um plano é compatível quando atende ao critério de parcelas de TODOS os descontos
+// selecionados que têm critério (interseção). Devolve a lista de descontos que o
+// plano NÃO atende, para montar o motivo do bloqueio.
+const planIncompatibleDiscounts = (qtdeParcelas, selectedCategories, objectDiscountCategories) => {
+  const selected = new Set(selectedCategories || []);
+  return (objectDiscountCategories || [])
+    .filter((item) => selected.has(item.value) && item.condicaoParcelas)
+    .filter((item) => !installmentsMatchCriteria(qtdeParcelas, item.condicaoParcelas))
+    .map((item) => item.label || item.value);
 };
 
 const Extension = ({ context, runServerless, sendAlert, actions }) => {
@@ -74,6 +126,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     "categoriacondicao",
     "desconto_aprovado",
     "categorias_aprovadas",
+    "cpf",
     "nivel_de_interesse",
     "modalidade_de_interesse",
     "matriculas_formadas_posgraduacao",
@@ -141,6 +194,19 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     },
   );
 
+  // Convênio(s) associados ao negócio. A função legada lê os convênios no momento em
+  // que roda; observamos a associação aqui para reavaliar quando ela muda.
+  const { results: convenioResults } = useAssociations(
+    {
+      toObjectType: envConfig.convenioObjectId,
+      properties: ["tipo_de_convenio"],
+      pageLength: 10,
+    },
+    {
+      propertiesToFormat: "all",
+    },
+  );
+
   // useAssociations tem retornado `toObjectId` em alguns resultados e `id` em outros.
   // Normalize ambos, preservando o formato de origem para o resto do card.
   const firstContactAssociation = contactResults?.[0];
@@ -186,14 +252,28 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   // valor) continua vindo da MuleSoft via fetchDiscount com o categoria_sei da regra.
   const [objectDiscountCategories, setObjectDiscountCategories] = useState([]);
   const [isEvaluatingObjectDiscounts, setIsEvaluatingObjectDiscounts] = useState(false);
+  const [objectDiscountsEvaluated, setObjectDiscountsEvaluated] = useState(false);
+
+  // Consulta de matrículas por CPF. A API é a fonte única das contagens de ex-aluno;
+  // sem consulta feita, os descontos que dependem de matrículas não são ofertados.
+  const [cpfInput, setCpfInput] = useState("");
+  const [isSavingCpf, setIsSavingCpf] = useState(false);
+  const [isSearchingEnrollments, setIsSearchingEnrollments] = useState(false);
+  const [enrollmentData, setEnrollmentData] = useState(null);
 
   const turmaAtual = manualTurmaData || associatedTurmaResult[0];
 
-  // Determina se é CEU ou Pós sem matrículas (para regra de limite de diamantes)
+  // Determina se é CEU ou Pós sem matrículas (para regra de limite de diamantes).
+  // Fonte única = contagens da API de matrículas por CPF (mesma base do motor legado);
+  // sem busca feita (counts ausente) o aluno é tratado como sem matrícula.
+  // "Com matrícula" em Pós espelha o motor: pos >= 1 OU graduação >= 1.
+  const posCount = enrollmentData?.counts?.pos ?? 0;
+  const gradCount = enrollmentData?.counts?.graduacao ?? 0;
   const isCeuOrPosSemMatricula =
     properties.nivel_de_interesse === NIVEL_INTERESSE_CEU ||
     (properties.nivel_de_interesse === "Pós-graduação" &&
-      (parseInt(properties.matriculas_formadas_posgraduacao, 10) || 0) === 0);
+      posCount < 1 &&
+      gradCount < 1);
 
   // Categoria do desconto de pagamento à vista (Ação Comercial) por nível de interesse:
   // CEU -> acao_comercial_ceu | Pós-graduação (e fallback) -> acao_comercial_pos.
@@ -345,27 +425,34 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   // Verifica os descontos legados via custom code (réplica 1:1 do workflow
   // "v0 - Processos de descontos"). Executa ao abrir o card e pode ser reexecutada
   // pelo botão "Verificar descontos".
-  const handleVerifyDiscounts = async () => {
+  const handleVerifyDiscounts = async (countsOverride) => {
     setIsEvaluatingDiscounts(true);
     try {
+      const counts =
+        countsOverride !== undefined ? countsOverride : (enrollmentData?.counts ?? null);
       const { response } = await runServerless({
         name: "evaluateLegacyDiscounts",
         parameters: {
           dealId: context.crm.objectId,
           convenioObjectId: envConfig.convenioObjectId,
+          counts,
         },
       });
 
       if (response?.status === "SUCCESS") {
-        const categories = response.response?.categories || [];
-        setLegacyCategories(categories);
-        sendAlert({
-          type: "success",
-          message:
-            categories.length > 0
-              ? `Descontos verificados: ${categories.length} categoria(s) aprovada(s).`
-              : "Descontos verificados: nenhuma categoria aprovada para este negócio.",
-        });
+        setLegacyCategories(response.response?.categories || []);
+        const diag = response.response || {};
+        if (diag.convenioReadError || diag.writeError) {
+          sendAlert({
+            type: "warning",
+            message: formatOriginError(
+              "SISTEMA",
+              `Convênios lidos: ${diag.convenioCount ?? "?"}. ${
+                diag.convenioReadError ? "Leitura: " + diag.convenioReadError + " " : ""
+              }${diag.writeError ? "Escrita: " + diag.writeError : ""}`,
+            ),
+          });
+        }
       } else {
         sendAlert({
           type: "warning",
@@ -389,15 +476,185 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     }
   };
 
+  // Persiste as categorias selecionadas no negócio (propriedade categoriacondicao).
+  const persistSelectedCategories = async (categories) => {
+    try {
+      await runServerless({
+        name: "saveDealCategories",
+        parameters: {
+          dealId: context.crm.objectId,
+          categories: categories.join(";"),
+        },
+      });
+    } catch (error) {
+      console.error("Erro ao salvar as categorias do desconto:", error);
+    }
+  };
+
+  // Chave de reavaliação: nível e modalidade (deal) + contato(s) + convênio(s) associados.
+  // Regrava os descontos legados sempre que qualquer um muda, para a categoria não ficar
+  // presa ao estado anterior (ex.: trocar convênio normal -> especial).
+  const contactAssocKey = (contactResults || [])
+    .map((r) => r.toObjectId ?? r.id)
+    .filter(Boolean)
+    .sort()
+    .join(",");
+  const convenioAssocKey = (convenioResults || [])
+    .map((r) => r.toObjectId ?? r.id)
+    .filter(Boolean)
+    .sort()
+    .join(",");
+  const legacyReevalKey = [
+    properties.nivel_de_interesse || "",
+    properties.modalidade_de_interesse || "",
+    contactAssocKey,
+    convenioAssocKey,
+  ].join("|");
+
   useEffect(() => {
     handleVerifyDiscounts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [legacyReevalKey]);
+
+  // Reconcilia a seleção com o conjunto elegível: remove categorias que deixaram de ser
+  // elegíveis e limpa o categoriacondicao, para a seleção antiga não continuar liberando
+  // o desconto errado (ex.: convênio normal -> especial).
+  useEffect(() => {
+    if (legacyCategories === null) return;
+    const eligibleValues = new Set([
+      ...legacyCategories,
+      ...objectDiscountCategories.map((o) => o.value),
+    ]);
+    setSelectedCategory((prev) => {
+      const filtered = prev.filter((c) => eligibleValues.has(c));
+      if (filtered.length !== prev.length) {
+        persistSelectedCategories(filtered);
+      }
+      return filtered;
+    });
+  }, [legacyCategories, objectDiscountCategories, properties.categoriacondicao]);
+
+  // CPF do aluno: espelha a propriedade cpf; grava no clique; a busca de matrículas
+  // usa a API IPOG e alimenta as regras de ex-aluno.
+  const cpfDigits = (value) => String(value || "").replace(/\D/g, "");
+  const typedCpfDigits = cpfDigits(cpfInput);
+
+  useEffect(() => {
+    setCpfInput(properties.cpf || "");
+  }, [properties.cpf]);
+
+  // Salva o CPF digitado e, em seguida, busca as matrículas e reavalia os descontos
+  // de ex-aluno. Um único clique executa as duas etapas em sequência.
+  // Com o campo vazio, o clique LIMPA o CPF do negócio e reavalia os descontos sem
+  // histórico de matrículas (não há o que buscar).
+  const handleSaveAndSearch = async () => {
+    const isClearing = typedCpfDigits.length === 0;
+
+    if (!isClearing && typedCpfDigits.length !== 11) {
+      sendAlert({ type: "warning", message: "Informe um CPF com 11 dígitos." });
+      return;
+    }
+
+    // Grava sempre (mesmo com o CPF igual): a function limpa e regrava, para o
+    // `cpf_desconto_avaliado` nunca ficar desatualizado em relação ao `cpf`.
+    setIsSavingCpf(true);
+    try {
+      const { response } = await runServerless({
+        name: "saveDealCpf",
+        parameters: { dealId: context.crm.objectId, cpf: cpfInput },
+      });
+      if (response?.status !== "SUCCESS") {
+        sendAlert({
+          type: "warning",
+          message: formatOriginError(
+            response?.origin,
+            response?.message || "Não foi possível salvar o CPF.",
+          ),
+        });
+        return;
+      }
+      setCpfInput(response.response?.cpf || "");
+      // CPF novo (ou limpo) invalida as matrículas anteriores.
+      setEnrollmentData(null);
+      await actions.refreshObjectProperties();
+    } catch (error) {
+      console.error("Erro ao salvar CPF:", error);
+      sendAlert({
+        type: "danger",
+        message: formatOriginError("SISTEMA", "Erro ao salvar o CPF. Tente novamente."),
+      });
+      return;
+    } finally {
+      setIsSavingCpf(false);
+    }
+
+    if (isClearing) {
+      // Sem CPF não há matrículas a buscar: reavalia os descontos sem histórico.
+      await handleVerifyDiscounts();
+      sendAlert({
+        type: "success",
+        message: "CPF removido. Descontos reavaliados sem histórico de matrículas.",
+      });
+      return;
+    }
+
+    await handleSearchEnrollments();
+  };
+
+  const handleSearchEnrollments = async () => {
+    if (typedCpfDigits.length !== 11) {
+      sendAlert({
+        type: "warning",
+        message: "Informe um CPF com 11 dígitos para buscar as matrículas.",
+      });
+      return;
+    }
+    setIsSearchingEnrollments(true);
+    try {
+      const { response } = await runServerless({
+        name: "countEnrollmentsByCpf",
+        parameters: { cpf: typedCpfDigits },
+      });
+      if (response?.status === "SUCCESS" || response?.status === "NOT_FOUND") {
+        const data =
+          response.response || { counts: { pos: 0, graduacao: 0, ceu: 0 }, groups: [], total: 0 };
+        setEnrollmentData(data);
+        // Contagens da API passam a alimentar as regras de ex-aluno (fonte única).
+        await handleVerifyDiscounts(data.counts);
+        sendAlert({
+          type: "success",
+          message:
+            (data.total || 0) > 0
+              ? `Matrículas encontradas: ${data.total} (Ativas/Formadas).`
+              : "Nenhuma matrícula ativa ou formada encontrada para este CPF.",
+        });
+      } else {
+        sendAlert({
+          type: "warning",
+          message: formatOriginError(
+            response?.origin,
+            response?.message || "Não foi possível consultar as matrículas.",
+          ),
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao consultar matrículas:", error);
+      sendAlert({
+        type: "danger",
+        message: formatOriginError("SISTEMA", "Erro ao consultar as matrículas. Tente novamente."),
+      });
+    } finally {
+      setIsSearchingEnrollments(false);
+    }
+  };
 
   // Motor da etapa 2: avalia as regras do objeto Descontos contra o negócio e devolve
   // as categorias elegíveis. O benefício (tipo/valor) continua vindo da MuleSoft via
   // fetchDiscount com o categoria_sei de cada regra.
-  const refreshObjectDiscounts = async (qtdeParcelas = null) => {
+  // `formaPagamento` é recebida por parâmetro (não lida do estado) para o recálculo
+  // disparado no onChange do Tipo de Pagamento usar o valor novo imediatamente, sem
+  // depender do clique em Simular. A elegibilidade não depende mais do plano escolhido:
+  // o critério de parcelas é aplicado no bloqueio dos planos, não aqui.
+  const refreshObjectDiscounts = async (formaPagamento = null) => {
     if (!envConfig.discountsObjectId) return;
     setIsEvaluatingObjectDiscounts(true);
     try {
@@ -406,21 +663,13 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
         parameters: {
           dealId: context.crm.objectId,
           discountsObjectId: envConfig.discountsObjectId,
-          formaPagamento: FORMA_PAGAMENTO_POR_TIPO[selectedTipoPagamento] || null,
-          qtdeParcelas,
+          formaPagamento: formaPagamento || null,
         },
       });
 
       if (response?.status === "SUCCESS") {
-        const categories = response.response?.categories || [];
-        setObjectDiscountCategories(categories);
-        sendAlert({
-          type: "success",
-          message:
-            categories.length > 0
-              ? `Descontos do objeto elegíveis: ${categories.length}.`
-              : `Descontos do objeto: nenhuma regra elegível (${response.response?.rulesEvaluated ?? 0} avaliadas).`,
-        });
+        setObjectDiscountCategories(response.response?.categories || []);
+        setObjectDiscountsEvaluated(true);
       } else {
         setObjectDiscountCategories([]);
         sendAlert({
@@ -510,7 +759,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     // Motores da etapa 2 + legado: reavaliam os descontos elegíveis no clique único
     // (legado roda também ao abrir o card; aqui garante frescor com o tipo selecionado).
     handleVerifyDiscounts();
-    refreshObjectDiscounts(FORMA_PAGAMENTO_POR_TIPO[selectedTipoPagamento] || null);
+    refreshObjectDiscounts(selectedTipoPagamento || null);
 
     try {
       const promises =
@@ -798,8 +1047,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
   const handleSelectCondition = (condition) => {
     setSelectedCondition(condition);
-    // O critério de parcelas do objeto Descontos é avaliado por condição escolhida.
-    refreshObjectDiscounts(condition?.qtdeParcelas ?? null);
+    // A elegibilidade do desconto não depende mais do plano escolhido: o critério de
+    // parcelas é aplicado no bloqueio dos planos (planIncompatibleDiscounts), não aqui.
+    refreshObjectDiscounts(selectedTipoPagamento || null);
   };
 
   const calculateAntecipationValue = (
@@ -1063,7 +1313,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   return (
     <Card>
       <Flex direction="column" gap="medium">
-        {/* Header Info */}
+        <BrandHeader title="Gerar plano financeiro" />
+
+        {/* Header Info: turma, unidade e atualização de dados no topo */}
         <Flex direction="row" justify="between" gap="medium" align="end">
           <Flex direction="column" gap="extra-small">
             <Text format={{ fontWeight: "regular" }}>Turma</Text>
@@ -1086,9 +1338,79 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               size="small"
               disabled={isRefreshing}
             >
-              {isRefreshing ? "Atualizando..." : "🔄 Atualizar dados de turma"}
+              <Icon name="refresh" />
+              {isRefreshing ? "Atualizando..." : "Atualizar dados de turma"}
             </Button>
           </Flex>
+        </Flex>
+
+        {/* CPF do aluno e matrículas: no meio. Os descontos de ex-aluno dependem da
+            consulta de matrículas por CPF (fonte única das contagens). */}
+        <Flex direction="column" gap="small">
+          <Flex direction="row" gap="small" align="end">
+            <Input
+              label="CPF do aluno"
+              name="cpf"
+              value={cpfInput}
+              onInput={(value) => setCpfInput(value)}
+              placeholder="000.000.000-00"
+            />
+            <Button
+              onClick={handleSaveAndSearch}
+              variant="primary"
+              disabled={
+                (typedCpfDigits.length !== 0 && typedCpfDigits.length !== 11) ||
+                isSavingCpf ||
+                isSearchingEnrollments
+              }
+            >
+              {isSavingCpf
+                ? "Salvando..."
+                : isSearchingEnrollments
+                ? "Buscando matrículas..."
+                : typedCpfDigits.length === 0
+                ? "Limpar CPF"
+                : "Salvar e buscar matrículas"}
+            </Button>
+          </Flex>
+          <Text format={{ fontSize: "small" }}>
+            Digite o CPF para validar descontos de ex aluno. Deixe vazio e clique para
+            remover o CPF.
+          </Text>
+          {enrollmentData && (
+            <>
+              <Divider />
+              <Heading>
+                {`Matrículas de ${enrollmentData.nomeAluno || "aluno"} (Ativas/Formadas)`}
+              </Heading>
+              {(enrollmentData.groups || []).length === 0 ? (
+                <Text format={{ fontSize: "small" }}>
+                  Nenhuma matrícula ativa ou formada encontrada para este CPF.
+                </Text>
+              ) : (
+                enrollmentData.groups.map((group) => (
+                  <Box
+                    key={group.key}
+                    border="thin"
+                    borderColor="default"
+                    borderRadius="medium"
+                    padding="medium"
+                  >
+                    <Flex direction="column" gap="extra-small">
+                      <Text format={{ fontWeight: "demibold" }}>
+                        {`${group.label}: ${group.total} matrícula(s)`}
+                      </Text>
+                      {group.matriculas.map((mat) => (
+                        <Text key={mat.id} format={{ fontSize: "small" }}>
+                          {`${mat.id} | ${mat.statusLabel} | ${mat.curso}`}
+                        </Text>
+                      ))}
+                    </Flex>
+                  </Box>
+                ))
+              )}
+            </>
+          )}
         </Flex>
 
         <Flex direction="row" justify="between" gap="medium">
@@ -1110,8 +1432,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               });
             }
             // Motor da etapa 2: reavalia as regras do objeto Descontos com a forma de
-            // pagamento escolhida, antes de qualquer simulação.
-            refreshObjectDiscounts(FORMA_PAGAMENTO_POR_TIPO[newTipo] || null);
+            // pagamento escolhida, antes de qualquer simulação. Passa o valor novo
+            // diretamente (o estado ainda não atualizou neste ponto).
+            refreshObjectDiscounts(newTipo || null);
           }}
               options={paymentTypeOptions}
               placeholder="Selecione o tipo"
@@ -1153,6 +1476,12 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
             Simular
           </Button>
         </Flex>
+        {/* Status discreto dos descontos elegíveis (substitui os pop-ups de sucesso) */}
+        {legacyCategories !== null && (
+          <Text format={{ fontSize: "small" }}>
+            {`Descontos elegíveis: ${discountCategoryOptions.length}.`}
+          </Text>
+        )}
         {selectedCategory.includes("aluno_diamante") &&
           !isLoadingContactAssociations &&
           !associatedContactId && (
@@ -1265,7 +1594,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               <Text format={{ fontSize: "small" }}>
                 Nenhum desconto disponível para a quantidade de indicações.
               </Text>
-            ) : isCeuOrPosSemMatricula && diamondIndications.length >= 10 && diamondTier === null ? (
+            ) : isCeuOrPosSemMatricula && diamondIndications.length >= 5 && diamondTier === null ? (
               <>
                 <Text format={{ fontSize: "small" }}>
                   Selecione o tier de desconto para visualizar as indicações.
@@ -1278,18 +1607,20 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                   >
                     50% de desconto (5 indicações)
                   </Button>
-                  <Button
-                    onClick={() => handleSelectDiamondTier(10)}
-                    variant={diamondTier === 10 ? "primary" : "secondary"}
-                    size="small"
-                  >
-                    100% de desconto (10 indicações)
-                  </Button>
+                  {diamondIndications.length >= 10 && (
+                    <Button
+                      onClick={() => handleSelectDiamondTier(10)}
+                      variant={diamondTier === 10 ? "primary" : "secondary"}
+                      size="small"
+                    >
+                      100% de desconto (10 indicações)
+                    </Button>
+                  )}
                 </Flex>
               </>
             ) : (
               <>
-                {isCeuOrPosSemMatricula && diamondIndications.length >= 10 && diamondTier !== null && (
+                {isCeuOrPosSemMatricula && diamondTier !== null && (
                   <Flex direction="row" gap="small" wrap="wrap">
                     <Button
                       onClick={() => handleSelectDiamondTier(5)}
@@ -1298,13 +1629,15 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                     >
                       50% de desconto (5 indicações)
                     </Button>
-                    <Button
-                      onClick={() => handleSelectDiamondTier(10)}
-                      variant={diamondTier === 10 ? "primary" : "secondary"}
-                      size="small"
-                    >
-                      100% de desconto (10 indicações)
-                    </Button>
+                    {diamondIndications.length >= 10 && (
+                      <Button
+                        onClick={() => handleSelectDiamondTier(10)}
+                        variant={diamondTier === 10 ? "primary" : "secondary"}
+                        size="small"
+                      >
+                        100% de desconto (10 indicações)
+                      </Button>
+                    )}
                   </Flex>
                 )}
                 <Flex direction="row" gap="small" wrap="wrap">
@@ -1392,6 +1725,14 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                       ...(diamondLabel ? [diamondLabel] : []),
                       ...(discountData.allDiscounts || []).filter(d => d.categoria !== "aluno_diamante").map(d => d.name)
                     ];
+                    // Planos incompatíveis com o critério de parcelas dos descontos
+                    // selecionados: continuam visíveis, mas não podem ser escolhidos.
+                    const incompatibleDiscounts = planIncompatibleDiscounts(
+                      condition.qtdeParcelas,
+                      selectedCategory,
+                      objectDiscountCategories,
+                    );
+                    const isPlanBlocked = incompatibleDiscounts.length > 0;
                     return (
                     <TableRow key={condition.codigoCondicao}>
                       <TableCell>{condition.qtdeParcelas}</TableCell>
@@ -1417,18 +1758,28 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                         {formatCurrency(discountData.finalValue)}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          onClick={() => handleSelectCondition(condition)}
-                          variant={
-                            selectedCondition === condition
-                              ? "primary"
-                              : "secondary"
-                          }
-                        >
-                          {selectedCondition === condition
-                            ? "Selecionado"
-                            : "Selecionar"}
-                        </Button>
+                        <Flex direction="column" gap="extra-small">
+                          <Button
+                            onClick={() => handleSelectCondition(condition)}
+                            variant={
+                              selectedCondition === condition
+                                ? "primary"
+                                : "secondary"
+                            }
+                            disabled={isPlanBlocked}
+                          >
+                            {selectedCondition === condition
+                              ? "Selecionado"
+                              : "Selecionar"}
+                          </Button>
+                          {isPlanBlocked && (
+                            <Text format={{ color: "danger" }}>
+                              {`Plano não compatível com desconto:\n${incompatibleDiscounts
+                                .map((name) => `• ${name}`)
+                                .join("\n")}`}
+                            </Text>
+                          )}
+                        </Flex>
                       </TableCell>
                     </TableRow>
                   )})}

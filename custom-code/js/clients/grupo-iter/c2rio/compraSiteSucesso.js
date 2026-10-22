@@ -24,15 +24,19 @@ const axios = require("axios");
 //   - cf_product: array -> JSON string na propriedade cf_produto.
 //   - cf_crianca: true/SIM/1/número>0 -> true; false/NAO/0/vazio -> false.
 //   - cf_data_pedido e cf_date_visit_expected: DD-MM-YYYY -> YYYY-MM-DD.
-//   - cf_data_hora_visita (contato e deal, datetime): o SIG envia só a data;
-//     grava com hora fixa 12:00 de Brasília (UTC-3), em timestamp ms.
+//   - cf_data_hora_visita (contato e deal, datetime): aceita timestamp em ms ou
+//     em segundos, ISO 8601 com fuso, e data DD-MM-YYYY ou YYYY-MM-DD com
+//     horário opcional. Sem horário, fixa 12:00 de Brasília (UTC-3).
+//
+// A propriedade payload do contato guarda o payload recebido com as datas de
+// visita já legíveis ("DD/MM/YYYY HH:mm", horário de Brasília), não em timestamp.
 //
 // O token vem de ACTIVE.hubspotToken: secret HUBSPOT_TOKEN_SANDBOX_INTEGRACAO_SIG
 // em sandbox e HUBSPOT_TOKEN_INTEGRACAO_SIG em produção, nunca hardcoded.
 // ---------------------------------------------------------------------------
 
 // Ambiente da execução. Trocar manualmente para "production" no deploy.
-const ENV = "sandbox";
+const ENV = "production";
 
 const CONFIG = {
   sandbox: {
@@ -53,7 +57,7 @@ const CONTACT_FIELDS = [
   { from: "conversion_identifier", to: "conversion_identifier", type: "text" },
   { from: "traffic_medium", to: "utm_medium", type: "text" },
   { from: "traffic_source", to: "utm_source", type: "text" },
-  { from: "email", to: "email", type: "text" },
+  { from: "email", to: "email", type: "email" },
   { from: "name", to: "firstname", type: "text" },
   { from: "state", to: "state", type: "text" },
   { from: "city", to: "city", type: "text" },
@@ -65,7 +69,7 @@ const CONTACT_FIELDS = [
   { from: "cf_category", to: "cf_category", type: "text" },
   { from: "cf_accept_communication", to: "aceite_receber_comunicacoes_c2rio", type: "acceptance" },
   { from: "cf_date_visit_expected", to: "cf_data_visita", type: "date" },
-  { from: "cf_lingua", to: "idioma_cloned", type: "idioma" },
+  { from: "cf_lingua", to: "idioma", type: "idioma" },
   { from: "cf_agent", to: "cf_agent", type: "text" },
   { from: "cf_crianca", to: "cf_comprou_crianca", type: "childFlag" },
   { from: "cf_brand_card", to: "cf_brand_card", type: "text" },
@@ -78,7 +82,7 @@ const DEAL_FIELDS = [
   { from: "conversion_identifier", to: "conversion_identifier", type: "text" },
   { from: "traffic_medium", to: "utm_medium", type: "text" },
   { from: "traffic_source", to: "utm_source", type: "text" },
-  { from: "email", to: "email_do_contato_principal", type: "text" },
+  { from: "email", to: "email_do_contato_principal", type: "email" },
   { from: "cf_id_pedido", to: "dealname", type: "text", fallbackFrom: "name" },
   { from: "state", to: "state", type: "text" },
   { from: "city", to: "cidade", type: "text" },
@@ -119,6 +123,16 @@ const toChildFlag = (valor) => {
   if (Number.isFinite(numericValue)) return numericValue > 0;
   const normalizedValue = String(valor).trim().toLowerCase();
   return TRUE_WORDS.has(normalizedValue);
+};
+
+// email (contato) e email_do_contato_principal (deal): o SIG às vezes manda o
+// valor com espaço em branco no início ou no fim, e a propriedade nativa de
+// e-mail do HubSpot rejeita o PATCH inteiro com INVALID_EMAIL quando isso
+// acontece. trim() remove o espaço sem alterar o endereço em si.
+const toEmail = (valor) => {
+  if (valor == null) return null;
+  const trimmedValue = String(valor).trim();
+  return trimmedValue === "" ? null : trimmedValue;
 };
 
 const toNumber = (valor) => {
@@ -232,14 +246,27 @@ const toDateString = (raw) => {
   return `${year}-${padNumber(month)}-${padNumber(day)}`;
 };
 
-// cf_data_hora_visita (datetime, contato e deal). Aceita YYYY-MM-DD ou
-// DD-MM-YYYY (hífen ou barra), com horário opcional HH:mm[:ss]. Com fuso
-// explícito (Z ou ±HH:mm), usa o instante como veio; sem fuso, o horário é o de
-// Brasília (UTC-3). Sem horário, fixa 12:00 de Brasília, evitando mudança de
-// dia na exibição. Valor ilegível retorna null (não grava).
+// Fuso de Brasília em ms. O Brasil não tem horário de verão desde 2019, então o
+// deslocamento é fixo em UTC-3 o ano inteiro.
+const BRASILIA_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+// cf_data_hora_visita (datetime, contato e deal). Aceita os quatro formatos que
+// o SIG já enviou neste evento:
+//   - timestamp em milissegundos ("1792144800000") ou em segundos
+//     ("1792144800"), que já é um instante absoluto e entra sem ajuste de fuso;
+//   - ISO 8601 com fuso explícito ("2026-10-16T10:00:00Z"), usado como veio;
+//   - YYYY-MM-DD ou DD-MM-YYYY (hífen ou barra), com horário opcional
+//     HH:mm[:ss], lido como horário de Brasília (UTC-3).
+// Sem horário, fixa 12:00 de Brasília, evitando mudança de dia na exibição.
+// Valor ilegível retorna null (não grava).
 const toVisitDateTimeMs = (raw) => {
   if (raw == null || raw === "") return null;
   const text = String(raw).trim();
+  const epochMatch = /^\d{10}(\d{3})?$/.exec(text);
+  if (epochMatch) {
+    const epochValue = Number(text);
+    return epochMatch[1] ? epochValue : epochValue * 1000;
+  }
   if (/[T\s]\d{1,2}:\d{2}.*(Z|[+-]\d{2}:?\d{2})$/i.test(text)) {
     const timestamp = Date.parse(text.replace(" ", "T"));
     return Number.isFinite(timestamp) ? timestamp : null;
@@ -256,7 +283,35 @@ const toVisitDateTimeMs = (raw) => {
   const minute = timeMatch ? Number(timeMatch[2]) : 0;
   const second = timeMatch && timeMatch[3] ? Number(timeMatch[3]) : 0;
   if (hour > 23 || minute > 59 || second > 59) return null;
-  return Date.UTC(year, month - 1, day, hour, minute, second) + 3 * 60 * 60 * 1000;
+  return Date.UTC(year, month - 1, day, hour, minute, second) + BRASILIA_OFFSET_MS;
+};
+
+// Campos de data e hora de visita que vão legíveis para a propriedade payload
+// do contato, no lugar do valor cru recebido do SIG.
+const VISIT_DATETIME_PAYLOAD_FIELDS = ["cf_data_hora_visita", "cf_data_hora_visita_anterior"];
+
+// Timestamp em ms -> "DD/MM/YYYY HH:mm" em horário de Brasília.
+const toReadableDateTime = (timestampMs) => {
+  const brasiliaDate = new Date(timestampMs - BRASILIA_OFFSET_MS);
+  const day = padNumber(brasiliaDate.getUTCDate());
+  const month = padNumber(brasiliaDate.getUTCMonth() + 1);
+  const year = brasiliaDate.getUTCFullYear();
+  const hour = padNumber(brasiliaDate.getUTCHours());
+  const minute = padNumber(brasiliaDate.getUTCMinutes());
+  return `${day}/${month}/${year} ${hour}:${minute}`;
+};
+
+// Cópia do payload com as datas de visita já legíveis, para a propriedade
+// payload do contato. Não altera o objeto recebido, que continua sendo a fonte
+// das conversões. Campo ilegível fica como veio, para o diagnóstico não perder
+// o valor original.
+const buildReadablePayload = (payload) => {
+  const readablePayload = { ...payload };
+  for (const field of VISIT_DATETIME_PAYLOAD_FIELDS) {
+    const timestamp = toVisitDateTimeMs(readablePayload[field]);
+    if (timestamp != null) readablePayload[field] = toReadableDateTime(timestamp);
+  }
+  return readablePayload;
 };
 
 const convertField = (field, payload) => {
@@ -272,6 +327,8 @@ const convertField = (field, payload) => {
   }
 
   switch (field.type) {
+    case "email":
+      return toEmail(valor);
     case "acceptance":
       return toAcceptance(valor);
     case "number":
@@ -372,7 +429,7 @@ exports.main = async (event, callback) => {
   });
 
   const contactProperties = buildContactProperties(CONTACT_FIELDS, payload);
-  contactProperties["payload"] = JSON.stringify(payload, null, 2);
+  contactProperties["payload"] = JSON.stringify(buildReadablePayload(payload), null, 2);
   const dealProperties = buildDealProperties(DEAL_FIELDS, payload);
 
   try {

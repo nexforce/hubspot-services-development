@@ -152,13 +152,12 @@ const fetchLineItemProperties = async (ids, hubspotClient) => {
     "tipo_de_contrato",
     "classificacao_do_contrato",
     // Propriedades CALCULADAS (valor base × quantity, resolvidas pelo CRM
-    // conforme o tipo de emissão) — fonte do "Valor Bruto" exibido no card.
+    // conforme o tipo de emissão), fonte do "Valor Bruto" das categorias de
+    // valor FIXO. As categorias hora×valor não têm calculada no meio: leem e
+    // gravam na mesma propriedade base, sem fator nenhum.
     "valor_mensalidade_calculado",
     "valor_locacao_calculado",
     "valor_licenca_calculado",
-    "valor_treinamento_calculado",
-    "valor_horas_desenvolvimento_calculado",
-    "valor_horas_contabeis_calculado",
     // Snapshots do bruto ORIGINAL (escala BASE), gravados uma única vez na
     // primeira aplicação — a referência imutável de cada categoria.
     "valor_mensalidade_original",
@@ -221,6 +220,12 @@ const resolveGross = (calcValue, baseValue, quantity) =>
 const resolveBrutoOriginal = (snapshot, grossAtual, quantity) =>
   isBlank(snapshot) ? grossAtual : parseFloat(snapshot) * quantity;
 
+// Mesmo papel, para as categorias hora×valor, e sem multiplicar por quantity:
+// a propriedade base dessas categorias guarda o TOTAL e o CRM não a recompõe.
+// Ver o cabeçalho do bloco de alocação em ApplyDiscounts.js.
+const resolveBrutoOriginalHoras = (snapshot, grossAtual) =>
+  isBlank(snapshot) ? grossAtual : parseFloat(snapshot);
+
 const groupBySistema = (lineItems, labels) => {
   const grouped = {};
 
@@ -242,9 +247,6 @@ const groupBySistema = (lineItems, labels) => {
       valor_mensalidade_calculado,
       valor_locacao_calculado,
       valor_licenca_calculado,
-      valor_treinamento_calculado,
-      valor_horas_desenvolvimento_calculado,
-      valor_horas_contabeis_calculado,
       valor_mensalidade_original,
       valor_locacao_original,
       valor_licenca_original,
@@ -326,56 +328,42 @@ const groupBySistema = (lineItems, labels) => {
     g.licenca += licencaOriginal;
     g.licencaLiquido += licencaGross;
 
-    // A categoria hora×valor vale quando o bruto (calculado/base) está
-    // preenchido (não só as horas). As HORAS nunca são multiplicadas por
-    // quantity; o valor/h é derivado depois (total ÷ horas) e por isso já
-    // embute a multiplicação — é a taxa efetiva cobrada por hora.
+    // A categoria hora×valor vale quando o valor base está preenchido (não só
+    // as horas). Aqui NÃO há propriedade calculada no meio: o CRM não multiplica
+    // essas categorias por quantity, então o card lê a mesma propriedade em que
+    // o desconto grava e o valor/h digitado é o que volta na releitura.
+    // As HORAS também nunca são multiplicadas, então o valor/h (total ÷ horas)
+    // é a taxa efetiva cobrada por hora.
     // O gate continua pelo valor VIGENTE: item zerado pela consolidação de
     // horas está fora da categoria e seu snapshot antigo não pode ser somado
     // ao bruto do sistema (viraria dupla contagem).
-    const vTrein = resolveGross(
-      valor_treinamento_calculado,
-      valor_treinamento,
-      qty,
-    );
+    const vTrein = parseFloat(valor_treinamento || 0);
     if (vTrein > 0) {
-      g.treinamentoTotalBruto += resolveBrutoOriginal(
+      g.treinamentoTotalBruto += resolveBrutoOriginalHoras(
         valor_treinamento_original,
         vTrein,
-        qty,
       );
       g.treinamentoTotalLiquido += vTrein;
       g.treinamentoHoras += parseFloat(horas_treinamento || 0);
     }
 
-    const vDev = resolveGross(
-      valor_horas_desenvolvimento_calculado,
-      valor_horas_desenvolvimento,
-      qty,
-    );
+    const vDev = parseFloat(valor_horas_desenvolvimento || 0);
     if (vDev > 0) {
-      g.desenvolvimentoTotalBruto += resolveBrutoOriginal(
+      g.desenvolvimentoTotalBruto += resolveBrutoOriginalHoras(
         valor_horas_desenvolvimento_original,
         vDev,
-        qty,
       );
       g.desenvolvimentoTotalLiquido += vDev;
       g.desenvolvimentoHoras += parseFloat(horas_desenvolvimento || 0);
     }
 
-    // Consultoria: mesmo modelo de treinamento/dev — valor base em
-    // valor_horas_consultoria; a calculada correspondente (confirmada pelo
-    // time) é valor_horas_contabeis_calculado.
-    const vCons = resolveGross(
-      valor_horas_contabeis_calculado,
-      valor_horas_consultoria,
-      qty,
-    );
+    // Consultoria: mesmo modelo de treinamento e desenvolvimento, com o valor
+    // base em valor_horas_consultoria.
+    const vCons = parseFloat(valor_horas_consultoria || 0);
     if (vCons > 0) {
-      g.consultoriaTotalBruto += resolveBrutoOriginal(
+      g.consultoriaTotalBruto += resolveBrutoOriginalHoras(
         valor_horas_consultoria_original,
         vCons,
-        qty,
       );
       g.consultoriaTotalLiquido += vCons;
       g.consultoriaHoras += parseFloat(horas_consultoria || 0);

@@ -1,0 +1,8 @@
+{
+  "config": {
+    "entrypoint": "app/functions/saveDealCpf.js",
+    "secretKeys": ["HUBSPOT_API_KEY"]
+  },
+  "uid": "saveDealCpf",
+  "type": "app-function"
+}

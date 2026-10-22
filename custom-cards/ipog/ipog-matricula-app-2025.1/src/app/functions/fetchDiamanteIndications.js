@@ -1,5 +1,28 @@
 const axios = require("axios");
 
+// Ordena as indicações pela expiração mais próxima primeiro. Sem data (ou inválida)
+// vai para o fim, para não ocupar as vagas do tier 5 antes das que expiram.
+function expirationTime(value) {
+  if (value === null || value === undefined || value === "") {
+    return Number.POSITIVE_INFINITY;
+  }
+  const numeric = Number(value);
+  if (!Number.isNaN(numeric) && String(value).trim() !== "") {
+    return numeric;
+  }
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed;
+}
+
+function sortByExpirationAscending(list) {
+  return (list || [])
+    .slice()
+    .sort(
+      (a, b) =>
+        expirationTime(a?.data_de_expiracao) - expirationTime(b?.data_de_expiracao),
+    );
+}
+
 exports.main = async (context = {}) => {
   console.log("Fetch Diamante Indications - Context:", context);
 
@@ -103,6 +126,12 @@ exports.main = async (context = {}) => {
         "indicacao_ativa",
         "data_de_expiracao",
       ],
+      sorts: [
+        {
+          propertyName: "data_de_expiracao",
+          direction: "ASCENDING",
+        },
+      ],
       limit: diamanteIds.length,
     };
 
@@ -117,13 +146,15 @@ exports.main = async (context = {}) => {
 
     console.log("Search response:", searchResponse.data);
 
-    const results = (searchResponse.data.results || []).map((record) => ({
+    const mapped = (searchResponse.data.results || []).map((record) => ({
       id: record.id,
       nome_do_indicado: record.properties.nome_do_indicado || "",
       nivel_educacional: record.properties.nivel_educacional || "",
       indicacao_ativa: record.properties.indicacao_ativa || "",
       data_de_expiracao: record.properties.data_de_expiracao || "",
     }));
+    // A exibição e o tier 5 usam esta ordem: expiração mais próxima primeiro.
+    const results = sortByExpirationAscending(mapped);
 
     return {
       status: "SUCCESS",
@@ -143,3 +174,6 @@ exports.main = async (context = {}) => {
     return { status: "ERROR", origin: "HUBSPOT", message: errorMessage };
   }
 };
+
+exports.expirationTime = expirationTime;
+exports.sortByExpirationAscending = sortByExpirationAscending;

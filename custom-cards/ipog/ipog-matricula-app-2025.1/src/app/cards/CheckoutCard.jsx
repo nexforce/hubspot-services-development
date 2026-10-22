@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   AutoGrid,
   Flex,
@@ -12,6 +12,9 @@ import {
   Accordion,
   Select,
   hubspot,
+  Heading,
+  Icon,
+  Image,
   Link,
   LoadingButton,
   Modal,
@@ -25,6 +28,21 @@ import {
   TableCell,
 } from "@hubspot/ui-extensions";
 import { useCrmProperties } from "@hubspot/ui-extensions/crm";
+import ipogLogo from "./assets/ipog-logo.png";
+
+// Cabeçalho de marca do card: logo do IPOG + título e subtítulo. Fonte única do
+// título/subtítulo, para os três cards não divergirem no texto.
+const BRAND_SUBTITLE = "IPOG Instituto de Pós-Graduação & Graduação";
+
+const BrandHeader = ({ title }) => (
+  <Flex direction="row" gap="medium" align="center">
+    <Image src={ipogLogo} alt="IPOG" height={48} />
+    <Flex direction="column" gap="extra-small">
+      <Heading>{title}</Heading>
+      <Text variant="microcopy">{BRAND_SUBTITLE}</Text>
+    </Flex>
+  </Flex>
+);
 
 // Contagens de dígitos exigidas pelos campos mascarados. O gate, a microcopy e a
 // mensagem inline do telefone são montados a partir delas, para que a regra e o
@@ -256,10 +274,10 @@ hubspot.extend(({ context, runServerlessFunction, actions }) => (
 // por actions.closeOverlay(id), que o card injeta como prop closeOverlay.
 // reactions.closeModal(id) vale para modal aberto por reactions.openModal e
 // neste arranjo não fecha nada. Mesmo padrão dos modais do orcamento-toolkit.
-const DISCIPLINAS_MODAL_ID = "consultarDatasInicioModal";
+const CRONOGRAMA_MODAL_ID = "cronogramaAlunoModal";
 
 // Modal de resultado do cancelamento de pré-matrícula, montado pelo mesmo
-// arranjo do overlay do LoadingButton (ver comentário do DISCIPLINAS_MODAL_ID).
+// arranjo do overlay do LoadingButton (ver comentário do CRONOGRAMA_MODAL_ID).
 const CANCEL_RESULT_MODAL_ID = "cancelarPreMatriculaModal";
 
 // Etapas "Matrícula ganha" (closed/won) do portal IPOG, conforme o schema de
@@ -321,137 +339,185 @@ const formatDateObjectToBr = (dateObject) => {
   return `${day}/${month}/${dateObject.year}`;
 };
 
-const isSameDateObject = (a, b) =>
-  Boolean(a) &&
-  Boolean(b) &&
-  a.year === b.year &&
-  a.month === b.month &&
-  a.date === b.date;
+const MONTH_LABELS = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
 
-const DisciplinaRow = ({
-  disciplina,
-  todayUtcMillis,
-  selectedDate,
-  onSelect,
-  closeOverlay,
-}) => {
-  const startDateObject = formatTimestampToDateObject(
-    disciplina.dataInicioTimestamp,
-  );
-  const hasStarted =
-    disciplina.dataInicioTimestamp != null &&
-    disciplina.dataInicioTimestamp < todayUtcMillis;
-  const isSelectable = Boolean(startDateObject) && !hasStarted;
-  const isSelected = isSelectable && isSameDateObject(selectedDate, startDateObject);
-
-  return (
-    <TableRow>
-      <TableCell>
-        {disciplina.nome ||
-          disciplina.descricao ||
-          disciplina.disciplina ||
-          "-"}
-      </TableCell>
-      <TableCell>{disciplina.cargaHoraria || "-"}</TableCell>
-      <TableCell>{disciplina.modalidade || "-"}</TableCell>
-      <TableCell>
-        {startDateObject
-          ? formatDateObjectToBr(startDateObject)
-          : disciplina.periodoAula || "Não programado"}
-      </TableCell>
-      <TableCell>
-        {!startDateObject
-          ? "Não programado"
-          : hasStarted
-            ? "Já iniciada"
-            : "Disponível"}
-      </TableCell>
-      <TableCell>
-        <Button
-          variant={isSelected ? "primary" : "secondary"}
-          disabled={!isSelectable}
-          onClick={() => {
-            onSelect(startDateObject);
-            closeOverlay(DISCIPLINAS_MODAL_ID);
-          }}
-        >
-          {isSelected ? "Selecionado" : "Selecionar"}
-        </Button>
-      </TableCell>
-    </TableRow>
-  );
+const formatMesIngresso = (mesIngresso) => {
+  if (!mesIngresso) return "";
+  const [year, month] = String(mesIngresso).split("-");
+  const label = MONTH_LABELS[Number(month) - 1];
+  return label ? `${label}/${year}` : mesIngresso;
 };
 
-const DisciplinasModal = ({
+const formatTimestampToBr = (timestamp) => {
+  const dateObject = formatTimestampToDateObject(timestamp);
+  return dateObject ? formatDateObjectToBr(dateObject) : "-";
+};
+
+const formatPeriodo = (disciplina) => {
+  if (disciplina.dataInicioTimestamp == null) return disciplina.periodo || "-";
+  const date = new Date(disciplina.dataInicioTimestamp);
+  return `${MONTH_LABELS[date.getUTCMonth()]}/${date.getUTCFullYear()}`;
+};
+const formatCronogramaText = (data, classIdentifier) => {
+  if (!data?.primeira) return "";
+
+  const lines = [];
+  lines.push(`*CRONOGRAMA DO CURSO*`);
+  if (classIdentifier) {
+    lines.push(`Turma: ${classIdentifier}`);
+  }
+  lines.push("");
+  lines.push(`*DISCIPLINA QUE IRÁ INICIAR:*`);
+  const dataInicioPrimeira = formatTimestampToBr(
+    data.primeira.dataInicioTimestamp,
+  );
+  lines.push(`▶ *${dataInicioPrimeira}* - ${data.primeira.nome}`);
+  if (data.primeira.periodoAula) {
+    lines.push(`   Período de aulas: ${data.primeira.periodoAula}`);
+  }
+
+  if (data.demais && data.demais.length > 0) {
+    lines.push("");
+    lines.push(`*DEMAIS DISCIPLINAS:*`);
+    data.demais.forEach((disciplina) => {
+      const dataInicio = formatTimestampToBr(disciplina.dataInicioTimestamp);
+      const nome =
+        disciplina.nome ||
+        disciplina.descricao ||
+        disciplina.disciplina ||
+        "-";
+      lines.push(`• ${dataInicio} - ${nome}`);
+    });
+  }
+
+  return lines.join("\n");
+};
+
+const CronogramaModal = ({
   error,
   data,
   classCode,
   classIdentifier,
-  todayUtcMillis,
-  selectedDate,
-  onSelect,
   closeOverlay,
+  onCopyCronograma,
+  loadingCopyCronograma,
 }) => (
-  <Modal
-    id={DISCIPLINAS_MODAL_ID}
-    title="Datas de início das disciplinas"
-    width="lg"
-  >
+  <Modal id={CRONOGRAMA_MODAL_ID} title="Cronograma do aluno" width="lg">
     <ModalBody>
       {error ? (
         <Alert title="Erro" variant="danger">
           {error}
         </Alert>
-      ) : !data?.disciplinas?.length ? (
+      ) : !data ? (
+        <Text>Selecione o mês e o ano de ingresso e consulte o cronograma.</Text>
+      ) : !data.primeira ? (
         <Text>
-          Nenhuma disciplina retornada para esta turma. Não há datas de início
-          disponíveis para seleção.
+          Não há disciplina de ingresso para {formatMesIngresso(data.mesIngresso)}{" "}
+          nesta turma.
         </Text>
       ) : (
-        <Flex direction="column" gap="small">
-          <Text variant="microcopy">
-            {data.identificadorTurma || classIdentifier} · turma{" "}
-            {data.codigoTurma || classCode} · {data.disciplinas.length}{" "}
-            disciplina(s)
-          </Text>
-          <Table bordered>
-            <TableHead>
-              <TableRow>
-                <TableHeader>Disciplina</TableHeader>
-                <TableHeader>Carga horária</TableHeader>
-                <TableHeader>Modalidade</TableHeader>
-                <TableHeader>Início</TableHeader>
-                <TableHeader>Situação</TableHeader>
-                <TableHeader>Ação</TableHeader>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data.disciplinas.map((disciplina, index) => (
-                <DisciplinaRow
-                  key={`${disciplina.codigo}-${index}`}
-                  disciplina={disciplina}
-                  todayUtcMillis={todayUtcMillis}
-                  selectedDate={selectedDate}
-                  onSelect={onSelect}
-                  closeOverlay={closeOverlay}
-                />
-              ))}
-            </TableBody>
-          </Table>
+        <Flex direction="column" gap="medium">
+          <Flex direction="row" justify="between" align="center">
+            <Text variant="microcopy">
+              {classIdentifier} · turma {classCode || "-"} · ingresso{" "}
+              {formatMesIngresso(data.mesIngresso)} · {1 + data.demais.length}{" "}
+              disciplina(s)
+            </Text>
+            {onCopyCronograma && (
+              <LoadingButton
+                size="extra-small"
+                variant="secondary"
+                loading={loadingCopyCronograma}
+                onClick={onCopyCronograma}
+              >
+                <Flex direction="row" gap="extra-small" align="center">
+                  <Icon name="copy" />
+                  <Text format={{ fontSize: "small" }}>Copiar cronograma</Text>
+                </Flex>
+              </LoadingButton>
+            )}
+          </Flex>
+
+          <Alert title="Disciplina que irá iniciar" variant="success">
+            <Text format={{ fontWeight: "demibold" }}>{data.primeira.nome}</Text>
+            <Text variant="microcopy">
+              {formatPeriodo(data.primeira)} · início{" "}
+              {formatTimestampToBr(data.primeira.dataInicioTimestamp)}
+              {data.primeira.modalidade ? ` · ${data.primeira.modalidade}` : ""}
+            </Text>
+            {data.primeira.periodoAula ? (
+              <Text variant="microcopy">
+                Aulas: {data.primeira.periodoAula}
+              </Text>
+            ) : null}
+          </Alert>
+
+          <Flex direction="column" gap="extra-small">
+            <Text format={{ fontWeight: "demibold" }}>Demais disciplinas</Text>
+            {data.demais.length === 0 ? (
+              <Text variant="microcopy">
+                Nenhuma outra disciplina encontrada na grade desta turma.
+              </Text>
+            ) : (
+              <Table bordered>
+                <TableHead>
+                  <TableRow>
+                    <TableHeader>Período</TableHeader>
+                    <TableHeader>Disciplina</TableHeader>
+                    <TableHeader>Modalidade</TableHeader>
+                    <TableHeader>Início</TableHeader>
+                    <TableHeader>Período de aulas</TableHeader>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {data.demais.map((disciplina, index) => (
+                    <TableRow
+                      key={`${disciplina.codigo}-${disciplina.dataInicio}-${index}`}
+                    >
+                      <TableCell>{formatPeriodo(disciplina)}</TableCell>
+                      <TableCell>
+                        {disciplina.nome ||
+                          disciplina.descricao ||
+                          disciplina.disciplina ||
+                          "-"}
+                      </TableCell>
+                      <TableCell>{disciplina.modalidade || "-"}</TableCell>
+                      <TableCell>
+                        {formatTimestampToBr(disciplina.dataInicioTimestamp)}
+                      </TableCell>
+                      <TableCell>{disciplina.periodoAula || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Flex>
         </Flex>
       )}
     </ModalBody>
     <ModalFooter>
       <Button
         variant="secondary"
-        onClick={() => closeOverlay(DISCIPLINAS_MODAL_ID)}
+        onClick={() => closeOverlay(CRONOGRAMA_MODAL_ID)}
       >
         Fechar
       </Button>
     </ModalFooter>
   </Modal>
 );
-
 // Modal de retorno do cancelamento. Sucesso mostra a mensagem de confirmação;
 // erro mostra o texto recebido na propriedade `message` da resposta da API
 // (validação de status centralizada no IPOG), sem reescrever o motivo, além do
@@ -500,6 +566,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     "numero_de_telefone",
     "usuarioresponsavel",
     "cpf",
+    "cpf_desconto_avaliado",
     "geracaodeparcelaautomatica",
     "tipo_de_matricula",
     "datamatricula",
@@ -540,6 +607,9 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const [cpfError, setCpfError] = useState(false);
   const [cpfValidationMessage, setCpfValidationMessage] = useState("");
   const [cpf, setCpf] = useState("");
+  // Marca se o consultor alterou o campo de CPF desde a última sincronização com a
+  // propriedade do Negócio, para a sincronização não sobrescrever o que ele digitou.
+  const cpfDirtyRef = useRef(false);
   const [birthDate, setBirthDate] = useState(undefined);
   const [postalCode, setPostalCode] = useState("");
   const [state, setState] = useState("");
@@ -555,10 +625,13 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const [loadingEnrollment, setLoadingEnrollment] = useState(false);
   const [loadingSaveDraft, setLoadingSaveDraft] = useState(false);
   const [loadingRegenerateCheckout, setLoadingRegenerateCheckout] = useState(false);
-  const [loadingDisciplinas, setLoadingDisciplinas] = useState(false);
-  const [disciplinasData, setDisciplinasData] = useState(null);
-  const [disciplinasError, setDisciplinasError] = useState("");
+  const [loadingCronograma, setLoadingCronograma] = useState(false);
+  const [cronograma, setCronograma] = useState(null);
+  const [cronogramaError, setCronogramaError] = useState("");
   const [alertMessage, setAlertMessage] = useState(null);
+  // Aviso do gate de CPF do desconto, exibido junto ao botão de gerar matrícula
+  // (não no topo do card, onde ficam os avisos gerais).
+  const [cpfGateMessage, setCpfGateMessage] = useState(null);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [educationType, setEducationType] = useState("");
   const [registeredCpf, setRegisteredCpf] = useState(null);
@@ -571,20 +644,22 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const [cancelResult, setCancelResult] = useState(null);
 
   const [studentStartModule, setStudentStartModule] = useState("");
-  const [studentStartDate, setStudentStartDate] = useState(null);
+  const [studentStartMonth, setStudentStartMonth] = useState(null);
+  const [studentStartYear, setStudentStartYear] = useState(null);
+
+  // Loading dos botões de copiar (ID da matrícula e link de checkout). Cada um
+  // tem o seu, para o spinner de um não aparecer no outro.
+  const [loadingCopyEnrollmentId, setLoadingCopyEnrollmentId] = useState(false);
+  const [loadingCopyCheckoutLink, setLoadingCopyCheckoutLink] = useState(false);
+  const [loadingCopyCronograma, setLoadingCopyCronograma] = useState(false);
 
   const today = new Date();
-  const minDay = String(today.getDate()).padStart(2, "0");
-  const minMonth = String(today.getMonth() + 1).padStart(2, "0");
-  const minYear = today.getFullYear();
-  const minDate = {
-    year: minYear,
-    month: parseInt(minMonth) - 1,
-    date: parseInt(minDay),
-  };
+  const anoAtual = today.getFullYear();
+  const mesAtual = today.getMonth() + 1;
+  const mesCorrenteIndex = anoAtual * 12 + (mesAtual - 1);
 
-  // Meia-noite UTC do dia de hoje no fuso do consultor. Usado para marcar
-  // disciplinas já iniciadas, na mesma base local de minDate.
+  // Meia-noite UTC do dia de hoje no fuso do consultor. Usado para decidir se a
+  // data já gravada no Deal ainda é escolhível, na carga inicial.
   const todayUtcMillis = Date.UTC(
     today.getFullYear(),
     today.getMonth(),
@@ -596,6 +671,15 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const enrollmentType = dealProperties.tipo_de_matricula || "";
   const enrollmentDate = dealProperties.datamatricula || "";
   const studentCpf = dealProperties.cpf || "";
+  // CPF que originou a avaliação de descontos no card Plano Financeiro. Quando existe,
+  // o desconto só vale para esse CPF: o campo fica travado e a matrícula é validada
+  // contra ele. Vazio significa que não houve avaliação por CPF (ex.: desconto de
+  // convênio), e o campo permanece editável.
+  const discountEvaluatedCpf = dealProperties.cpf_desconto_avaliado || "";
+  const hasDiscountEvaluatedCpf = normalizeDigits(discountEvaluatedCpf).length === CPF_DIGITS;
+  const cpfLockedByDiscount =
+    hasDiscountEvaluatedCpf &&
+    normalizeDigits(discountEvaluatedCpf) === normalizeDigits(studentCpf);
   const consultantEmail = dealProperties.consultoremail || "";
   const responsibleUser = String(dealProperties.usuarioresponsavel || "");
   const conditionCode = dealProperties.codigocondicao || "";
@@ -631,6 +715,39 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const isEadPos =
     typeOfInterest === "EAD" && levelOfInterest === "Pós-graduação";
 
+  // Mês e ano são a escolha do consultor. A API do IPOG responde qual é a
+  // disciplina de ingresso; o card não recalcula prazo. O piso de calendário
+  // existe porque a API fixa meses passados no início da grade, sem erro.
+  const mesSelecionadoIndex =
+    studentStartMonth && studentStartYear
+      ? studentStartYear * 12 + (studentStartMonth - 1)
+      : null;
+  const mesValido =
+    mesSelecionadoIndex != null && mesSelecionadoIndex >= mesCorrenteIndex;
+
+  // studentStartDate continua sendo a forma que generateEnrollment e
+  // generateCheckoutLink entendem, agora derivada de mês e ano, sempre dia 1.
+  const studentStartDate = mesValido
+    ? normalizeDateObject({
+        year: studentStartYear,
+        month: studentStartMonth - 1,
+        date: 1,
+      })
+    : null;
+
+  const monthOptions = MONTH_LABELS.map((label, index) => ({
+    label,
+    value: String(index + 1),
+  }));
+  const monthOptionsForYear =
+    studentStartYear === anoAtual
+      ? monthOptions.filter((option) => Number(option.value) >= mesAtual)
+      : monthOptions;
+  const yearOptions = [anoAtual, anoAtual + 1, anoAtual + 2].map((year) => ({
+    label: String(year),
+    value: String(year),
+  }));
+
   // A data que a matrícula no SEI de fato usou, lida direto do Deal. O campo
   // pode estar vazio por a data já ter passado, e o regerar de checkout precisa
   // repetir a data original, não a que o consultor escolheria agora.
@@ -644,6 +761,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       MULESOFT: "MuleSoft",
       VIACEP: "ViaCEP",
       CHECKOUT_IPOG: "Checkout IPOG",
+      IPOG: "IPOG",
       SISTEMA: "Sistema",
     };
     const label = labels[origin] || "Sistema";
@@ -690,66 +808,98 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     }
   };
 
-  const sortDisciplinasByStartDate = (list) =>
-    [...list].sort((a, b) => {
-      const aMillis = a.dataInicioTimestamp;
-      const bMillis = b.dataInicioTimestamp;
-      if (aMillis == null && bMillis == null) return 0;
-      if (aMillis == null) return 1;
-      if (bMillis == null) return -1;
-      return aMillis - bMillis;
-    });
+  const resetCronograma = () => {
+    setCronograma(null);
+    setCronogramaError("");
+  };
 
-  // Turma sem código é barrada pelo disabled do botão, não aqui: sem alternar
-  // loadingDisciplinas o modal nunca abriria para mostrar o erro.
-  const fetchDisciplinas = async () => {
-    setLoadingDisciplinas(true);
-    setDisciplinasError("");
+  const handleMonthChange = (value) => {
+    setStudentStartMonth(Number(value) || null);
+    resetCronograma();
+  };
+
+  const handleYearChange = (value) => {
+    const year = Number(value) || null;
+    setStudentStartYear(year);
+    if (year === anoAtual && studentStartMonth && studentStartMonth < mesAtual) {
+      setStudentStartMonth(null);
+    }
+    resetCronograma();
+  };
+
+  // A API do IPOG devolve o cronograma completo em ordem cronológica para o
+  // mês de ingresso pedido. A primeira disciplina é o ingresso; as seguintes
+  // são as demais disciplinas do curso. Não é necessário consultar a MuleSoft.
+  const consultarCronograma = async () => {
+    if (!mesValido || !classIdentifier) return;
+
+    const mesIngresso = `${studentStartYear}-${String(
+      studentStartMonth,
+    ).padStart(2, "0")}-01`;
+    setLoadingCronograma(true);
+    setCronogramaError("");
+    setCronograma(null);
 
     try {
-      const { response } = await runServerless({
-        name: "fetchTurmaDisciplinas",
-        parameters: { classCode },
+      const { response: ingressoResponse } = await runServerless({
+        name: "fetchDisciplinasIngresso",
+        parameters: { identificadorTurma: classIdentifier, mesIngresso },
       });
 
-      if (!response) {
-        setDisciplinasData(null);
-        setDisciplinasError(
-          "Tempo de resposta esgotado ao consultar as disciplinas. Tente novamente.",
+      if (!ingressoResponse) {
+        setCronogramaError(
+          "Tempo de resposta esgotado ao consultar a disciplina de ingresso. Tente novamente.",
         );
         return;
       }
 
-      if (response.status === "SUCCESS") {
-        const payload = response.response || {};
-        setDisciplinasData({
-          ...payload,
-          disciplinas: sortDisciplinasByStartDate(payload.disciplinas || []),
-        });
-      } else {
-        setDisciplinasData(null);
-        setDisciplinasError(
+      if (ingressoResponse.status !== "SUCCESS") {
+        setCronogramaError(
           formatOriginError(
-            response?.origin,
-            response?.message ||
-              "Não foi possível carregar as disciplinas da turma.",
+            ingressoResponse?.origin,
+            ingressoResponse?.message ||
+              "Não foi possível consultar a disciplina de ingresso.",
           ),
         );
+        return;
       }
+
+      const ingressoServidor = ingressoResponse.response || {};
+      const primeira = ingressoServidor.primeira || null;
+
+      if (!primeira) {
+        setCronograma({
+          identificadorTurma: classIdentifier,
+          mesIngresso,
+          primeira: null,
+          demais: [],
+        });
+        return;
+      }
+
+      // Demais disciplinas são as posições 1 em diante da mesma resposta,
+      // que já chegam em ordem cronológica de dataInicio e com substituir = N.
+      const todas = ingressoServidor.disciplinas || [];
+      const demais = todas.slice(1);
+
+      setCronograma({
+        identificadorTurma: classIdentifier,
+        mesIngresso,
+        primeira,
+        demais,
+      });
     } catch (error) {
-      console.error("Erro ao buscar disciplinas da turma:", error);
-      setDisciplinasData(null);
-      setDisciplinasError(
+      console.error("Erro ao consultar o cronograma:", error);
+      setCronogramaError(
         formatOriginError(
           "SISTEMA",
-          "Erro ao buscar disciplinas da turma. Tente novamente.",
+          "Erro ao consultar o cronograma. Tente novamente.",
         ),
       );
     } finally {
-      setLoadingDisciplinas(false);
+      setLoadingCronograma(false);
     }
   };
-
   useEffect(() => {
     const hasLoadedProperties =
       dealProperties && Object.keys(dealProperties).length > 0;
@@ -782,9 +932,9 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       if (dealProperties.city) setCity(dealProperties.city);
       if (dealProperties.sigla_estado) setState(dealProperties.sigla_estado);
 
-      // O campo só inicia preenchido quando a data gravada ainda é escolhível.
-      // Data no passado abre vazio, para o consultor escolher a próxima
-      // disciplina aberta, e a validação obrigatória cobra essa escolha.
+      // Os campos só iniciam preenchidos quando a data gravada ainda é
+      // escolhível. Data no passado abre vazia, para o consultor escolher o
+      // próximo mês, e a validação obrigatória cobra a consulta.
       if (dealProperties.data_de_inicio) {
         const startDateObject = formatTimestampToDateObject(
           dealProperties.data_de_inicio,
@@ -793,13 +943,32 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
           startDateObject &&
           dateObjectToUtcMillis(startDateObject) >= todayUtcMillis
         ) {
-          setStudentStartDate(startDateObject);
+          setStudentStartMonth(startDateObject.month + 1);
+          setStudentStartYear(startDateObject.year);
         }
       }
 
       setInitialLoadDone(true);
     }
   }, [dealProperties, initialLoadDone]);
+
+  // O CPF do Negócio pode mudar depois do carregamento inicial (o card Plano
+  // Financeiro grava a propriedade). O campo precisa refletir esse valor sem F5.
+  // Só sobrescreve quando o consultor NÃO alterou o campo desde a última
+  // sincronização: se ele digitou algo, o valor digitado é preservado.
+  useEffect(() => {
+    if (!initialLoadDone) return;
+    const propertyCpf = formatCpf(dealProperties.cpf || "");
+    if (propertyCpf === cpf) {
+      // Campo e propriedade coincidem: o consultor não tem edição pendente.
+      cpfDirtyRef.current = false;
+      return;
+    }
+    // O consultor alterou o campo e o valor difere da propriedade: preserva o que
+    // ele digitou. A sincronização volta a valer quando os dois coincidirem.
+    if (cpfDirtyRef.current) return;
+    setCpf(propertyCpf);
+  }, [dealProperties.cpf, initialLoadDone, cpf]);
 
   // A propriedade do Negócio manda enquanto chega preenchida. Quando vem vazia,
   // o Select da Seção A fica à disposição do consultor, e o fallback para string
@@ -1045,10 +1214,14 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       ? studentStartModule !== ""
       : true;
 
-    // normalizeDateObject garante objeto completo ou null, nunca meio-termo,
-    // então year presente já prova que existe data escolhida.
+    // A consulta é obrigatória e precisa ser da turma atual: sem a disciplina
+    // de ingresso devolvida pela API do IPOG não há como saber em que
+    // disciplina o aluno entra.
+    const cronogramaDaTurmaAtual =
+      Boolean(cronograma?.primeira) &&
+      cronograma.identificadorTurma === classIdentifier;
     const isStudentStartDateValid = isEadPos
-      ? typeof studentStartDate?.year === "number"
+      ? Boolean(studentStartDate) && cronogramaDaTurmaAtual
       : true;
 
     return (
@@ -1059,6 +1232,20 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   };
 
   const handleGenerateEnrollment = async () => {
+    // Gate de integridade do desconto: se houve avaliação por CPF, a matrícula só pode
+    // sair com o MESMO CPF que gerou o desconto. Bloqueia a troca de CPF entre a
+    // avaliação (card Plano Financeiro) e a matrícula (este card).
+    if (
+      hasDiscountEvaluatedCpf &&
+      normalizeDigits(studentCpf) !== normalizeDigits(discountEvaluatedCpf)
+    ) {
+      setCpfGateMessage(
+        "O desconto foi calculado para outro CPF. Refaça a avaliação dos descontos no card Plano Financeiro com o CPF correto antes de gerar a matrícula.",
+      );
+      return;
+    }
+
+    setCpfGateMessage(null);
     setLoadingEnrollment(true);
     setAlertMessage(null);
 
@@ -1299,7 +1486,76 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   // o onChange continua ligado ao mesmo handler: ele é o caminho do submit e
   // reaplica a máscara sobre o valor confirmado. As duas chamadas são seguras
   // porque formatCpf e formatPhoneNumber são idempotentes.
-  const handleCpfInput = (value) => setCpf(formatCpf(value));
+
+  // Cópia via ação nativa do SDK (actions.copyTextToClipboard), não
+  // navigator.clipboard: a ação é gerenciada pelo HubSpot e não depende de
+  // permissão de clipboard do iframe. O LoadingButton só dá o feedback visual.
+  const handleCopyEnrollmentId = async () => {
+    setLoadingCopyEnrollmentId(true);
+    try {
+      await actions.copyTextToClipboard(String(enrollmentId));
+      setAlertMessage({
+        type: "success",
+        message: "ID da matrícula copiado para a área de transferência.",
+      });
+    } catch (error) {
+      console.error("Erro ao copiar o ID da matrícula:", error);
+      setAlertMessage({
+        type: "danger",
+        message: "Não foi possível copiar o ID da matrícula.",
+      });
+    } finally {
+      setLoadingCopyEnrollmentId(false);
+    }
+  };
+
+  const handleCopyCronograma = async () => {
+    if (!cronograma?.primeira) return;
+    setLoadingCopyCronograma(true);
+    try {
+      const texto = formatCronogramaText(cronograma, classIdentifier);
+      await actions.copyTextToClipboard(texto);
+      setAlertMessage({
+        type: "success",
+        message: "Cronograma copiado com sucesso!",
+      });
+    } catch (error) {
+      console.error("Erro ao copiar cronograma:", error);
+      setAlertMessage({
+        type: "danger",
+        message: "Não foi possível copiar o cronograma.",
+      });
+    } finally {
+      setLoadingCopyCronograma(false);
+    }
+  };
+  const handleCopyCheckoutLink = async () => {
+    setLoadingCopyCheckoutLink(true);
+    try {
+      await actions.copyTextToClipboard(String(link));
+      setAlertMessage({
+        type: "success",
+        message: "Link de checkout copiado para a área de transferência.",
+      });
+    } catch (error) {
+      console.error("Erro ao copiar o link de checkout:", error);
+      setAlertMessage({
+        type: "danger",
+        message: "Não foi possível copiar o link de checkout.",
+      });
+    } finally {
+      setLoadingCopyCheckoutLink(false);
+    }
+  };
+
+  const handleCpfInput = (value) => {
+    setCpf(formatCpf(value));
+    // O consultor assumiu o campo: a sincronização com a propriedade não sobrescreve
+    // mais o valor digitado até os dois coincidirem.
+    cpfDirtyRef.current = true;
+    // Corrigir o CPF limpa o aviso do gate, que só faz sentido sobre o valor atual.
+    setCpfGateMessage(null);
+  };
 
   const handlePhoneNumberInput = (value) =>
     setPhoneNumber(formatPhoneNumber(value));
@@ -1331,9 +1587,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
 
   return (
     <Flex direction="column" gap="medium">
-      <Text format={{ fontWeight: "bold" }} variant="microcopy">
-        Cartão de Checkout - Gestão de Matrículas
-      </Text>
+      <BrandHeader title="Cadastrar alunos e gerar matrículas" />
 
       {alertMessage && (
         <Alert title={alertMessage.message} variant={alertMessage.type}>
@@ -1341,7 +1595,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
         </Alert>
       )}
 
-      <Accordion title="Seção A: Cadastro de Aluno" defaultOpen={true}>
+      <Accordion title="Cadastro de aluno" defaultOpen={true}>
         <Flex direction="column" gap="small">
           <Input
             label={SECTION_A_LABELS.fullName}
@@ -1372,6 +1626,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
               required={true}
               error={cpfError}
               validationMessage={cpfValidationMessage}
+              readOnly={cpfLockedByDiscount}
             />
             <Input
               label={SECTION_A_LABELS.phoneNumber}
@@ -1541,7 +1796,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
 
       <Divider size="medium" />
 
-      <Accordion title="Seção B: Geração de Matrícula" defaultOpen={true}>
+      <Accordion title="Geração de matrícula" defaultOpen={true}>
         <Flex direction="column" gap="small">
           {enrollmentId && (
             <Box
@@ -1551,10 +1806,13 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
               borderRadius="medium"
               padding="medium"
             >
-              <Flex direction="column" gap="small" align="center">
-                <Text format={{ fontWeight: "bold", fontSize: "large" }}>
-                  Aluno matriculado!
-                </Text>
+              <Flex direction="column" gap="small" align="center" justify="center">
+                <Flex direction="row" gap="extra-small" align="center" justify="center">
+                  <Icon name="success" color="success" />
+                  <Text format={{ fontWeight: "bold", fontSize: "large" }}>
+                    Aluno matriculado!
+                  </Text>
+                </Flex>
                 <Flex direction="row" gap="extra-small" align="center">
                   <Text format={{ fontWeight: "regular" }}>
                     ID da Matrícula:
@@ -1568,6 +1826,18 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
                   >
                     {enrollmentId}
                   </Text>
+                  <LoadingButton
+                    type="button"
+                    variant="transparent"
+                    size="small"
+                    loading={loadingCopyEnrollmentId}
+                    onClick={handleCopyEnrollmentId}
+                  >
+                    <Icon
+                      name="copy"
+                      screenReaderText="Copiar ID da matrícula"
+                    />
+                  </LoadingButton>
                 </Flex>
 
                 {link && (
@@ -1584,6 +1854,18 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
                       >
                         {link}
                       </Link>
+                      <LoadingButton
+                        type="button"
+                        variant="transparent"
+                        size="small"
+                        loading={loadingCopyCheckoutLink}
+                        onClick={handleCopyCheckoutLink}
+                      >
+                        <Icon
+                          name="copy"
+                          screenReaderText="Copiar link de checkout"
+                        />
+                      </LoadingButton>
                     </Flex>
                   </>
                 )}
@@ -1665,45 +1947,72 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
               readOnly={true}
             />
 
-            {isEadPos && (
-              <Flex direction="column" gap="extra-small">
-                <DateInput
-                  label="Data de Início do Aluno"
-                  name="studentStartDate"
-                  required={true}
-                  value={studentStartDate}
-                  readOnly={true}
-                />
-                <LoadingButton
-                  type="button"
-                  variant="secondary"
-                  disabled={!classCode}
-                  loading={loadingDisciplinas}
-                  onClick={fetchDisciplinas}
-                  overlayOptions={{ openBehavior: "onLoadingFinish" }}
-                  overlay={
-                    <DisciplinasModal
-                      error={disciplinasError}
-                      data={disciplinasData}
-                      classCode={classCode}
-                      classIdentifier={classIdentifier}
-                      todayUtcMillis={todayUtcMillis}
-                      selectedDate={studentStartDate}
-                      onSelect={setStudentStartDate}
-                      closeOverlay={(id) => actions.closeOverlay(id)}
-                    />
-                  }
-                >
-                  Consultar datas de início
-                </LoadingButton>
-                {!classCode && (
-                  <Text variant="microcopy">
-                    Confirme o plano financeiro para liberar a consulta.
-                  </Text>
-                )}
-              </Flex>
-            )}
           </AutoGrid>
+
+          {isEadPos && (
+            <Flex direction="column" gap="extra-small">
+              <AutoGrid columnWidth={240} gap="small" flexible={true}>
+                <Select
+                  label="Ano de ingresso"
+                  name="studentStartYear"
+                  required={true}
+                  value={studentStartYear ? String(studentStartYear) : ""}
+                  onChange={handleYearChange}
+                  options={yearOptions}
+                  placeholder="Selecione o ano"
+                />
+                <Select
+                  label="Mês de ingresso"
+                  name="studentStartMonth"
+                  required={true}
+                  disabled={!studentStartYear}
+                  value={studentStartMonth ? String(studentStartMonth) : ""}
+                  onChange={handleMonthChange}
+                  options={monthOptionsForYear}
+                  placeholder={
+                    studentStartYear
+                      ? "Selecione o mês"
+                      : "Selecione o ano primeiro"
+                  }
+                />
+              </AutoGrid>
+              <LoadingButton
+                type="button"
+                variant="secondary"
+                disabled={!classIdentifier || !mesValido}
+                loading={loadingCronograma}
+                onClick={consultarCronograma}
+                overlayOptions={{ openBehavior: "onLoadingFinish" }}
+                overlay={
+                  <CronogramaModal
+                    error={cronogramaError}
+                    data={cronograma}
+                    classCode={classCode}
+                    classIdentifier={classIdentifier}
+                    closeOverlay={(id) => actions.closeOverlay(id)}
+                    onCopyCronograma={handleCopyCronograma}
+                    loadingCopyCronograma={loadingCopyCronograma}
+                  />
+                }
+              >
+                Consultar cronograma
+              </LoadingButton>
+              {cronograma?.primeira && (
+                <Text variant="microcopy">
+                  Disciplina que irá iniciar: {cronograma.primeira.nome} ·
+                  início{" "}
+                  {formatTimestampToBr(
+                    cronograma.primeira.dataInicioTimestamp,
+                  )}
+                </Text>
+              )}
+              {!classIdentifier && (
+                <Text variant="microcopy">
+                  Confirme o plano financeiro para liberar a consulta.
+                </Text>
+              )}
+            </Flex>
+          )}
 
           {(typeOfInterest === "Ao Vivo" || typeOfInterest === "Presencial") &&
             levelOfInterest === "Pós-graduação" && (
@@ -1735,6 +2044,12 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
             <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
               {missingEnrollmentFieldsMessage(missingEnrollmentDealFields)}
             </Text>
+          )}
+
+          {cpfGateMessage && (
+            <Alert title={cpfGateMessage} variant="danger">
+              {cpfGateMessage}
+            </Alert>
           )}
 
           <Flex direction="row" gap="small">
