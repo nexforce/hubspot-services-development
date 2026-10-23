@@ -77,14 +77,47 @@ const NIVEL_INTERESSE_CEU = "Curso de extensão universitária";
 const isPagamentoAVista = (tipoPagamento) =>
   tipoPagamento === "PIX" || tipoPagamento === "A_VISTA";
 
-// Traduz o Tipo de Pagamento do card para o vocabulário de forma_pagamento
-// do objeto Descontos (valores espelhados da propriedade forma_de_pagamento_list).
-const FORMA_PAGAMENTO_POR_TIPO = {
-  PIX: "Pix",
-  BOLETO: "Boleto bancário",
-  A_VISTA: "Cartão de crédito",
-  PARCELADO: "Cartão de crédito",
-  RECORRENTE: "Cartão de crédito",
+// O objeto Descontos usa o mesmo vocabulário de `tipopagamento` do negócio
+// (PIX, A_VISTA, PARCELADO, RECORRENTE, BOLETO), então o valor do card é enviado
+// ao motor sem tradução.
+
+// Avalia uma quantidade de parcelas contra o critério de um desconto.
+// Retorna true quando não há critério (não restringe) ou quando atende.
+const installmentsMatchCriteria = (qtdeParcelas, criterio) => {
+  if (!criterio || !criterio.operador) return true;
+  const actual = Number(qtdeParcelas);
+  if (Number.isNaN(actual)) return false;
+  const expected = criterio.valor === null || criterio.valor === undefined ? null : Number(criterio.valor);
+  const expected2 = criterio.valor2 === null || criterio.valor2 === undefined ? null : Number(criterio.valor2);
+  switch (criterio.operador) {
+    case "igual_a":
+      return expected !== null && actual === expected;
+    case "diferente_de":
+      return expected !== null && actual !== expected;
+    case "menor_que":
+      return expected !== null && actual < expected;
+    case "menor_ou_igual":
+      return expected !== null && actual <= expected;
+    case "maior_que":
+      return expected !== null && actual > expected;
+    case "maior_ou_igual":
+      return expected !== null && actual >= expected;
+    case "entre":
+      return expected !== null && expected2 !== null && actual >= expected && actual <= expected2;
+    default:
+      return false;
+  }
+};
+
+// Um plano é compatível quando atende ao critério de parcelas de TODOS os descontos
+// selecionados que têm critério (interseção). Devolve a lista de descontos que o
+// plano NÃO atende, para montar o motivo do bloqueio.
+const planIncompatibleDiscounts = (qtdeParcelas, selectedCategories, objectDiscountCategories) => {
+  const selected = new Set(selectedCategories || []);
+  return (objectDiscountCategories || [])
+    .filter((item) => selected.has(item.value) && item.condicaoParcelas)
+    .filter((item) => !installmentsMatchCriteria(qtdeParcelas, item.condicaoParcelas))
+    .map((item) => item.label || item.value);
 };
 
 const Extension = ({ context, runServerless, sendAlert, actions }) => {
@@ -500,56 +533,68 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     });
   }, [legacyCategories, objectDiscountCategories, properties.categoriacondicao]);
 
-  // CPF do aluno: espelha a propriedade cpf; grava no clique quando alterado; a busca
-  // de matrículas usa a API IPOG e alimenta as regras de ex-aluno.
+  // CPF do aluno: espelha a propriedade cpf; grava no clique; a busca de matrículas
+  // usa a API IPOG e alimenta as regras de ex-aluno.
   const cpfDigits = (value) => String(value || "").replace(/\D/g, "");
-  const savedCpfDigits = cpfDigits(properties.cpf);
   const typedCpfDigits = cpfDigits(cpfInput);
-  const cpfChanged = typedCpfDigits !== savedCpfDigits;
 
   useEffect(() => {
     setCpfInput(properties.cpf || "");
   }, [properties.cpf]);
 
-  // Salva o CPF digitado (se mudou) e, em seguida, busca as matrículas e reavalia os
-  // descontos de ex-aluno. Um único clique executa as duas etapas em sequência.
+  // Salva o CPF digitado e, em seguida, busca as matrículas e reavalia os descontos
+  // de ex-aluno. Um único clique executa as duas etapas em sequência.
+  // Com o campo vazio, o clique LIMPA o CPF do negócio e reavalia os descontos sem
+  // histórico de matrículas (não há o que buscar).
   const handleSaveAndSearch = async () => {
-    if (typedCpfDigits.length !== 11) {
+    const isClearing = typedCpfDigits.length === 0;
+
+    if (!isClearing && typedCpfDigits.length !== 11) {
       sendAlert({ type: "warning", message: "Informe um CPF com 11 dígitos." });
       return;
     }
 
-    if (cpfChanged) {
-      setIsSavingCpf(true);
-      try {
-        const { response } = await runServerless({
-          name: "saveDealCpf",
-          parameters: { dealId: context.crm.objectId, cpf: cpfInput },
-        });
-        if (response?.status !== "SUCCESS") {
-          sendAlert({
-            type: "warning",
-            message: formatOriginError(
-              response?.origin,
-              response?.message || "Não foi possível salvar o CPF.",
-            ),
-          });
-          return;
-        }
-        setCpfInput(response.response?.cpf || "");
-        // CPF novo invalida as matrículas anteriores; a busca abaixo recarrega.
-        setEnrollmentData(null);
-        await actions.refreshObjectProperties();
-      } catch (error) {
-        console.error("Erro ao salvar CPF:", error);
+    // Grava sempre (mesmo com o CPF igual): a function limpa e regrava, para o
+    // `cpf_desconto_avaliado` nunca ficar desatualizado em relação ao `cpf`.
+    setIsSavingCpf(true);
+    try {
+      const { response } = await runServerless({
+        name: "saveDealCpf",
+        parameters: { dealId: context.crm.objectId, cpf: cpfInput },
+      });
+      if (response?.status !== "SUCCESS") {
         sendAlert({
-          type: "danger",
-          message: formatOriginError("SISTEMA", "Erro ao salvar o CPF. Tente novamente."),
+          type: "warning",
+          message: formatOriginError(
+            response?.origin,
+            response?.message || "Não foi possível salvar o CPF.",
+          ),
         });
         return;
-      } finally {
-        setIsSavingCpf(false);
       }
+      setCpfInput(response.response?.cpf || "");
+      // CPF novo (ou limpo) invalida as matrículas anteriores.
+      setEnrollmentData(null);
+      await actions.refreshObjectProperties();
+    } catch (error) {
+      console.error("Erro ao salvar CPF:", error);
+      sendAlert({
+        type: "danger",
+        message: formatOriginError("SISTEMA", "Erro ao salvar o CPF. Tente novamente."),
+      });
+      return;
+    } finally {
+      setIsSavingCpf(false);
+    }
+
+    if (isClearing) {
+      // Sem CPF não há matrículas a buscar: reavalia os descontos sem histórico.
+      await handleVerifyDiscounts();
+      sendAlert({
+        type: "success",
+        message: "CPF removido. Descontos reavaliados sem histórico de matrículas.",
+      });
+      return;
     }
 
     await handleSearchEnrollments();
@@ -605,7 +650,11 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   // Motor da etapa 2: avalia as regras do objeto Descontos contra o negócio e devolve
   // as categorias elegíveis. O benefício (tipo/valor) continua vindo da MuleSoft via
   // fetchDiscount com o categoria_sei de cada regra.
-  const refreshObjectDiscounts = async (qtdeParcelas = null) => {
+  // `formaPagamento` é recebida por parâmetro (não lida do estado) para o recálculo
+  // disparado no onChange do Tipo de Pagamento usar o valor novo imediatamente, sem
+  // depender do clique em Simular. A elegibilidade não depende mais do plano escolhido:
+  // o critério de parcelas é aplicado no bloqueio dos planos, não aqui.
+  const refreshObjectDiscounts = async (formaPagamento = null) => {
     if (!envConfig.discountsObjectId) return;
     setIsEvaluatingObjectDiscounts(true);
     try {
@@ -614,8 +663,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
         parameters: {
           dealId: context.crm.objectId,
           discountsObjectId: envConfig.discountsObjectId,
-          formaPagamento: FORMA_PAGAMENTO_POR_TIPO[selectedTipoPagamento] || null,
-          qtdeParcelas,
+          formaPagamento: formaPagamento || null,
         },
       });
 
@@ -711,7 +759,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     // Motores da etapa 2 + legado: reavaliam os descontos elegíveis no clique único
     // (legado roda também ao abrir o card; aqui garante frescor com o tipo selecionado).
     handleVerifyDiscounts();
-    refreshObjectDiscounts(FORMA_PAGAMENTO_POR_TIPO[selectedTipoPagamento] || null);
+    refreshObjectDiscounts(selectedTipoPagamento || null);
 
     try {
       const promises =
@@ -999,8 +1047,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
   const handleSelectCondition = (condition) => {
     setSelectedCondition(condition);
-    // O critério de parcelas do objeto Descontos é avaliado por condição escolhida.
-    refreshObjectDiscounts(condition?.qtdeParcelas ?? null);
+    // A elegibilidade do desconto não depende mais do plano escolhido: o critério de
+    // parcelas é aplicado no bloqueio dos planos (planIncompatibleDiscounts), não aqui.
+    refreshObjectDiscounts(selectedTipoPagamento || null);
   };
 
   const calculateAntecipationValue = (
@@ -1309,17 +1358,24 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
             <Button
               onClick={handleSaveAndSearch}
               variant="primary"
-              disabled={typedCpfDigits.length !== 11 || isSavingCpf || isSearchingEnrollments}
+              disabled={
+                (typedCpfDigits.length !== 0 && typedCpfDigits.length !== 11) ||
+                isSavingCpf ||
+                isSearchingEnrollments
+              }
             >
               {isSavingCpf
                 ? "Salvando..."
                 : isSearchingEnrollments
                 ? "Buscando matrículas..."
+                : typedCpfDigits.length === 0
+                ? "Limpar CPF"
                 : "Salvar e buscar matrículas"}
             </Button>
           </Flex>
           <Text format={{ fontSize: "small" }}>
-            Digite o CPF para validar descontos de ex aluno.
+            Digite o CPF para validar descontos de ex aluno. Deixe vazio e clique para
+            remover o CPF.
           </Text>
           {enrollmentData && (
             <>
@@ -1376,8 +1432,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               });
             }
             // Motor da etapa 2: reavalia as regras do objeto Descontos com a forma de
-            // pagamento escolhida, antes de qualquer simulação.
-            refreshObjectDiscounts(FORMA_PAGAMENTO_POR_TIPO[newTipo] || null);
+            // pagamento escolhida, antes de qualquer simulação. Passa o valor novo
+            // diretamente (o estado ainda não atualizou neste ponto).
+            refreshObjectDiscounts(newTipo || null);
           }}
               options={paymentTypeOptions}
               placeholder="Selecione o tipo"
@@ -1668,6 +1725,14 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                       ...(diamondLabel ? [diamondLabel] : []),
                       ...(discountData.allDiscounts || []).filter(d => d.categoria !== "aluno_diamante").map(d => d.name)
                     ];
+                    // Planos incompatíveis com o critério de parcelas dos descontos
+                    // selecionados: continuam visíveis, mas não podem ser escolhidos.
+                    const incompatibleDiscounts = planIncompatibleDiscounts(
+                      condition.qtdeParcelas,
+                      selectedCategory,
+                      objectDiscountCategories,
+                    );
+                    const isPlanBlocked = incompatibleDiscounts.length > 0;
                     return (
                     <TableRow key={condition.codigoCondicao}>
                       <TableCell>{condition.qtdeParcelas}</TableCell>
@@ -1693,18 +1758,28 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                         {formatCurrency(discountData.finalValue)}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          onClick={() => handleSelectCondition(condition)}
-                          variant={
-                            selectedCondition === condition
-                              ? "primary"
-                              : "secondary"
-                          }
-                        >
-                          {selectedCondition === condition
-                            ? "Selecionado"
-                            : "Selecionar"}
-                        </Button>
+                        <Flex direction="column" gap="extra-small">
+                          <Button
+                            onClick={() => handleSelectCondition(condition)}
+                            variant={
+                              selectedCondition === condition
+                                ? "primary"
+                                : "secondary"
+                            }
+                            disabled={isPlanBlocked}
+                          >
+                            {selectedCondition === condition
+                              ? "Selecionado"
+                              : "Selecionar"}
+                          </Button>
+                          {isPlanBlocked && (
+                            <Text format={{ color: "danger" }}>
+                              {`Plano não compatível com desconto:\n${incompatibleDiscounts
+                                .map((name) => `• ${name}`)
+                                .join("\n")}`}
+                            </Text>
+                          )}
+                        </Flex>
                       </TableCell>
                     </TableRow>
                   )})}

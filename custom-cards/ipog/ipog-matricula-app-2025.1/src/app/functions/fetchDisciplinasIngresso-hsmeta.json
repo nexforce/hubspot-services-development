@@ -1,0 +1,10 @@
+{
+  "config": {
+    "entrypoint": "app/functions/fetchDisciplinasIngresso.js",
+    "secretKeys": [
+      "IPOG_DISCIPLINAS_TOKEN"
+    ]
+  },
+  "uid": "fetchDisciplinasIngresso",
+  "type": "app-function"
+}

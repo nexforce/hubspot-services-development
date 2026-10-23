@@ -36,7 +36,7 @@ const axios = require("axios");
 // ---------------------------------------------------------------------------
 
 // Ambiente da execução. Trocar manualmente para "production" no deploy.
-const ENV = "sandbox";
+const ENV = "production";
 
 const CONFIG = {
   sandbox: {
@@ -57,7 +57,7 @@ const CONTACT_FIELDS = [
   { from: "conversion_identifier", to: "conversion_identifier", type: "text" },
   { from: "traffic_medium", to: "utm_medium", type: "text" },
   { from: "traffic_source", to: "utm_source", type: "text" },
-  { from: "email", to: "email", type: "text" },
+  { from: "email", to: "email", type: "email" },
   { from: "name", to: "firstname", type: "text" },
   { from: "state", to: "state", type: "text" },
   { from: "city", to: "city", type: "text" },
@@ -69,7 +69,7 @@ const CONTACT_FIELDS = [
   { from: "cf_category", to: "cf_category", type: "text" },
   { from: "cf_accept_communication", to: "aceite_receber_comunicacoes_c2rio", type: "acceptance" },
   { from: "cf_date_visit_expected", to: "cf_data_visita", type: "date" },
-  { from: "cf_lingua", to: "idioma_cloned", type: "idioma" },
+  { from: "cf_lingua", to: "idioma", type: "idioma" },
   { from: "cf_agent", to: "cf_agent", type: "text" },
   { from: "cf_crianca", to: "cf_comprou_crianca", type: "childFlag" },
   { from: "cf_brand_card", to: "cf_brand_card", type: "text" },
@@ -82,7 +82,7 @@ const DEAL_FIELDS = [
   { from: "conversion_identifier", to: "conversion_identifier", type: "text" },
   { from: "traffic_medium", to: "utm_medium", type: "text" },
   { from: "traffic_source", to: "utm_source", type: "text" },
-  { from: "email", to: "email_do_contato_principal", type: "text" },
+  { from: "email", to: "email_do_contato_principal", type: "email" },
   { from: "cf_id_pedido", to: "dealname", type: "text", fallbackFrom: "name" },
   { from: "state", to: "state", type: "text" },
   { from: "city", to: "cidade", type: "text" },
@@ -123,6 +123,16 @@ const toChildFlag = (valor) => {
   if (Number.isFinite(numericValue)) return numericValue > 0;
   const normalizedValue = String(valor).trim().toLowerCase();
   return TRUE_WORDS.has(normalizedValue);
+};
+
+// email (contato) e email_do_contato_principal (deal): o SIG às vezes manda o
+// valor com espaço em branco no início ou no fim, e a propriedade nativa de
+// e-mail do HubSpot rejeita o PATCH inteiro com INVALID_EMAIL quando isso
+// acontece. trim() remove o espaço sem alterar o endereço em si.
+const toEmail = (valor) => {
+  if (valor == null) return null;
+  const trimmedValue = String(valor).trim();
+  return trimmedValue === "" ? null : trimmedValue;
 };
 
 const toNumber = (valor) => {
@@ -317,6 +327,8 @@ const convertField = (field, payload) => {
   }
 
   switch (field.type) {
+    case "email":
+      return toEmail(valor);
     case "acceptance":
       return toAcceptance(valor);
     case "number":
