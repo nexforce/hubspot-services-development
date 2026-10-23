@@ -61,9 +61,44 @@ Mapeamento de campos (input do workflow para o corpo da API):
 | `inscricao_estadual` | `inscricao_estadual_produtor` |
 | `contribuinte_import` | `contribuinte` |
 | `numero_de_telefone` | `telefone` |
-| `estado`, `cidade`, `email`, `estado_civil`, `profissao`, `cep`, `logradouro`, `numero`, `complemento`, `bairro`, `razao_social`, `praca_id`, `hubspot_owner_id` | mesmo nome |
+| `estado`, `cidade`, `email`, `estado_civil`, `profissao`, `cep`, `logradouro`, `numero`, `complemento`, `bairro`, `razao_social`, `praca_id`, `hubspot_owner_id`, `banco`, `agencia`, `tipoconta`, `nome_do_dealer` | mesmo nome |
+| `conta` (sem o dígito) | `conta` |
+| `conta` (dígito, separado do número pelo `-`) | `digitoConta` |
 | (owner do deal, via API) | `comercial_id` |
 | (ID do deal) | `hubspot_id` |
+
+O input `conta` chega com o dígito verificador junto ao número, separado por `-` (ex.:
+`12345-6`). O script separa os dois com uma regex antes de montar o corpo da API: o
+número vai em `conta` e o dígito em `digitoConta`. Se o valor não tiver `-`, o script
+envia o que recebeu em `conta` e deixa `digitoConta` vazio, sem quebrar.
+
+### `painel/createProducerOnHubspot.js`
+
+Custom code de **ação de workflow baseado em negócio**. Roda depois do
+`painel/createProducerOnPainel.js`, no mesmo workflow, e cria o registro de produtor
+no HubSpot (objeto customizado `2-55743372`), associado ao negócio, à empresa e ao
+contato do negócio.
+
+Fluxo:
+
+1. Lê os dados do produtor dos `inputFields` do workflow, incluindo `id_do_produtor`
+   (retornado pelo script anterior) e `comercialId`.
+2. Busca as empresas e os contatos associados ao negócio via API do HubSpot.
+3. Monta as associações do novo registro de produtor com o negócio, as empresas e os
+   contatos encontrados.
+4. Cria o registro de produtor com `POST` no objeto customizado.
+5. Devolve os output fields: `hs_execution_state`, `error`, `errorMessage`.
+
+Diferente do `createProducerOnPainel.js`, o campo `conta` aqui **não** é separado do
+dígito: vai para a propriedade `conta` como chega do input field, dígito junto.
+
+Mapeamento de campos (input do workflow para propriedade do objeto de produtor no
+HubSpot): mesmo nome em `tipo_de_produtor`, `cpf`, `cnpj`, `nome_do_produtor`, `estado`,
+`cidade`, `nome_fantasia`, `inscricao_estadual`, `estado_civil`, `profissao`,
+`numero_de_telefone`, `bairro`, `complemento`, `cep`, `numero`, `logradouro`,
+`razao_social`, `praca_id`, `banco`, `agencia`, `tipoconta`, `nome_do_dealer`, `conta`;
+`contribuinte_import` vai para `contribuinte`, e `comercialId` vai para
+`id_do_comercial`.
 
 ### `painel/proposalNotification.js`
 
