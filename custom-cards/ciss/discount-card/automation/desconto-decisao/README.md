@@ -142,6 +142,10 @@ A tabela existe para configurar as ramificações dele.
 | PDV e Geral - Enterprise | `872876957` | `1347655299` | `1386747212` | `1308807587` |
 | Expansão - Franquia | `907963396` | `1385332128` | `1385331521` | **FALTANDO** |
 | Expansão - PDV e Geral | `911415619` | `1385331244` | `1385331246` | **FALTANDO** |
+| Expansão - Franquias (novo) | `941856010` | `1452906380` | `1452906381` | `1452906382` |
+| Expansão - PDV e Geral (novo) | `941855020` | `1452890477` | `1452890478` | `1452890479` |
+
+As duas linhas "(novo)" são pipelines distintos de `907963396` e `911415619`, com nome quase idêntico (singular/plural) e alçada diferente (15% para os dois, contra 10%/20% dos antigos). Os IDs vieram direto de `GET /crm/v3/pipelines/deals` no portal CISS em 2026-10-23, não da tabela de Ops. Ao contrário dos dois antigos, estes dois já nascem com um estágio "Aprovação Recusada" próprio, então as três colunas estão completas desde já.
 
 A coluna `aprovado` veio de Ops em 21/08/2026, lida da lista de estágios do portal, onde o rótulo de cada um é "Aprovação Aprovada (Pipeline ...)".
 
@@ -152,7 +156,7 @@ Os IDs vinham do `PROPOSAL_STAGES` de `ReviewDiscount.js`, removido em 31/07/202
 
 A coluna de entrada é o `APPROVAL_STAGES` de `src/app/functions/ApplyDiscounts.js` e de `locacao-equipamentos-card/src/app/functions/aplicarDesconto.js`, repetida aqui para conferência: é o estágio de onde o negócio precisa sair.
 
-Falta só a coluna `reprovado` das duas pipelines de Expansão, lacuna que antecede esta refatoração: o reject nelas emite um aviso no log e deixa o negócio parado no estágio de aprovação.
+Falta só a coluna `reprovado` dos dois pipelines de Expansão originais (`907963396` e `911415619`), lacuna que antecede esta refatoração: o reject neles emite um aviso no log e deixa o negócio parado no estágio de aprovação. Os dois pipelines de Expansão "(novo)" adicionados depois não têm essa lacuna.
 O ramo `aprovado` está completo, os seis pipelines.
 
 **Sem a ação no ramo `aprovado` o negócio fica parado em "Aprovação pendente" mesmo com o desconto aplicado.**
