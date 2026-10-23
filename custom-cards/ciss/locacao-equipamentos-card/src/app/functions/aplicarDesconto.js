@@ -21,6 +21,8 @@ const APPROVAL_STAGES = {
   872876957: '1347655299', // PDV e Geral - Enterprise
   907963396: '1385332128', // Expansão - Franquia
   911415619: '1385331244', // Expansão - PDV e Geral
+  941855020: '1452890477', // Expansão - PDV e Geral (novo) — Aprovação pendente
+  941856010: '1452906380', // Expansão - Franquias (novo) — Aprovação pendente
 };
 
 const WEBHOOK_APROVACAO =
