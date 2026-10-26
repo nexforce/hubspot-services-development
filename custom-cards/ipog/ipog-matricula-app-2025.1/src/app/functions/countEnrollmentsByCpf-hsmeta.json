@@ -3,8 +3,8 @@
     "entrypoint": "app/functions/countEnrollmentsByCpf.js",
     "secretKeys": [
       "MULESOFT_BASE_URL",
-      "MULESOFT_USERNAME",
-      "MULESOFT_PASSWORD"
+      "MULESOFT_USERNAME_ACADEMIC",
+      "MULESOFT_PASSWORD_ACADEMIC"
     ]
   },
   "uid": "countEnrollmentsByCpf",

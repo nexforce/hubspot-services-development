@@ -62,7 +62,7 @@ const CONFIG = {
   production: {
     classObjectId: "2-42181871",
     convenioObjectId: "2-42538986",
-    discountsObjectId: "", // objeto Descontos ainda não existe em produção
+    discountsObjectId: "",
     templates: {
       posPresencial: "510682133656",
       posEad: "512266346925",
@@ -123,7 +123,6 @@ const planIncompatibleDiscounts = (qtdeParcelas, selectedCategories, objectDisco
 const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const { properties } = useCrmProperties([
     "dealname",
-    "categoriacondicao",
     "desconto_aprovado",
     "categorias_aprovadas",
     "cpf",
@@ -476,21 +475,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     }
   };
 
-  // Persiste as categorias selecionadas no negócio (propriedade categoriacondicao).
-  const persistSelectedCategories = async (categories) => {
-    try {
-      await runServerless({
-        name: "saveDealCategories",
-        parameters: {
-          dealId: context.crm.objectId,
-          categories: categories.join(";"),
-        },
-      });
-    } catch (error) {
-      console.error("Erro ao salvar as categorias do desconto:", error);
-    }
-  };
-
   // Chave de reavaliação: nível e modalidade (deal) + contato(s) + convênio(s) associados.
   // Regrava os descontos legados sempre que qualquer um muda, para a categoria não ficar
   // presa ao estado anterior (ex.: trocar convênio normal -> especial).
@@ -515,23 +499,16 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     handleVerifyDiscounts();
   }, [legacyReevalKey]);
 
-  // Reconcilia a seleção com o conjunto elegível: remove categorias que deixaram de ser
-  // elegíveis e limpa o categoriacondicao, para a seleção antiga não continuar liberando
-  // o desconto errado (ex.: convênio normal -> especial).
+  // Reconcilia a seleção em memória com o conjunto elegível para que uma troca de
+  // convênio (ex.: normal -> especial) remova descontos que deixaram de se aplicar.
   useEffect(() => {
     if (legacyCategories === null) return;
     const eligibleValues = new Set([
       ...legacyCategories,
       ...objectDiscountCategories.map((o) => o.value),
     ]);
-    setSelectedCategory((prev) => {
-      const filtered = prev.filter((c) => eligibleValues.has(c));
-      if (filtered.length !== prev.length) {
-        persistSelectedCategories(filtered);
-      }
-      return filtered;
-    });
-  }, [legacyCategories, objectDiscountCategories, properties.categoriacondicao]);
+    setSelectedCategory((prev) => prev.filter((c) => eligibleValues.has(c)));
+  }, [legacyCategories, objectDiscountCategories]);
 
   // CPF do aluno: espelha a propriedade cpf; grava no clique; a busca de matrículas
   // usa a API IPOG e alimenta as regras de ex-aluno.
@@ -664,6 +641,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
           dealId: context.crm.objectId,
           discountsObjectId: envConfig.discountsObjectId,
           formaPagamento: formaPagamento || null,
+          portalId,
         },
       });
 
@@ -716,13 +694,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
         break;
     }
   }, [envConfig, properties.nivel_de_interesse, properties.modalidade_de_interesse]);
-
-  useEffect(() => {
-    if (properties.categoriacondicao) {
-      const categories = properties.categoriacondicao.split(";").filter((cat) => cat !== "" && cat !== "acao_comercial");
-      setSelectedCategory(categories);
-    }
-  }, [properties.categoriacondicao]);
 
   const handleSimulate = async () => {
     if (
@@ -1444,7 +1415,8 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
           <Flex direction="column" gap="small">
             <MultiSelect
               label="Categorias do Desconto"
-              name="categoriacondicao"
+              name="discountCategory"
+
               value={selectedCategory}
               onChange={(value) => {
                 setSelectedCategory(value);

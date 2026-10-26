@@ -2052,10 +2052,11 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
             </Alert>
           )}
 
-          <Flex direction="row" gap="small">
+          <Flex direction="column" gap="small">
             <Button
               type="submit"
               variant="primary"
+              size="md"
               onClick={handleGenerateEnrollment}
               disabled={
                 loadingEnrollment ||
@@ -2070,6 +2071,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
               <LoadingButton
                 type="button"
                 variant="destructive"
+                size="md"
                 loading={loadingCancel}
                 disabled={
                   loadingCancel ||

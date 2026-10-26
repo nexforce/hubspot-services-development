@@ -222,15 +222,13 @@ exports.main = async (context = {}) => {
       { headers: { Authorization: `Bearer ${process.env.HUBSPOT_API_KEY}` } },
     );
     const categoriaMap = Object.fromEntries(
-      (propertyResponse.data.options || []).map(({ value, label }) => [
-        value,
-        label,
-      ]),
+      (propertyResponse.data.options || []).map(({ value, label }) => [value, label]),
     );
-    const categoriaLabel = selectedCategory
+    const categoriaLabel = String(selectedCategory || "")
       .split(";")
+      .filter(Boolean)
       .map((cat) => categoriaMap[cat] || cat)
-      .join(", ") || selectedCategory;
+      .join(", ");
 
     let lineItemId = null;
     if (lineItemData.total > 0) {
@@ -268,7 +266,7 @@ exports.main = async (context = {}) => {
               ? selectedCondition.qtdeParcelas + "x"
               : selectedCondition.qtdeParcelas
           } - ${parameters.course} (${parameters.class})`,
-          description: categoriaLabel,
+          description: categoriaLabel || discountCodes || "",
           price: selectedCondition.valorParcela,
           recurringbillingfrequency: frequencia,
           discount: lineItem.discount,
@@ -316,7 +314,7 @@ exports.main = async (context = {}) => {
               ? selectedCondition.qtdeParcelas + "x"
               : selectedCondition.qtdeParcelas
           } - ${parameters.course}`,
-          description: categoriaLabel,
+          description: categoriaLabel || discountCodes || "",
           price: selectedCondition.valorParcela,
           recurringbillingfrequency: frequencia,
           discount: lineItem.discount,
@@ -375,7 +373,6 @@ exports.main = async (context = {}) => {
       valor_da_parcela: selectedCondition.valorParcela?.toString() || "",
       valormatricula: selectedCondition.valorMatricula,
       valoracrescimo: selectedCondition.valorAcrescimo,
-      categoriacondicao: selectedCategory,
       desconto_aprovado: lineItem.discount,
       codigocondicao: selectedCondition.codigoCondicao,
       turmacodigo: financialPlan.turmaCodigo,

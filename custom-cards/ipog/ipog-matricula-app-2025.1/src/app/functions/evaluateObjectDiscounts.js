@@ -27,10 +27,175 @@ const axios = require("axios");
  * auxiliares importados por caminho relativo (lição dos builds #38/#39).
  */
 
-// Mapa id -> nome dos times HubSpot do portal IPOG (51406295).
-// Embutido de proposito: o empacotador do HubSpot nao inclui arquivos auxiliares
-// importados por caminho relativo (licao dos builds #38/#39).
-const HUBSPOT_TEAMS = {
+// O bundle do HubSpot precisa ser autocontido, então os mapas por portal ficam
+// embutidos neste arquivo. Regenerar quando equipes forem criadas/renomeadas.
+const mapeamento_equipes_prod = {
+  "58503284": "04. Marketing - Gestão",
+  "58503296": "3.2. Marketing - Eventos e Conteúdo",
+  "58503342": "3.1. Marketing Growth",
+  "58503537": "02. Gerência",
+  "58503555": "2.1 - Liderança",
+  "58503600": "2.1.1 - Colaboradores",
+  "59253374": "01. Marketing",
+  "60871120": "05. Relacionamento com Alunos",
+  "60871634": "12. Coordenação do Curso",
+  "60871773": "08. Secretaria",
+  "60871784": "09. Financeiro",
+  "61871708": "Marketing - Design",
+  "61926539": "9.1.1 Colaboradores",
+  "61926543": "9.1. Líderes",
+  "61926545": "4.1. Relacionamento - Líderes",
+  "61926547": "07. Graduação",
+  "61926559": "8.1.1. Colaboradores",
+  "61926563": "7.1. Líderes",
+  "61926588": "7.1.1. Colaboradores",
+  "61926610": "06. EAD",
+  "61926770": "5.1.2.3 Colaboradores",
+  "61926801": "5.1.2. EAD - Gerência",
+  "61926807": "5.1. EAD - Líderes",
+  "68583984": "4.1.1. Relacionamento - Analistas",
+  "68586037": "4.1.2. Relacionamento - Assistentes",
+  "68586570": "6.1. Graduação - Líderes",
+  "68586582": "6.1.1. Graduação - Analistas",
+  "68637151": "8.1 Líderes",
+  "68637755": "10. Coordenação Pedagógica",
+  "68637809": "10.1 Líderes",
+  "68638153": "11. Central de Atendimento",
+  "68638160": "11.1 Líderes",
+  "68638180": "11.1.2 Colaboradores",
+  "68653747": "8.1.1.2 Squad Aproveitamento de Módulos Internos Pós.Grad",
+  "68653908": "8.1.1.3 Squad AproveitamentoMódulosOutras Instituições Pós.Grad",
+  "68654006": "8.1.1.4 Squad Exclusão de Aproveitamento de Módulos Pos.Grad",
+  "68654072": "8.1.1.5 Squad Exclusão de Aproveitamento de Disciplinas Grad",
+  "68654406": "8.1.1.6 Squad Registro de aproveitamento Grad",
+  "68677220": "8.1.1.7 Squad Declaração de Conclusão Provisória Antes Grad",
+  "68677298": "8.1.1.8 Squad Declaração de Conclusão Apos Grad",
+  "68677302": "8.1.1.9 Squad Declaração de Conclusão Pos.Grad",
+  "68677305": "8.1.1.10 Squad Declaração de Ementas Pos.Grad",
+  "68677307": "8.1.1.11 Squad Declaração de Frequência Grad",
+  "68677308": "8.1.1.12 Squad Declaração de Frequência Pos e CEU",
+  "68677319": "8.1.1.13 Squad Declaração de Matrícula Grad",
+  "68677329": "8.1.1.14 Squad Declaração de Matrícula Pos e CEU",
+  "68677330": "8.1.1.15 Squad Declaração de Módulos Cursados Pos.Grad",
+  "68677354": "8.1.1.16 Squad Histórico Acadêmico Grad",
+  "68677380": "8.1.1.17 Squad Histórico Acadêmico Pos.Grad",
+  "68677397": "8.1.1.18 Squad Emissão do Certificado Extensão CEU",
+  "68677413": "8.1.1.19 Squad Certificado Digital (conclusão curso) Pos.Grad",
+  "68677429": "8.1.1.20 Squad Certificado Impresso (conclusão curso) Pos.Grad",
+  "68677436": "8.1.1.21 Squad Revisão de Frequência e Notas Pos e CEU",
+  "68677440": "8.1.1.22 Squad Cancelamento de Reposição Pos e CEU",
+  "68677443": "8.1.1.23 Squad Reposição de Aula Pos e CEU",
+  "68677453": "8.1.1.25 Squad Atualização Cadastral de Nome e Estado Civil",
+  "68677516": "8.1.1.26 Squad Assinatura do contrato de estágio Pos.Grad",
+  "68677547": "8.1.1.27 Squad Entrega de documentação de estagio Grad",
+  "68677998": "11.1.2.1 Squad Assinatura do estágio não obrigatório Grad",
+  "68678083": "11.1.2.2 Squad Solicitação de 2a Ch. (Presencial e EaD) Grad",
+  "68678112": "11.1.2.3 Squad Insc em Cursos de Extensão e Nivelamento Grad",
+  "68678350": "5.1.2.3.1 Prorrogação de Atividade Prévia Pos.Grad",
+  "68678450": "5.1.2.3.2 Suporte técnico ao AVA",
+  "68678502": "5.1.2.3.3 Alteracao data de ingresso na turma Pos.Grad",
+  "68679038": "8.1.1.28 Squad Correção de TCC Pos.Grad",
+  "68679053": "8.1.1.29 Squad Transferência de Matrícula",
+  "68679406": "8.1.1.30 Squad Entrega do TCC Grad",
+  "68679435": "8.1.1.31 Squad Afastamento de Matrícula Grad",
+  "68679452": "8.1.1.32 Squad Reativação de Matrícula Trancada Grad",
+  "68679482": "8.1.1.33 Squad Reingresso por Abandono/ Cancelamento Grad",
+  "68679488": "8.1.1.34 Squad Pré-Matrícula (Renovação) - Fora do Prazo Grad",
+  "68679530": "8.1.1.35 Squad PréMatrícula(Renovação)Fora do Prazo2ºCiclo Grad",
+  "68679600": "8.1.1.36 Squad Inscrição em Módulo de Pós-graduação Grad",
+  "68680300": "11.1.2.4 Squad Revisão de Frequência e Notas Grad",
+  "68680364": "11.1.2.5 Squad Entrega do TCC Grad",
+  "68680394": "11.1.2.6 Squad Afastamento de Matrícula Grad",
+  "68680405": "11.1.2.7 Squad Reativação de Matrícula Trancada Grad",
+  "68680415": "11.1.2.8 Squad Reingresso por Abandono/ Cancelamento Grad",
+  "68680425": "11.1.2.9 Squad Pré-Matrícula (Renovação) - Fora do Prazo Grad",
+  "68680457": "11.1.2.10 Squad PréMatrícula (Renovação)ForaDoPrazo 2º C Grad",
+  "68680466": "11.1.2.11 Squad Inscrição em Módulo de Pós-graduação Grad",
+  "68680499": "11.1.2.12 Squad Inclusão/ExclusãoDisc Presencial e EaD Grad",
+  "68680533": "11.1.2.13 Squad InclusãoDisciplinaAcompanhament PresenEEaD Grad",
+  "68680560": "11.1.2.14 Squad Solicitação para ser Aluno Ouvinte Grad",
+  "68681329": "9.1.1.1 Squad Registro de aproveitamento Grad",
+  "68681330": "9.1.1.2 Squad Exclusão de Aproveitamento de Disciplinas Grad",
+  "68681340": "9.1.1.3 Squad Transferência de Matrícula Pos e CEU",
+  "68681359": "9.1.1.4 Squad Afastamento de Matrícula Grad",
+  "68681365": "9.1.1.5 Squad Reativação de Matrícula Trancada Grad",
+  "68681386": "9.1.1.6 Squad Reingresso por Abandono/ Cancelamento Grad",
+  "68681391": "9.1.1.7 Squad Pré-Matrícula (Renovação) - Fora do Prazo Grad",
+  "68681415": "9.1.1.8 Squad PréMatrícula(Renovação)ForadoPrazo- 2º Ciclo Grad",
+  "68681422": "9.1.1.9 Squad Inscrição em Módulo de Pós-graduação Grad",
+  "68681444": "9.1.1.10 Squad Inclusão/Exclusão Discip Presencial e EaD Grad",
+  "68681476": "9.1.1.11 Squad InclusãoDisciplinasAcompanhament PresenEEaD Grad",
+  "68681478": "9.1.1.12 Squad Alteração de Responsável Financeiro",
+  "68681481": "9.1.1.13 Squad Alteração no Parâmetro de Vencimento Pos e CEU",
+  "68681495": "9.1.1.14 Squad Alteração de Plano Financeiro Pos E CEU",
+  "68682037": "4.1.1.1 Squad Solicitação de Remoção de Dados",
+  "68682090": "4.1.1.2 Squad Transferência de Matrícula Pos e CEU",
+  "68682106": "4.1.1.3 Squad Cancelamento de Matrícula Pos e CEU",
+  "68682134": "4.1.1.4 Squad Cancelamento de Contrato Pos e CEU",
+  "68682230": "5.1.2.3.4 Squad Solicitação para ser Aluno Ouvinte Grad",
+  "68696796": "03. Sales",
+  "69046834": "3.4.2. Enterprise - Vendas",
+  "69047650": "3.3. Convênios - Colaborador",
+  "69075446": "3.4. Enterprise - Gestão",
+  "69251386": "3.4.3. Enterprise - Locação de espaços",
+  "70221733": "3.1. B2C - Diretoria",
+  "70222975": "14. Gerência Regional OPs",
+  "70222981": "1.4.1 - Liderança",
+  "70222986": "3.2. Inteligência Comercial - Liderança",
+  "70222987": "3.2.1. - Colaborador IC",
+  "73610634": "3.1.1. Pós-Graduação",
+  "73610833": "3.1.2. Graduação",
+  "73610903": "3.1.3. CEU",
+  "73613423": "3.1.1.2. Pós-Graduação - Ao Vivo",
+  "73613448": "3.1.1.1. Pós-Graduação - Presencial",
+  "73613467": "3.1.1.3. Pós-Graduação - EAD",
+  "73613537": "3.1.1.1.1. Belém - Gestor",
+  "73613586": "3.1.1.1.2. Florianópolis - Gestor",
+  "73613887": "3.1.1.1.3. Goiânia",
+  "73613905": "3.1.1.1.4. Maceió/Teresina - Gestor",
+  "73613922": "3.1.1.1.5. Manaus - Gestor",
+  "73613939": "3.1.1.1.6. São Luis - Gestor",
+  "73614777": "3.1.1.1.3. Goiânia - Gestor",
+  "73615251": "3.1.1.1.2. Florianópolis",
+  "73615510": "3.1.1.1.1. Belém",
+  "73615574": "3.1.1.1.4. Maceió",
+  "73615848": "3.1.1.1.5. Manaus",
+  "73615908": "3.1.1.1.6. São Luis",
+  "73615946": "3.1.1.1.7. Teresina",
+  "73635700": "3.1.1.2.1. Acelera A - Gestor",
+  "73635836": "3.1.1.2.2. Acelera B - Gestor",
+  "73635863": "3.1.1.2.3. Acelera C - Gestor",
+  "73635999": "3.1.1.1.2. Acelera A",
+  "73636023": "3.1.1.1.2. Acelera B",
+  "73636134": "3.1.1.1.3. Acelera C",
+  "73636231": "3.1.3.1. CEU - Ao Vivo",
+  "73636242": "3.1.3.2. CEU - Presencial",
+  "73636344": "3.1.3.1.1. CEU Ao Vivo - Gestor",
+  "73636354": "3.1.3.1.1. CEU Ao Vivo",
+  "73636360": "3.1.3.2.1. CEU Presencial - Gestor",
+  "73636363": "3.1.3.2.1. CEU Presencial",
+  "73637097": "3.1.2.1. Graduação - Presencial",
+  "73637106": "3.1.2.2. Graduação - EAD",
+  "73637167": "3.1.2.1.1. Grad Presencial - Gestor",
+  "73637215": "3.1.2.1.1. Grad Presencial",
+  "73637252": "3.1.2.2.1. Grad EAD - Gestor",
+  "73637256": "3.1.2.2.1. Grad EAD",
+  "73637532": "3.1.1.3.1. Pós EAD A - Gestor",
+  "73637541": "3.1.1.3.1.1. Pós EAD A",
+  "73897519": "3.1.1.3.2. Pós EAD B - Gestor",
+  "73897528": "3.1.1.3.2.1 Pós EAD B",
+  "74008226": "13. Nexforce",
+  "83064701": "3.4.1 Enterprise - Pré-Vendas",
+  "87389748": "3.1.1.2.4. Acelera D - Gestor",
+  "87389875": "3.1.1.1.4. Acelera D",
+  "88369761": "3.1.1.1.6. São Luis - Assistente",
+  "90701983": "3.5. E-Commerce",
+  "90702070": "3.5.1 Gestor",
+  "90702244": "3.5.2 Colaboradores",
+  "95213343": "15. Ipog Hub"
+};
+
+const mapeamento_equipes_homolog = {
   "83111740": "9. Financeiro",
   "83111741": "9.1. Líderes",
   "83111742": "9.1.1 Colaboradores",
@@ -192,8 +357,12 @@ const HUBSPOT_TEAMS = {
   "83111908": "11.1.2.12 Squad Inclusão/ExclusãoDisc Presencial e EaD Grad",
   "83111909": "8.1.1.20 Squad Certificado Impresso (conclusão curso) Pos.Grad",
   "83111910": "9.1.1.14 Squad Alteração de Plano Financeiro Pos E CEU",
-  "95217560": "15. Ipog Hub",
+  "95217560": "15. Ipog Hub"
+};
 
+const MAPEAMENTO_EQUIPES_POR_PORTAL = {
+  "48837477": mapeamento_equipes_prod,
+  "51406295": mapeamento_equipes_homolog,
 };
 
 const STATUS_ATIVO = "Ativo";
@@ -285,7 +454,7 @@ function matchMultiValues(ruleRaw, dealValue) {
  * prefixo hierárquico e sufixo ("3.1.1.1.7. Teresina", "3.1.1.1.1. Acelera A - Gestor"),
  * então igualdade exata nunca casaria com "Teresina" ou "Acelera A".
  * Vazio e "Todas as opções" não restringem. Sem time no negócio, não casa.
- * O nome do time é resolvido por `resolveTeamName` a partir do mapa estático HUBSPOT_TEAMS.
+ * O nome vem do mapa selecionado pelo portal. IDs de produção e homologação não são intercambiáveis.
  */
 function matchTeam(ruleRaw, teamName) {
   const ruleValues = splitValues(ruleRaw);
@@ -354,28 +523,33 @@ function extractInstallmentCriteria(rule) {
 }
 
 /**
- * Resolve o nome do time HubSpot a partir do id (`hubspot_team_id` do negócio).
- *
- * Não usa API: `hubspot_team_id` é `externalOptions: true` e `readOnlyDefinition: true`,
- * então a API de propriedades devolve `options: []` e nunca o label. O endpoint
- * `GET /settings/v3/users/teams` expõe o nome, mas exige o escopo
- * `settings.users.teams.read`, que o token do app card não tem (403).
- * O mapa estático em `hubspotTeams.js` é a fonte. Time novo exige regenerar o mapa.
+ * Resolve o nome pelo portal da invocação. Nunca tenta o mapa do outro portal:
+ * IDs de equipes não são portáveis entre produção e homologação.
  */
-/**
- * Resolve o nome do time HubSpot a partir do id (hubspot_team_id do negocio).
- * Le do mapa estatico HUBSPOT_TEAMS embutido no topo deste arquivo.
- */
-function resolveTeamName(teamId) {
+function getTeamMapForPortal(portalId) {
+  const portal = String(portalId || "").trim();
+  return MAPEAMENTO_EQUIPES_POR_PORTAL[portal] || null;
+}
+
+function resolveTeamName(teamId, portalId) {
   const id = String(teamId || "").trim();
-  if (!id) return null;
-  const name = HUBSPOT_TEAMS[id];
+  const portal = String(portalId || "").trim();
+  if (!id || !portal) return null;
+
+  const mapping = getTeamMapForPortal(portal);
+  if (!mapping) {
+    console.error(`Sem mapa de equipes configurado para o portal ${portal}.`);
+    return null;
+  }
+
+  const name = mapping[id];
   if (!name) {
-    console.error(`Time ${id} nao esta no mapa estatico de times.`);
+    console.error(`Equipe ${id} não está mapeada para o portal ${portal}.`);
     return null;
   }
   return name;
 }
+
 function isWithinValidity(startRaw, endRaw, referenceDate) {
   const start = toDate(startRaw);
   const end = toDate(endRaw);
@@ -503,6 +677,8 @@ function evaluateObjectDiscounts(ctx = {}) {
 }
 
 exports.evaluateObjectDiscounts = evaluateObjectDiscounts;
+exports.resolveTeamName = resolveTeamName;
+exports.getTeamMapForPortal = getTeamMapForPortal;
 exports.parseNumber = parseNumber;
 exports.evaluateInstallments = evaluateInstallments;
 
@@ -517,7 +693,14 @@ exports.evaluateInstallments = evaluateInstallments;
  */
 exports.main = async (context = {}) => {
   const { parameters = {} } = context;
-  const { dealId, discountsObjectId, formaPagamento, qtdeParcelas, referencia } = parameters;
+  const {
+    dealId,
+    discountsObjectId,
+    formaPagamento,
+    qtdeParcelas,
+    referencia,
+    portalId,
+  } = parameters;
 
   const apiKey = process.env.HUBSPOT_API_KEY;
   if (!apiKey) {
@@ -564,10 +747,10 @@ exports.main = async (context = {}) => {
       after = searchResponse.data.paging?.next?.after;
     } while (after);
 
-    const equipeTime = resolveTeamName(dealProps.hubspot_team_id);
+    const equipeTime = resolveTeamName(dealProps.hubspot_team_id, portalId);
     console.log(
       "Time do negócio:",
-      JSON.stringify({ hubspot_team_id: dealProps.hubspot_team_id, nome: equipeTime }),
+        JSON.stringify({ portalId, hubspot_team_id: dealProps.hubspot_team_id, nome: equipeTime }),
     );
 
     const result = evaluateObjectDiscounts({
