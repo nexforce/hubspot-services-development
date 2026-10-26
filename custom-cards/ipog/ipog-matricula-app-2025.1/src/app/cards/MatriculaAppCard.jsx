@@ -62,7 +62,7 @@ const CONFIG = {
   production: {
     classObjectId: "2-42181871",
     convenioObjectId: "2-42538986",
-    discountsObjectId: "",
+    discountsObjectId: "2-71563521",
     templates: {
       posPresencial: "510682133656",
       posEad: "512266346925",
