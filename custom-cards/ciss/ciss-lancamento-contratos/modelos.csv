@@ -1,0 +1,883 @@
+ID Modelo Proposta,Descr. Modelo Proposta,ID Sistema,Descr. Sistema,ID Módulo,Descr. Módulo,ID Item Módulo,Descr. Item Módulo
+20,CISSLive Franquia CRM,64,CISSLive,226,Análise e Relatórios,1216,Análise Operacional
+20,CISSLive Franquia CRM,64,CISSLive,226,Análise e Relatórios,1217,Indicadores
+20,CISSLive Franquia CRM,64,CISSLive,226,Análise e Relatórios,1281,Relatório
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1169,Acessos
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1171,Alteração em Lote
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1299,Cadastro KDS
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1167,Cartões
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1462,Contas Bancárias
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1162,Contábil
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1164,Convênio
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1632,Descontos
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1160,Empresa
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1163,Estoque
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1161,Fiscal
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1166,Forma de Pagamento
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1170,Importação
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1670,Moedas
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1165,Operação
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1159,Pessoa
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1168,Processos
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1158,Produto
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1573,Setores
+20,CISSLive Franquia CRM,64,CISSLive,213,Cadastros,1263,Tags
+20,CISSLive Franquia CRM,64,CISSLive,225,Central,1203,Atender Solicitações
+20,CISSLive Franquia CRM,64,CISSLive,225,Central,1204,CEP
+20,CISSLive Franquia CRM,64,CISSLive,209,CISSLive,1126,Retaguarda CRM
+20,CISSLive Franquia CRM,64,CISSLive,224,CISSLive APP,1232,CISSLive APP CRM
+20,CISSLive Franquia CRM,64,CISSLive,215,Compra,1178,Compra
+20,CISSLive Franquia CRM,64,CISSLive,215,Compra,1179,Devolução de Compra - Integração com Software de Terceiros
+20,CISSLive Franquia CRM,64,CISSLive,215,Compra,1180,Pedido de Compra
+20,CISSLive Franquia CRM,64,CISSLive,215,Compra,1177,Radar NFE - Integração com Software de Terceiros
+20,CISSLive Franquia CRM,64,CISSLive,215,Compra,1284,Sugestão de Compra
+20,CISSLive Franquia CRM,64,CISSLive,220,Configuração,1197,Configuração de Caixa - Integração com Software de Terceiros
+20,CISSLive Franquia CRM,64,CISSLive,220,Configuração,1198,Configuração de Sistema
+20,CISSLive Franquia CRM,64,CISSLive,220,Configuração,1532,Configuração do Ambiente
+20,CISSLive Franquia CRM,64,CISSLive,220,Configuração,1199,Integração
+20,CISSLive Franquia CRM,64,CISSLive,218,Contábil,1495,Apuração do CMV
+20,CISSLive Franquia CRM,64,CISSLive,218,Contábil,1195,Demonstrativo de Balancete
+20,CISSLive Franquia CRM,64,CISSLive,218,Contábil,1193,Demonstrativo de Resultados(DRE)
+20,CISSLive Franquia CRM,64,CISSLive,218,Contábil,1194,Encerramento de exercicio
+20,CISSLive Franquia CRM,64,CISSLive,218,Contábil,1192,Lançamento
+20,CISSLive Franquia CRM,64,CISSLive,217,Estoque,1190,Inventário de estoque
+20,CISSLive Franquia CRM,64,CISSLive,217,Estoque,1189,Lançamento de estoque
+20,CISSLive Franquia CRM,64,CISSLive,217,Estoque,1250,Movimentação Cronológica
+20,CISSLive Franquia CRM,64,CISSLive,217,Estoque,1328,Produção de Produtos
+20,CISSLive Franquia CRM,64,CISSLive,217,Estoque,1191,Transformação de produtos
+20,CISSLive Franquia CRM,64,CISSLive,216,Financeiro,1520,Antecipação
+20,CISSLive Franquia CRM,64,CISSLive,216,Financeiro,1397,Calendário Financeiro
+20,CISSLive Franquia CRM,64,CISSLive,216,Financeiro,1278,Comissão de Vendedores
+20,CISSLive Franquia CRM,64,CISSLive,216,Financeiro,1461,Conciliação Bancária
+20,CISSLive Franquia CRM,64,CISSLive,216,Financeiro,1188,Conciliação Manual
+20,CISSLive Franquia CRM,64,CISSLive,216,Financeiro,1186,Contas a Pagar
+20,CISSLive Franquia CRM,64,CISSLive,216,Financeiro,1185,Contas a receber
+20,CISSLive Franquia CRM,64,CISSLive,216,Financeiro,1187,Movimento de Caixa
+20,CISSLive Franquia CRM,64,CISSLive,216,Financeiro,1496,Provisionamento Financeiro
+20,CISSLive Franquia CRM,64,CISSLive,222,Fiscal,1200,Arquivos Fiscais
+20,CISSLive Franquia CRM,64,CISSLive,222,Fiscal,1201,Inutilizar Notas
+20,CISSLive Franquia CRM,64,CISSLive,222,Fiscal,1337,Notas de Ajuste
+20,CISSLive Franquia CRM,64,CISSLive,223,Integrim,1206,Serviço
+20,CISSLive Franquia CRM,64,CISSLive,230,Início,1295,Indicadores Dashboard
+20,CISSLive Franquia CRM,64,CISSLive,214,Preço,1173,Agenda de Preços
+20,CISSLive Franquia CRM,64,CISSLive,214,Preço,1176,Cotação com Concorrentes
+20,CISSLive Franquia CRM,64,CISSLive,214,Preço,1174,Etiquetas
+20,CISSLive Franquia CRM,64,CISSLive,214,Preço,1322,Histórico de Custos
+20,CISSLive Franquia CRM,64,CISSLive,214,Preço,1283,Histórico de Preço
+20,CISSLive Franquia CRM,64,CISSLive,214,Preço,1172,Manuteção de preços
+20,CISSLive Franquia CRM,64,CISSLive,214,Preço,1175,Promoções - Integração com Software de Terceiros
+20,CISSLive Franquia CRM,64,CISSLive,221,Utilitários,1289,Histórico de Notificações
+20,CISSLive Franquia CRM,64,CISSLive,221,Utilitários,1202,Meus Arquivos
+20,CISSLive Franquia CRM,64,CISSLive,221,Utilitários,1290,Monitoramento de Integrações
+20,CISSLive Franquia CRM,64,CISSLive,211,Vendas,1127,CISSLive PDV CRM - Integração com Software de Terceiros
+20,CISSLive Franquia CRM,64,CISSLive,211,Vendas,1277,Controle de Vasilhame
+20,CISSLive Franquia CRM,64,CISSLive,211,Vendas,1182,Devolução de venda - Integração com Software de Terceiros
+20,CISSLive Franquia CRM,64,CISSLive,211,Vendas,1184,Fechamento Fisico
+20,CISSLive Franquia CRM,64,CISSLive,211,Vendas,1236,Meta de Vendas - Integração com Software de Terceiros
+20,CISSLive Franquia CRM,64,CISSLive,211,Vendas,1183,Nota origem Cupom - Integração com Software de Terceiros
+20,CISSLive Franquia CRM,64,CISSLive,211,Vendas,1293,PlugAPI - adicional por delivery/parceiro
+26,CissLive Franquia OAKBerry,64,CISSLive,226,Análise e Relatórios,1216,Análise Operacional
+26,CissLive Franquia OAKBerry,64,CISSLive,226,Análise e Relatórios,1217,Indicadores
+26,CissLive Franquia OAKBerry,64,CISSLive,226,Análise e Relatórios,1281,Relatório
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1169,Acessos
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1171,Alteração em Lote
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1299,Cadastro KDS
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1167,Cartões
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1462,Contas Bancárias
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1162,Contábil
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1164,Convênio
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1160,Empresa
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1163,Estoque
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1161,Fiscal
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1166,Forma de Pagamento
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1170,Importação
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1165,Operação
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1518,Organização Fornecedor
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1159,Pessoa
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1168,Processos
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1158,Produto
+26,CissLive Franquia OAKBerry,64,CISSLive,213,Cadastros,1263,Tags
+26,CissLive Franquia OAKBerry,64,CISSLive,225,Central,1203,Atender Solicitações
+26,CissLive Franquia OAKBerry,64,CISSLive,225,Central,1204,CEP
+26,CissLive Franquia OAKBerry,64,CISSLive,209,CISSLive,1488,Alteração Cadastral
+26,CissLive Franquia OAKBerry,64,CISSLive,209,CISSLive,1083,Retaguarda
+26,CissLive Franquia OAKBerry,64,CISSLive,224,CISSLive APP,1205,CISSLive APP (Por Dispositivo Móvel)
+26,CissLive Franquia OAKBerry,64,CISSLive,215,Compra,1178,Compra
+26,CissLive Franquia OAKBerry,64,CISSLive,215,Compra,1179,Devolução de Compra - Integração com Software de Terceiros
+26,CissLive Franquia OAKBerry,64,CISSLive,215,Compra,1180,Pedido de Compra
+26,CissLive Franquia OAKBerry,64,CISSLive,215,Compra,1177,Radar NFE - Integração com Software de Terceiros
+26,CissLive Franquia OAKBerry,64,CISSLive,215,Compra,1284,Sugestão de Compra
+26,CissLive Franquia OAKBerry,64,CISSLive,220,Configuração,1197,Configuração de Caixa - Integração com Software de Terceiros
+26,CissLive Franquia OAKBerry,64,CISSLive,220,Configuração,1198,Configuração de Sistema
+26,CissLive Franquia OAKBerry,64,CISSLive,220,Configuração,1532,Configuração do Ambiente
+26,CissLive Franquia OAKBerry,64,CISSLive,220,Configuração,1199,Integração
+26,CissLive Franquia OAKBerry,64,CISSLive,218,Contábil,1495,Apuração do CMV
+26,CissLive Franquia OAKBerry,64,CISSLive,218,Contábil,1195,Demonstrativo de Balancete
+26,CissLive Franquia OAKBerry,64,CISSLive,218,Contábil,1193,Demonstrativo de Resultados(DRE)
+26,CissLive Franquia OAKBerry,64,CISSLive,218,Contábil,1194,Encerramento de exercicio
+26,CissLive Franquia OAKBerry,64,CISSLive,218,Contábil,1192,Lançamento
+26,CissLive Franquia OAKBerry,64,CISSLive,217,Estoque,1190,Inventário de estoque
+26,CissLive Franquia OAKBerry,64,CISSLive,217,Estoque,1189,Lançamento de estoque
+26,CissLive Franquia OAKBerry,64,CISSLive,217,Estoque,1250,Movimentação Cronológica
+26,CissLive Franquia OAKBerry,64,CISSLive,217,Estoque,1328,Produção de Produtos
+26,CissLive Franquia OAKBerry,64,CISSLive,217,Estoque,1191,Transformação de produtos
+26,CissLive Franquia OAKBerry,64,CISSLive,216,Financeiro,1520,Antecipação
+26,CissLive Franquia OAKBerry,64,CISSLive,216,Financeiro,1397,Calendário Financeiro
+26,CissLive Franquia OAKBerry,64,CISSLive,216,Financeiro,1278,Comissão de Vendedores
+26,CissLive Franquia OAKBerry,64,CISSLive,216,Financeiro,1461,Conciliação Bancária
+26,CissLive Franquia OAKBerry,64,CISSLive,216,Financeiro,1188,Conciliação Manual
+26,CissLive Franquia OAKBerry,64,CISSLive,216,Financeiro,1186,Contas a Pagar
+26,CissLive Franquia OAKBerry,64,CISSLive,216,Financeiro,1185,Contas a receber
+26,CissLive Franquia OAKBerry,64,CISSLive,216,Financeiro,1187,Movimento de Caixa
+26,CissLive Franquia OAKBerry,64,CISSLive,216,Financeiro,1496,Provisionamento Financeiro
+26,CissLive Franquia OAKBerry,64,CISSLive,222,Fiscal,1200,Arquivos Fiscais
+26,CissLive Franquia OAKBerry,64,CISSLive,222,Fiscal,1201,Inutilizar Notas
+26,CissLive Franquia OAKBerry,64,CISSLive,222,Fiscal,1337,Notas de Ajuste
+26,CissLive Franquia OAKBerry,64,CISSLive,230,Início,1295,Indicadores Dashboard
+26,CissLive Franquia OAKBerry,64,CISSLive,214,Preço,1173,Agenda de Preços
+26,CissLive Franquia OAKBerry,64,CISSLive,214,Preço,1176,Cotação com Concorrentes
+26,CissLive Franquia OAKBerry,64,CISSLive,214,Preço,1174,Etiquetas
+26,CissLive Franquia OAKBerry,64,CISSLive,214,Preço,1322,Histórico de Custos
+26,CissLive Franquia OAKBerry,64,CISSLive,214,Preço,1283,Histórico de Preço
+26,CissLive Franquia OAKBerry,64,CISSLive,214,Preço,1172,Manuteção de preços
+26,CissLive Franquia OAKBerry,64,CISSLive,214,Preço,1175,Promoções - Integração com Software de Terceiros
+26,CissLive Franquia OAKBerry,64,CISSLive,221,Utilitários,1289,Histórico de Notificações
+26,CissLive Franquia OAKBerry,64,CISSLive,221,Utilitários,1202,Meus Arquivos
+26,CissLive Franquia OAKBerry,64,CISSLive,221,Utilitários,1290,Monitoramento de Integrações
+26,CissLive Franquia OAKBerry,64,CISSLive,211,Vendas,1116,CISSFly
+26,CissLive Franquia OAKBerry,64,CISSLive,211,Vendas,1277,Controle de Vasilhame
+26,CissLive Franquia OAKBerry,64,CISSLive,211,Vendas,1182,Devolução de venda - Integração com Software de Terceiros
+26,CissLive Franquia OAKBerry,64,CISSLive,211,Vendas,1184,Fechamento Fisico
+26,CissLive Franquia OAKBerry,64,CISSLive,211,Vendas,1236,Meta de Vendas - Integração com Software de Terceiros
+26,CissLive Franquia OAKBerry,64,CISSLive,211,Vendas,1082,NFC-e - Supermercados (por Fte. Cx.) - Integração com Software de Terceiros
+26,CissLive Franquia OAKBerry,64,CISSLive,211,Vendas,1183,Nota origem Cupom - Integração com Software de Terceiros
+26,CissLive Franquia OAKBerry,64,CISSLive,211,Vendas,1292,Plug API - Integração com Software de Terceiros
+25,CISSLive Franquias,64,CISSLive,226,Análise e Relatórios,1216,Análise Operacional
+25,CISSLive Franquias,64,CISSLive,226,Análise e Relatórios,1217,Indicadores
+25,CISSLive Franquias,64,CISSLive,226,Análise e Relatórios,1281,Relatório
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1169,Acessos
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1171,Alteração em Lote
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1299,Cadastro KDS
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1167,Cartões
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1462,Contas Bancárias
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1162,Contábil
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1164,Convênio
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1160,Empresa
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1163,Estoque
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1161,Fiscal
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1166,Forma de Pagamento
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1170,Importação
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1670,Moedas
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1165,Operação
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1518,Organização Fornecedor
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1159,Pessoa
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1168,Processos
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1158,Produto
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1573,Setores
+25,CISSLive Franquias,64,CISSLive,213,Cadastros,1263,Tags
+25,CISSLive Franquias,64,CISSLive,225,Central,1203,Atender Solicitações
+25,CISSLive Franquias,64,CISSLive,225,Central,1204,CEP
+25,CISSLive Franquias,64,CISSLive,209,CISSLive,1488,Alteração Cadastral
+25,CISSLive Franquias,64,CISSLive,209,CISSLive,1083,Retaguarda
+25,CISSLive Franquias,64,CISSLive,224,CISSLive APP,1205,CISSLive APP (Por Dispositivo Móvel)
+25,CISSLive Franquias,64,CISSLive,215,Compra,1178,Compra
+25,CISSLive Franquias,64,CISSLive,215,Compra,1179,Devolução de Compra - Integração com Software de Terceiros
+25,CISSLive Franquias,64,CISSLive,215,Compra,1180,Pedido de Compra
+25,CISSLive Franquias,64,CISSLive,215,Compra,1177,Radar NFE - Integração com Software de Terceiros
+25,CISSLive Franquias,64,CISSLive,215,Compra,1284,Sugestão de Compra
+25,CISSLive Franquias,64,CISSLive,220,Configuração,1197,Configuração de Caixa - Integração com Software de Terceiros
+25,CISSLive Franquias,64,CISSLive,220,Configuração,1198,Configuração de Sistema
+25,CISSLive Franquias,64,CISSLive,220,Configuração,1532,Configuração do Ambiente
+25,CISSLive Franquias,64,CISSLive,220,Configuração,1199,Integração
+25,CISSLive Franquias,64,CISSLive,220,Configuração,1362,Relação de Ambientes
+25,CISSLive Franquias,64,CISSLive,218,Contábil,1495,Apuração do CMV
+25,CISSLive Franquias,64,CISSLive,218,Contábil,1195,Demonstrativo de Balancete
+25,CISSLive Franquias,64,CISSLive,218,Contábil,1193,Demonstrativo de Resultados(DRE)
+25,CISSLive Franquias,64,CISSLive,218,Contábil,1194,Encerramento de exercicio
+25,CISSLive Franquias,64,CISSLive,218,Contábil,1192,Lançamento
+25,CISSLive Franquias,64,CISSLive,217,Estoque,1190,Inventário de estoque
+25,CISSLive Franquias,64,CISSLive,217,Estoque,1189,Lançamento de estoque
+25,CISSLive Franquias,64,CISSLive,217,Estoque,1250,Movimentação Cronológica
+25,CISSLive Franquias,64,CISSLive,217,Estoque,1328,Produção de Produtos
+25,CISSLive Franquias,64,CISSLive,217,Estoque,1191,Transformação de produtos
+25,CISSLive Franquias,64,CISSLive,216,Financeiro,1520,Antecipação
+25,CISSLive Franquias,64,CISSLive,216,Financeiro,1397,Calendário Financeiro
+25,CISSLive Franquias,64,CISSLive,216,Financeiro,1278,Comissão de Vendedores
+25,CISSLive Franquias,64,CISSLive,216,Financeiro,1461,Conciliação Bancária
+25,CISSLive Franquias,64,CISSLive,216,Financeiro,1188,Conciliação Manual
+25,CISSLive Franquias,64,CISSLive,216,Financeiro,1186,Contas a Pagar
+25,CISSLive Franquias,64,CISSLive,216,Financeiro,1185,Contas a receber
+25,CISSLive Franquias,64,CISSLive,216,Financeiro,1187,Movimento de Caixa
+25,CISSLive Franquias,64,CISSLive,216,Financeiro,1496,Provisionamento Financeiro
+25,CISSLive Franquias,64,CISSLive,222,Fiscal,1200,Arquivos Fiscais
+25,CISSLive Franquias,64,CISSLive,222,Fiscal,1201,Inutilizar Notas
+25,CISSLive Franquias,64,CISSLive,222,Fiscal,1337,Notas de Ajuste
+25,CISSLive Franquias,64,CISSLive,223,Integrim,1206,Serviço
+25,CISSLive Franquias,64,CISSLive,230,Início,1295,Indicadores Dashboard
+25,CISSLive Franquias,64,CISSLive,214,Preço,1173,Agenda de Preços
+25,CISSLive Franquias,64,CISSLive,214,Preço,1176,Cotação com Concorrentes
+25,CISSLive Franquias,64,CISSLive,214,Preço,1174,Etiquetas
+25,CISSLive Franquias,64,CISSLive,214,Preço,1322,Histórico de Custos
+25,CISSLive Franquias,64,CISSLive,214,Preço,1283,Histórico de Preço
+25,CISSLive Franquias,64,CISSLive,214,Preço,1172,Manuteção de preços
+25,CISSLive Franquias,64,CISSLive,214,Preço,1175,Promoções - Integração com Software de Terceiros
+25,CISSLive Franquias,64,CISSLive,221,Utilitários,1289,Histórico de Notificações
+25,CISSLive Franquias,64,CISSLive,221,Utilitários,1202,Meus Arquivos
+25,CISSLive Franquias,64,CISSLive,221,Utilitários,1290,Monitoramento de Integrações
+25,CISSLive Franquias,64,CISSLive,211,Vendas,1080,CISSPDV - Frente de Caixa
+25,CISSLive Franquias,64,CISSLive,211,Vendas,1277,Controle de Vasilhame
+25,CISSLive Franquias,64,CISSLive,211,Vendas,1182,Devolução de venda - Integração com Software de Terceiros
+25,CISSLive Franquias,64,CISSLive,211,Vendas,1184,Fechamento Fisico
+25,CISSLive Franquias,64,CISSLive,211,Vendas,1236,Meta de Vendas - Integração com Software de Terceiros
+25,CISSLive Franquias,64,CISSLive,211,Vendas,1082,NFC-e - Supermercados (por Fte. Cx.) - Integração com Software de Terceiros
+25,CISSLive Franquias,64,CISSLive,211,Vendas,1183,Nota origem Cupom - Integração com Software de Terceiros
+21,CISSLive Geral/Padrão,64,CISSLive,226,Análise e Relatórios,1216,Análise Operacional
+21,CISSLive Geral/Padrão,64,CISSLive,226,Análise e Relatórios,1217,Indicadores
+21,CISSLive Geral/Padrão,64,CISSLive,226,Análise e Relatórios,1281,Relatório
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1169,Acessos
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1171,Alteração em Lote
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1299,Cadastro KDS
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1167,Cartões
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1462,Contas Bancárias
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1162,Contábil
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1164,Convênio
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1632,Descontos
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1160,Empresa
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1163,Estoque
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1161,Fiscal
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1166,Forma de Pagamento
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1170,Importação
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1670,Moedas
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1165,Operação
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1159,Pessoa
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1168,Processos
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1158,Produto
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1573,Setores
+21,CISSLive Geral/Padrão,64,CISSLive,213,Cadastros,1263,Tags
+21,CISSLive Geral/Padrão,64,CISSLive,225,Central,1203,Atender Solicitações
+21,CISSLive Geral/Padrão,64,CISSLive,225,Central,1204,CEP
+21,CISSLive Geral/Padrão,64,CISSLive,209,CISSLive,1083,Retaguarda
+21,CISSLive Geral/Padrão,64,CISSLive,224,CISSLive APP,1205,CISSLive APP (Por Dispositivo Móvel)
+21,CISSLive Geral/Padrão,64,CISSLive,251,CISSLiveControl,1544,CISSLiveControl
+21,CISSLive Geral/Padrão,64,CISSLive,215,Compra,1178,Compra
+21,CISSLive Geral/Padrão,64,CISSLive,215,Compra,1179,Devolução de Compra - Integração com Software de Terceiros
+21,CISSLive Geral/Padrão,64,CISSLive,215,Compra,1180,Pedido de Compra
+21,CISSLive Geral/Padrão,64,CISSLive,215,Compra,1177,Radar NFE - Integração com Software de Terceiros
+21,CISSLive Geral/Padrão,64,CISSLive,215,Compra,1284,Sugestão de Compra
+21,CISSLive Geral/Padrão,64,CISSLive,220,Configuração,1197,Configuração de Caixa - Integração com Software de Terceiros
+21,CISSLive Geral/Padrão,64,CISSLive,220,Configuração,1198,Configuração de Sistema
+21,CISSLive Geral/Padrão,64,CISSLive,220,Configuração,1532,Configuração do Ambiente
+21,CISSLive Geral/Padrão,64,CISSLive,220,Configuração,1199,Integração
+21,CISSLive Geral/Padrão,64,CISSLive,218,Contábil,1495,Apuração do CMV
+21,CISSLive Geral/Padrão,64,CISSLive,218,Contábil,1195,Demonstrativo de Balancete
+21,CISSLive Geral/Padrão,64,CISSLive,218,Contábil,1193,Demonstrativo de Resultados(DRE)
+21,CISSLive Geral/Padrão,64,CISSLive,218,Contábil,1194,Encerramento de exercicio
+21,CISSLive Geral/Padrão,64,CISSLive,218,Contábil,1192,Lançamento
+21,CISSLive Geral/Padrão,64,CISSLive,217,Estoque,1190,Inventário de estoque
+21,CISSLive Geral/Padrão,64,CISSLive,217,Estoque,1189,Lançamento de estoque
+21,CISSLive Geral/Padrão,64,CISSLive,217,Estoque,1250,Movimentação Cronológica
+21,CISSLive Geral/Padrão,64,CISSLive,217,Estoque,1328,Produção de Produtos
+21,CISSLive Geral/Padrão,64,CISSLive,217,Estoque,1191,Transformação de produtos
+21,CISSLive Geral/Padrão,64,CISSLive,216,Financeiro,1520,Antecipação
+21,CISSLive Geral/Padrão,64,CISSLive,216,Financeiro,1397,Calendário Financeiro
+21,CISSLive Geral/Padrão,64,CISSLive,216,Financeiro,1278,Comissão de Vendedores
+21,CISSLive Geral/Padrão,64,CISSLive,216,Financeiro,1461,Conciliação Bancária
+21,CISSLive Geral/Padrão,64,CISSLive,216,Financeiro,1188,Conciliação Manual
+21,CISSLive Geral/Padrão,64,CISSLive,216,Financeiro,1186,Contas a Pagar
+21,CISSLive Geral/Padrão,64,CISSLive,216,Financeiro,1185,Contas a receber
+21,CISSLive Geral/Padrão,64,CISSLive,216,Financeiro,1187,Movimento de Caixa
+21,CISSLive Geral/Padrão,64,CISSLive,216,Financeiro,1496,Provisionamento Financeiro
+21,CISSLive Geral/Padrão,64,CISSLive,222,Fiscal,1200,Arquivos Fiscais
+21,CISSLive Geral/Padrão,64,CISSLive,222,Fiscal,1201,Inutilizar Notas
+21,CISSLive Geral/Padrão,64,CISSLive,222,Fiscal,1337,Notas de Ajuste
+21,CISSLive Geral/Padrão,64,CISSLive,223,Integrim,1206,Serviço
+21,CISSLive Geral/Padrão,64,CISSLive,230,Início,1295,Indicadores Dashboard
+21,CISSLive Geral/Padrão,64,CISSLive,214,Preço,1173,Agenda de Preços
+21,CISSLive Geral/Padrão,64,CISSLive,214,Preço,1176,Cotação com Concorrentes
+21,CISSLive Geral/Padrão,64,CISSLive,214,Preço,1174,Etiquetas
+21,CISSLive Geral/Padrão,64,CISSLive,214,Preço,1322,Histórico de Custos
+21,CISSLive Geral/Padrão,64,CISSLive,214,Preço,1283,Histórico de Preço
+21,CISSLive Geral/Padrão,64,CISSLive,214,Preço,1172,Manuteção de preços
+21,CISSLive Geral/Padrão,64,CISSLive,214,Preço,1175,Promoções - Integração com Software de Terceiros
+21,CISSLive Geral/Padrão,64,CISSLive,221,Utilitários,1289,Histórico de Notificações
+21,CISSLive Geral/Padrão,64,CISSLive,221,Utilitários,1202,Meus Arquivos
+21,CISSLive Geral/Padrão,64,CISSLive,221,Utilitários,1290,Monitoramento de Integrações
+21,CISSLive Geral/Padrão,64,CISSLive,211,Vendas,1080,CISSPDV - Frente de Caixa
+21,CISSLive Geral/Padrão,64,CISSLive,211,Vendas,1277,Controle de Vasilhame
+21,CISSLive Geral/Padrão,64,CISSLive,211,Vendas,1182,Devolução de venda - Integração com Software de Terceiros
+21,CISSLive Geral/Padrão,64,CISSLive,211,Vendas,1184,Fechamento Fisico
+21,CISSLive Geral/Padrão,64,CISSLive,211,Vendas,1236,Meta de Vendas - Integração com Software de Terceiros
+21,CISSLive Geral/Padrão,64,CISSLive,211,Vendas,1082,NFC-e - Supermercados (por Fte. Cx.) - Integração com Software de Terceiros
+21,CISSLive Geral/Padrão,64,CISSLive,211,Vendas,1183,Nota origem Cupom - Integração com Software de Terceiros
+23,CISSLive Gestor,66,CISSLive Gestor,242,Análise e Relatórios,1504,Análise Operacional
+23,CISSLive Gestor,66,CISSLive Gestor,242,Análise e Relatórios,1517,Histórico de Sincronização
+23,CISSLive Gestor,66,CISSLive Gestor,242,Análise e Relatórios,1505,Indicadores
+23,CISSLive Gestor,66,CISSLive Gestor,242,Análise e Relatórios,1451,Relatório
+23,CISSLive Gestor,66,CISSLive Gestor,241,Cadastro,1450,Acessos
+23,CISSLive Gestor,66,CISSLive Gestor,241,Cadastro,1500,Alteração em Lote
+23,CISSLive Gestor,66,CISSLive Gestor,241,Cadastro,1441,Contábil
+23,CISSLive Gestor,66,CISSLive Gestor,241,Cadastro,1637,Descontos
+23,CISSLive Gestor,66,CISSLive Gestor,241,Cadastro,1458,Empresa
+23,CISSLive Gestor,66,CISSLive Gestor,241,Cadastro,1459,Fiscal
+23,CISSLive Gestor,66,CISSLive Gestor,241,Cadastro,1449,Forma de Pagamento
+23,CISSLive Gestor,66,CISSLive Gestor,241,Cadastro,1448,Operação
+23,CISSLive Gestor,66,CISSLive Gestor,241,Cadastro,1440,Pessoa
+23,CISSLive Gestor,66,CISSLive Gestor,241,Cadastro,1431,Produto
+23,CISSLive Gestor,66,CISSLive Gestor,241,Cadastro,1557,Tags
+23,CISSLive Gestor,66,CISSLive Gestor,249,CISSLive APP,1507,CISSLive APP
+23,CISSLive Gestor,66,CISSLive Gestor,243,Configuração,1506,Configuração de Caixa
+23,CISSLive Gestor,66,CISSLive Gestor,243,Configuração,1452,Relação de Ambientes
+23,CISSLive Gestor,66,CISSLive Gestor,248,Início,1501,Indicadores Dashboard
+23,CISSLive Gestor,66,CISSLive Gestor,244,Preço,1454,Agenda de Preços
+23,CISSLive Gestor,66,CISSLive Gestor,244,Preço,1502,Histórico de Custos
+23,CISSLive Gestor,66,CISSLive Gestor,244,Preço,1455,Histórico de Preços
+23,CISSLive Gestor,66,CISSLive Gestor,244,Preço,1453,Manutenção de Preços
+23,CISSLive Gestor,66,CISSLive Gestor,244,Preço,1456,Promoções
+23,CISSLive Gestor,66,CISSLive Gestor,245,Vendas,1457,CISSLive Gestor
+23,CISSLive Gestor,66,CISSLive Gestor,245,Vendas,1503,Venda
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,226,Análise e Relatórios,1216,Análise Operacional
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,226,Análise e Relatórios,1217,Indicadores
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,226,Análise e Relatórios,1281,Relatório
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1169,Acessos
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1171,Alteração em Lote
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1299,Cadastro KDS
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1167,Cartões
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1462,Contas Bancárias
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1162,Contábil
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1164,Convênio
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1632,Descontos
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1160,Empresa
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1163,Estoque
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1161,Fiscal
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1166,Forma de Pagamento
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1170,Importação
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1670,Moedas
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1165,Operação
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1159,Pessoa
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1168,Processos
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1158,Produto
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1573,Setores
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,213,Cadastros,1263,Tags
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,225,Central,1203,Atender Solicitações
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,225,Central,1204,CEP
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,209,CISSLive,1126,Retaguarda CRM
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,224,CISSLive APP,1232,CISSLive APP CRM
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,215,Compra,1178,Compra
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,215,Compra,1179,Devolução de Compra - Integração com Software de Terceiros
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,215,Compra,1180,Pedido de Compra
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,215,Compra,1177,Radar NFE - Integração com Software de Terceiros
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,215,Compra,1284,Sugestão de Compra
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,220,Configuração,1197,Configuração de Caixa - Integração com Software de Terceiros
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,220,Configuração,1198,Configuração de Sistema
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,220,Configuração,1532,Configuração do Ambiente
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,220,Configuração,1199,Integração
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,218,Contábil,1495,Apuração do CMV
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,218,Contábil,1195,Demonstrativo de Balancete
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,218,Contábil,1193,Demonstrativo de Resultados(DRE)
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,218,Contábil,1194,Encerramento de exercicio
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,218,Contábil,1192,Lançamento
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,217,Estoque,1190,Inventário de estoque
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,217,Estoque,1189,Lançamento de estoque
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,217,Estoque,1250,Movimentação Cronológica
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,217,Estoque,1328,Produção de Produtos
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,217,Estoque,1191,Transformação de produtos
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,216,Financeiro,1520,Antecipação
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,216,Financeiro,1397,Calendário Financeiro
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,216,Financeiro,1278,Comissão de Vendedores
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,216,Financeiro,1461,Conciliação Bancária
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,216,Financeiro,1188,Conciliação Manual
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,216,Financeiro,1186,Contas a Pagar
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,216,Financeiro,1185,Contas a receber
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,216,Financeiro,1187,Movimento de Caixa
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,216,Financeiro,1496,Provisionamento Financeiro
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,222,Fiscal,1200,Arquivos Fiscais
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,222,Fiscal,1201,Inutilizar Notas
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,222,Fiscal,1337,Notas de Ajuste
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,223,Integrim,1206,Serviço
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,230,Início,1295,Indicadores Dashboard
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,214,Preço,1173,Agenda de Preços
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,214,Preço,1176,Cotação com Concorrentes
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,214,Preço,1174,Etiquetas
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,214,Preço,1322,Histórico de Custos
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,214,Preço,1283,Histórico de Preço
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,214,Preço,1172,Manuteção de preços
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,214,Preço,1175,Promoções - Integração com Software de Terceiros
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,221,Utilitários,1289,Histórico de Notificações
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,221,Utilitários,1202,Meus Arquivos
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,221,Utilitários,1290,Monitoramento de Integrações
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,211,Vendas,1127,CISSLive PDV CRM - Integração com Software de Terceiros
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,211,Vendas,1277,Controle de Vasilhame
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,211,Vendas,1182,Devolução de venda - Integração com Software de Terceiros
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,211,Vendas,1184,Fechamento Fisico
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,211,Vendas,1236,Meta de Vendas - Integração com Software de Terceiros
+19,CISSLive Grupo CRM - Loja Própria,64,CISSLive,211,Vendas,1183,Nota origem Cupom - Integração com Software de Terceiros
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1169,Acessos
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1171,Alteração em Lote
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1299,Cadastro KDS
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1167,Cartões
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1462,Contas Bancárias
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1162,Contábil
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1164,Convênio
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1160,Empresa
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1163,Estoque
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1161,Fiscal
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1166,Forma de Pagamento
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1170,Importação
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1165,Operação
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1518,Organização Fornecedor
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1159,Pessoa
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1168,Processos
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1158,Produto
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,213,Cadastros,1263,Tags
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,220,Configuração,1197,Configuração de Caixa - Integração com Software de Terceiros
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,220,Configuração,1198,Configuração de Sistema
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,220,Configuração,1532,Configuração do Ambiente
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,220,Configuração,1199,Integração
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,220,Configuração,1362,Relação de Ambientes
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,214,Preço,1173,Agenda de Preços
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,214,Preço,1175,Promoções - Integração com Software de Terceiros
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,211,Vendas,1080,CISSPDV - Frente de Caixa
+24,CISSLive Integração CISSBox Terceiros,64,CISSLive,211,Vendas,1082,NFC-e - Supermercados (por Fte. Cx.) - Integração com Software de Terceiros
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,824,Acessos CISSPoder (Por retaguarda)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,1088,Cadastro Rápido
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,268,Cadastros / Utilitários / Relatórios / Ajuda
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,879,Cenários Fiscais para Tributação de Produtos
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,598,Credit Score - Aprovação Crédito
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,595,Mapa de Endereçamento
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,589,Mix de Produtos por Empresa
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,250,CISSPoder APP,1530,CISSPoder APP
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,200,CissReport,965,CISSReport
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,254,CISSTarefas,1572,CISSTarefas (Por CNPJ)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,1490,Abastecimento Automático
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,1117,Acordos Comerciais
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,1235,Acordos Comerciais CNPJ Adicional
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,322,Bonificação de Compra
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,43,Checagem de Produtos e Emissão de Etiquetas
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,909,Ciclo de Compras
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,867,CISS Control (Por Loja)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,706,CISSCotação
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,152,Cotação de Preços com Concorrentes
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,39,Cotação de Preços de Fornecedores
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,996,Formação de Preços e Venda para o Atacarejo
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,588,Gestão de Transferência e Estoque(Filiais)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,41,Manutenção de Preços de Vendas e Ofertas
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,40,Notas de Entrada
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,874,Orçamento de Compras
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,364,Pedido de Compras
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,151,Preços por Empresa
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,1542,Radar XML de CT-e
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,961,Radar XML NF-e de Entradas (Por Loja) 2.0
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,150,Recepção de Mercadorias (Conferencia Cega)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,1594,Recepção Inteligente
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,365,Relacionamento de Produto com Fornecedor
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,1243,Tabela de Preços
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,3,Compras,1215,Transferência Automática
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,594,Centro de Resultados
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,1028,Comissões Avançadas
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,590,Controladoria Contábil
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,592,Controladoria Fiscal
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,194,Controladoria Patrimonial
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,1091,Controle de Avarias
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,286,Controle de Lotes
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,176,Controle de Produção
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,903,Demonstrações Contábeis
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,47,Estoque de Produtos
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,1099,Exclusão de ICMS da Base de PIS/COFINS
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,1313,Exclusão de ICMS da Base de PIS/COFINS - Decisão STF
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,873,Folha de Pagamento - Integração Software Terceiros
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,709,Importação XML da NF-e Notas de Entrada (Site/Arquivo)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,1086,MDF-e (por CNPJ)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,353,NF-e - Nota Fiscal Eletrônica
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,905,NFC-e - Lojas (por Empresa)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,644,SPED - EFD Contribuições (por CNPJ)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,352,SPED Contábil (por CNPJ)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,954,SPED ECF - Escrituração Contábil Fiscal
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,1033,SPED EFD REINF
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,351,SPED Fiscal (por CNPJ)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,58,Controle de Entrega,1247,CISSTrack (Por CNPJ)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,58,Controle de Entrega,1251,CISSTrack CNPJ Adicional
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,58,Controle de Entrega,900,Conferencia de Entrega na Frente de Caixa
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,58,Controle de Entrega,849,Emissão de Nota Fiscal na Logística de Entrega (Pedido de Venda)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,58,Controle de Entrega,248,Logística de Entrega de Mercadorias
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,42,CRM,970,Clube de Beneficios
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,42,CRM,179,Fidelização de Clientes
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,42,CRM,216,Perfil e Relacionamento - Perguntas Dinâmicas
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,597,Caixa Geral
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,198,Cartão Próprio
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,1026,Conciliação Bancária OFX
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,52,Contas a Pagar e Receber
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,1212,DDA - Débito Direto Autorizado
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,377,Fluxo de Caixa
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,158,Geração de Arquivo Contas a Pagar
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,775,Geração de Arquivo Contas a Receber
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,185,Gestão de Cobrança
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,50,Tesouraria
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,40,Gerencial,184,Apoio a Decisão
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,227,Integrações,1150,CISS Integrim
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,253,Portal CISSPoder,1571,Portal CISSPoder
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,4,Vendas,842,CISS Process (Liberação Processos por Dispositivos Moveis)
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,4,Vendas,578,CISSPDV - Frente de Caixa
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,4,Vendas,212,Emissão de Boletos Bancários(Por CNPJ) - Integração com Software de Terceiros
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,4,Vendas,1032,Gestão de Vendas
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,4,Vendas,1071,Importação de Orçamento
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,4,Vendas,289,Metas de Vendas
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,4,Vendas,366,Notas Fiscais Origem de Cupom
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,4,Vendas,288,Ordem de Serviços
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,4,Vendas,1011,Orçamento por Ambiente
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,4,Vendas,1003,Sistema Tintométrico
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,4,Vendas,44,"Tele-Vendas, DAV, Pré Vendas, Nota Diversas"
+14,MatCon Grande Porte Lucro Real,1,CISSPoder,4,Vendas,367,Transferência Vendas entre Empresas
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,824,Acessos CISSPoder (Por retaguarda)
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,1088,Cadastro Rápido
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,268,Cadastros / Utilitários / Relatórios / Ajuda
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,879,Cenários Fiscais para Tributação de Produtos
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,598,Credit Score - Aprovação Crédito
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,250,CISSPoder APP,1530,CISSPoder APP
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,200,CissReport,965,CISSReport
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,254,CISSTarefas,1572,CISSTarefas (Por CNPJ)
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,322,Bonificação de Compra
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,42,Carga de Produtos para Balanças
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,43,Checagem de Produtos e Emissão de Etiquetas
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,909,Ciclo de Compras
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,867,CISS Control (Por Loja)
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,706,CISSCotação
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,996,Formação de Preços e Venda para o Atacarejo
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,673,Gestão de Promoções - Combo
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,41,Manutenção de Preços de Vendas e Ofertas
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,40,Notas de Entrada
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,364,Pedido de Compras
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,961,Radar XML NF-e de Entradas (Por Loja) 2.0
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,150,Recepção de Mercadorias (Conferencia Cega)
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,1594,Recepção Inteligente
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,3,Compras,365,Relacionamento de Produto com Fornecedor
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,1028,Comissões Avançadas
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,590,Controladoria Contábil
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,592,Controladoria Fiscal
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,194,Controladoria Patrimonial
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,1091,Controle de Avarias
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,286,Controle de Lotes
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,47,Estoque de Produtos
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,1099,Exclusão de ICMS da Base de PIS/COFINS
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,1313,Exclusão de ICMS da Base de PIS/COFINS - Decisão STF
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,709,Importação XML da NF-e Notas de Entrada (Site/Arquivo)
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,1086,MDF-e (por CNPJ)
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,607,NF-e - Envio Automatico de XML via e-mail
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,353,NF-e - Nota Fiscal Eletrônica
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,905,NFC-e - Lojas (por Empresa)
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,644,SPED - EFD Contribuições (por CNPJ)
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,5,Controladoria,351,SPED Fiscal (por CNPJ)
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,58,Controle de Entrega,1247,CISSTrack (Por CNPJ)
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,58,Controle de Entrega,849,Emissão de Nota Fiscal na Logística de Entrega (Pedido de Venda)
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,58,Controle de Entrega,248,Logística de Entrega de Mercadorias
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,58,Controle de Entrega,378,Separação de Mercadorias
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,42,CRM,970,Clube de Beneficios
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,6,Financeiro,597,Caixa Geral
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,6,Financeiro,1026,Conciliação Bancária OFX
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,6,Financeiro,52,Contas a Pagar e Receber
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,6,Financeiro,1212,DDA - Débito Direto Autorizado
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,6,Financeiro,377,Fluxo de Caixa
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,6,Financeiro,158,Geração de Arquivo Contas a Pagar
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,6,Financeiro,775,Geração de Arquivo Contas a Receber
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,6,Financeiro,185,Gestão de Cobrança
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,6,Financeiro,50,Tesouraria
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,40,Gerencial,184,Apoio a Decisão
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,253,Portal CISSPoder,1571,Portal CISSPoder
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,4,Vendas,842,CISS Process (Liberação Processos por Dispositivos Moveis)
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,4,Vendas,578,CISSPDV - Frente de Caixa
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,4,Vendas,212,Emissão de Boletos Bancários(Por CNPJ) - Integração com Software de Terceiros
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,4,Vendas,1032,Gestão de Vendas
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,4,Vendas,1071,Importação de Orçamento
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,4,Vendas,289,Metas de Vendas
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,4,Vendas,366,Notas Fiscais Origem de Cupom
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,4,Vendas,1011,Orçamento por Ambiente
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,4,Vendas,44,"Tele-Vendas, DAV, Pré Vendas, Nota Diversas"
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,4,Vendas,367,Transferência Vendas entre Empresas
+22,MatCon Médio Porte Lucro Real,1,CISSPoder,4,Vendas,1151,Venda Antecipada
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,63,Cadastros Gerais,824,Acessos CISSPoder (Por retaguarda)
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,63,Cadastros Gerais,268,Cadastros / Utilitários / Relatórios / Ajuda
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,63,Cadastros Gerais,879,Cenários Fiscais para Tributação de Produtos
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,250,CISSPoder APP,1530,CISSPoder APP
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,254,CISSTarefas,1572,CISSTarefas (Por CNPJ)
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,322,Bonificação de Compra
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,43,Checagem de Produtos e Emissão de Etiquetas
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,909,Ciclo de Compras
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,867,CISS Control (Por Loja)
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,41,Manutenção de Preços de Vendas e Ofertas
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,40,Notas de Entrada
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,364,Pedido de Compras
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,961,Radar XML NF-e de Entradas (Por Loja) 2.0
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,150,Recepção de Mercadorias (Conferencia Cega)
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,1594,Recepção Inteligente
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,365,Relacionamento de Produto com Fornecedor
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,1028,Comissões Avançadas
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,590,Controladoria Contábil
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,592,Controladoria Fiscal
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,286,Controle de Lotes
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,47,Estoque de Produtos
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,1099,Exclusão de ICMS da Base de PIS/COFINS
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,1313,Exclusão de ICMS da Base de PIS/COFINS - Decisão STF
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,709,Importação XML da NF-e Notas de Entrada (Site/Arquivo)
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,1086,MDF-e (por CNPJ)
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,353,NF-e - Nota Fiscal Eletrônica
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,905,NFC-e - Lojas (por Empresa)
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,644,SPED - EFD Contribuições (por CNPJ)
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,351,SPED Fiscal (por CNPJ)
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,58,Controle de Entrega,849,Emissão de Nota Fiscal na Logística de Entrega (Pedido de Venda)
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,58,Controle de Entrega,248,Logística de Entrega de Mercadorias
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,6,Financeiro,597,Caixa Geral
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,6,Financeiro,1026,Conciliação Bancária OFX
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,6,Financeiro,52,Contas a Pagar e Receber
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,6,Financeiro,377,Fluxo de Caixa
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,6,Financeiro,775,Geração de Arquivo Contas a Receber
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,6,Financeiro,50,Tesouraria
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,40,Gerencial,184,Apoio a Decisão
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,253,Portal CISSPoder,1571,Portal CISSPoder
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,4,Vendas,842,CISS Process (Liberação Processos por Dispositivos Moveis)
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,4,Vendas,578,CISSPDV - Frente de Caixa
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,4,Vendas,212,Emissão de Boletos Bancários(Por CNPJ) - Integração com Software de Terceiros
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,4,Vendas,289,Metas de Vendas
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,4,Vendas,366,Notas Fiscais Origem de Cupom
+12,MatCon Pequeno Porte Presumido/Real,1,CISSPoder,4,Vendas,44,"Tele-Vendas, DAV, Pré Vendas, Nota Diversas"
+11,MatCon Pequeno Porte Simples,1,CISSPoder,63,Cadastros Gerais,824,Acessos CISSPoder (Por retaguarda)
+11,MatCon Pequeno Porte Simples,1,CISSPoder,63,Cadastros Gerais,268,Cadastros / Utilitários / Relatórios / Ajuda
+11,MatCon Pequeno Porte Simples,1,CISSPoder,63,Cadastros Gerais,879,Cenários Fiscais para Tributação de Produtos
+11,MatCon Pequeno Porte Simples,1,CISSPoder,250,CISSPoder APP,1530,CISSPoder APP
+11,MatCon Pequeno Porte Simples,1,CISSPoder,254,CISSTarefas,1572,CISSTarefas (Por CNPJ)
+11,MatCon Pequeno Porte Simples,1,CISSPoder,3,Compras,43,Checagem de Produtos e Emissão de Etiquetas
+11,MatCon Pequeno Porte Simples,1,CISSPoder,3,Compras,909,Ciclo de Compras
+11,MatCon Pequeno Porte Simples,1,CISSPoder,3,Compras,41,Manutenção de Preços de Vendas e Ofertas
+11,MatCon Pequeno Porte Simples,1,CISSPoder,3,Compras,40,Notas de Entrada
+11,MatCon Pequeno Porte Simples,1,CISSPoder,3,Compras,364,Pedido de Compras
+11,MatCon Pequeno Porte Simples,1,CISSPoder,3,Compras,961,Radar XML NF-e de Entradas (Por Loja) 2.0
+11,MatCon Pequeno Porte Simples,1,CISSPoder,3,Compras,150,Recepção de Mercadorias (Conferencia Cega)
+11,MatCon Pequeno Porte Simples,1,CISSPoder,3,Compras,365,Relacionamento de Produto com Fornecedor
+11,MatCon Pequeno Porte Simples,1,CISSPoder,5,Controladoria,1028,Comissões Avançadas
+11,MatCon Pequeno Porte Simples,1,CISSPoder,5,Controladoria,590,Controladoria Contábil
+11,MatCon Pequeno Porte Simples,1,CISSPoder,5,Controladoria,592,Controladoria Fiscal
+11,MatCon Pequeno Porte Simples,1,CISSPoder,5,Controladoria,1091,Controle de Avarias
+11,MatCon Pequeno Porte Simples,1,CISSPoder,5,Controladoria,286,Controle de Lotes
+11,MatCon Pequeno Porte Simples,1,CISSPoder,5,Controladoria,47,Estoque de Produtos
+11,MatCon Pequeno Porte Simples,1,CISSPoder,5,Controladoria,709,Importação XML da NF-e Notas de Entrada (Site/Arquivo)
+11,MatCon Pequeno Porte Simples,1,CISSPoder,5,Controladoria,353,NF-e - Nota Fiscal Eletrônica
+11,MatCon Pequeno Porte Simples,1,CISSPoder,5,Controladoria,905,NFC-e - Lojas (por Empresa)
+11,MatCon Pequeno Porte Simples,1,CISSPoder,58,Controle de Entrega,849,Emissão de Nota Fiscal na Logística de Entrega (Pedido de Venda)
+11,MatCon Pequeno Porte Simples,1,CISSPoder,58,Controle de Entrega,248,Logística de Entrega de Mercadorias
+11,MatCon Pequeno Porte Simples,1,CISSPoder,6,Financeiro,597,Caixa Geral
+11,MatCon Pequeno Porte Simples,1,CISSPoder,6,Financeiro,1026,Conciliação Bancária OFX
+11,MatCon Pequeno Porte Simples,1,CISSPoder,6,Financeiro,52,Contas a Pagar e Receber
+11,MatCon Pequeno Porte Simples,1,CISSPoder,6,Financeiro,1212,DDA - Débito Direto Autorizado
+11,MatCon Pequeno Porte Simples,1,CISSPoder,6,Financeiro,158,Geração de Arquivo Contas a Pagar
+11,MatCon Pequeno Porte Simples,1,CISSPoder,6,Financeiro,775,Geração de Arquivo Contas a Receber
+11,MatCon Pequeno Porte Simples,1,CISSPoder,6,Financeiro,50,Tesouraria
+11,MatCon Pequeno Porte Simples,1,CISSPoder,40,Gerencial,184,Apoio a Decisão
+11,MatCon Pequeno Porte Simples,1,CISSPoder,4,Vendas,842,CISS Process (Liberação Processos por Dispositivos Moveis)
+11,MatCon Pequeno Porte Simples,1,CISSPoder,4,Vendas,578,CISSPDV - Frente de Caixa
+11,MatCon Pequeno Porte Simples,1,CISSPoder,4,Vendas,212,Emissão de Boletos Bancários(Por CNPJ) - Integração com Software de Terceiros
+11,MatCon Pequeno Porte Simples,1,CISSPoder,4,Vendas,366,Notas Fiscais Origem de Cupom
+11,MatCon Pequeno Porte Simples,1,CISSPoder,4,Vendas,44,"Tele-Vendas, DAV, Pré Vendas, Nota Diversas"
+13,Super Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,824,Acessos CISSPoder (Por retaguarda)
+13,Super Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,1088,Cadastro Rápido
+13,Super Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,268,Cadastros / Utilitários / Relatórios / Ajuda
+13,Super Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,879,Cenários Fiscais para Tributação de Produtos
+13,Super Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,598,Credit Score - Aprovação Crédito
+13,Super Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,595,Mapa de Endereçamento
+13,Super Grande Porte Lucro Real,1,CISSPoder,63,Cadastros Gerais,589,Mix de Produtos por Empresa
+13,Super Grande Porte Lucro Real,1,CISSPoder,250,CISSPoder APP,1530,CISSPoder APP
+13,Super Grande Porte Lucro Real,1,CISSPoder,200,CissReport,965,CISSReport
+13,Super Grande Porte Lucro Real,1,CISSPoder,254,CISSTarefas,1572,CISSTarefas (Por CNPJ)
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,1490,Abastecimento Automático
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,1117,Acordos Comerciais
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,1235,Acordos Comerciais CNPJ Adicional
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,322,Bonificação de Compra
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,42,Carga de Produtos para Balanças
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,43,Checagem de Produtos e Emissão de Etiquetas
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,909,Ciclo de Compras
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,867,CISS Control (Por Loja)
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,706,CISSCotação
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,152,Cotação de Preços com Concorrentes
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,996,Formação de Preços e Venda para o Atacarejo
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,673,Gestão de Promoções - Combo
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,588,Gestão de Transferência e Estoque(Filiais)
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,41,Manutenção de Preços de Vendas e Ofertas
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,40,Notas de Entrada
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,874,Orçamento de Compras
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,364,Pedido de Compras
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,151,Preços por Empresa
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,1542,Radar XML de CT-e
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,961,Radar XML NF-e de Entradas (Por Loja) 2.0
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,150,Recepção de Mercadorias (Conferencia Cega)
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,1594,Recepção Inteligente
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,365,Relacionamento de Produto com Fornecedor
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,1243,Tabela de Preços
+13,Super Grande Porte Lucro Real,1,CISSPoder,3,Compras,1215,Transferência Automática
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,594,Centro de Resultados
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,590,Controladoria Contábil
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,592,Controladoria Fiscal
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,194,Controladoria Patrimonial
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,1091,Controle de Avarias
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,196,Controle de Desagregação
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,176,Controle de Produção
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,1253,Controle de Validade
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,573,Controle de Vasilhames Front Box (Por PDV)
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,903,Demonstrações Contábeis
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,47,Estoque de Produtos
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,1099,Exclusão de ICMS da Base de PIS/COFINS
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,1313,Exclusão de ICMS da Base de PIS/COFINS - Decisão STF
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,873,Folha de Pagamento - Integração Software Terceiros
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,709,Importação XML da NF-e Notas de Entrada (Site/Arquivo)
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,1086,MDF-e (por CNPJ)
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,353,NF-e - Nota Fiscal Eletrônica
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,904,NFC-e - Supermercados (por Fte. Cx.)
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,644,SPED - EFD Contribuições (por CNPJ)
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,352,SPED Contábil (por CNPJ)
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,954,SPED ECF - Escrituração Contábil Fiscal
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,1033,SPED EFD REINF
+13,Super Grande Porte Lucro Real,1,CISSPoder,5,Controladoria,351,SPED Fiscal (por CNPJ)
+13,Super Grande Porte Lucro Real,1,CISSPoder,58,Controle de Entrega,575,Entrega a Domicilio (Front Box)
+13,Super Grande Porte Lucro Real,1,CISSPoder,42,CRM,1029,Campanhas Promocionais
+13,Super Grande Porte Lucro Real,1,CISSPoder,42,CRM,179,Fidelização de Clientes
+13,Super Grande Porte Lucro Real,1,CISSPoder,42,CRM,216,Perfil e Relacionamento - Perguntas Dinâmicas
+13,Super Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,597,Caixa Geral
+13,Super Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,198,Cartão Próprio
+13,Super Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,1026,Conciliação Bancária OFX
+13,Super Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,52,Contas a Pagar e Receber
+13,Super Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,1212,DDA - Débito Direto Autorizado
+13,Super Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,377,Fluxo de Caixa
+13,Super Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,158,Geração de Arquivo Contas a Pagar
+13,Super Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,775,Geração de Arquivo Contas a Receber
+13,Super Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,185,Gestão de Cobrança
+13,Super Grande Porte Lucro Real,1,CISSPoder,6,Financeiro,50,Tesouraria
+13,Super Grande Porte Lucro Real,1,CISSPoder,40,Gerencial,184,Apoio a Decisão
+13,Super Grande Porte Lucro Real,1,CISSPoder,227,Integrações,1150,CISS Integrim
+13,Super Grande Porte Lucro Real,1,CISSPoder,227,Integrações,887,Integração com E-Commerce
+13,Super Grande Porte Lucro Real,1,CISSPoder,253,Portal CISSPoder,1571,Portal CISSPoder
+13,Super Grande Porte Lucro Real,1,CISSPoder,4,Vendas,978,Biometria - Front Box(por CNPJ)
+13,Super Grande Porte Lucro Real,1,CISSPoder,4,Vendas,842,CISS Process (Liberação Processos por Dispositivos Moveis)
+13,Super Grande Porte Lucro Real,1,CISSPoder,4,Vendas,578,CISSPDV - Frente de Caixa
+13,Super Grande Porte Lucro Real,1,CISSPoder,4,Vendas,212,Emissão de Boletos Bancários(Por CNPJ) - Integração com Software de Terceiros
+13,Super Grande Porte Lucro Real,1,CISSPoder,4,Vendas,1071,Importação de Orçamento
+13,Super Grande Porte Lucro Real,1,CISSPoder,4,Vendas,289,Metas de Vendas
+13,Super Grande Porte Lucro Real,1,CISSPoder,4,Vendas,366,Notas Fiscais Origem de Cupom
+13,Super Grande Porte Lucro Real,1,CISSPoder,4,Vendas,44,"Tele-Vendas, DAV, Pré Vendas, Nota Diversas"
+10,Super Medio Porte Presumido/Real,1,CISSPoder,63,Cadastros Gerais,824,Acessos CISSPoder (Por retaguarda)
+10,Super Medio Porte Presumido/Real,1,CISSPoder,63,Cadastros Gerais,268,Cadastros / Utilitários / Relatórios / Ajuda
+10,Super Medio Porte Presumido/Real,1,CISSPoder,63,Cadastros Gerais,879,Cenários Fiscais para Tributação de Produtos
+10,Super Medio Porte Presumido/Real,1,CISSPoder,63,Cadastros Gerais,598,Credit Score - Aprovação Crédito
+10,Super Medio Porte Presumido/Real,1,CISSPoder,250,CISSPoder APP,1530,CISSPoder APP
+10,Super Medio Porte Presumido/Real,1,CISSPoder,200,CissReport,965,CISSReport
+10,Super Medio Porte Presumido/Real,1,CISSPoder,254,CISSTarefas,1572,CISSTarefas (Por CNPJ)
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,322,Bonificação de Compra
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,42,Carga de Produtos para Balanças
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,43,Checagem de Produtos e Emissão de Etiquetas
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,909,Ciclo de Compras
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,996,Formação de Preços e Venda para o Atacarejo
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,673,Gestão de Promoções - Combo
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,41,Manutenção de Preços de Vendas e Ofertas
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,40,Notas de Entrada
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,364,Pedido de Compras
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,1542,Radar XML de CT-e
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,961,Radar XML NF-e de Entradas (Por Loja) 2.0
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,150,Recepção de Mercadorias (Conferencia Cega)
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,1594,Recepção Inteligente
+10,Super Medio Porte Presumido/Real,1,CISSPoder,3,Compras,365,Relacionamento de Produto com Fornecedor
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,590,Controladoria Contábil
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,592,Controladoria Fiscal
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,1091,Controle de Avarias
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,196,Controle de Desagregação
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,176,Controle de Produção
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,1253,Controle de Validade
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,47,Estoque de Produtos
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,1099,Exclusão de ICMS da Base de PIS/COFINS
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,1313,Exclusão de ICMS da Base de PIS/COFINS - Decisão STF
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,709,Importação XML da NF-e Notas de Entrada (Site/Arquivo)
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,353,NF-e - Nota Fiscal Eletrônica
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,904,NFC-e - Supermercados (por Fte. Cx.)
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,644,SPED - EFD Contribuições (por CNPJ)
+10,Super Medio Porte Presumido/Real,1,CISSPoder,5,Controladoria,351,SPED Fiscal (por CNPJ)
+10,Super Medio Porte Presumido/Real,1,CISSPoder,58,Controle de Entrega,575,Entrega a Domicilio (Front Box)
+10,Super Medio Porte Presumido/Real,1,CISSPoder,42,CRM,1029,Campanhas Promocionais
+10,Super Medio Porte Presumido/Real,1,CISSPoder,6,Financeiro,597,Caixa Geral
+10,Super Medio Porte Presumido/Real,1,CISSPoder,6,Financeiro,1026,Conciliação Bancária OFX
+10,Super Medio Porte Presumido/Real,1,CISSPoder,6,Financeiro,52,Contas a Pagar e Receber
+10,Super Medio Porte Presumido/Real,1,CISSPoder,6,Financeiro,1212,DDA - Débito Direto Autorizado
+10,Super Medio Porte Presumido/Real,1,CISSPoder,6,Financeiro,158,Geração de Arquivo Contas a Pagar
+10,Super Medio Porte Presumido/Real,1,CISSPoder,6,Financeiro,775,Geração de Arquivo Contas a Receber
+10,Super Medio Porte Presumido/Real,1,CISSPoder,6,Financeiro,50,Tesouraria
+10,Super Medio Porte Presumido/Real,1,CISSPoder,40,Gerencial,184,Apoio a Decisão
+10,Super Medio Porte Presumido/Real,1,CISSPoder,253,Portal CISSPoder,1571,Portal CISSPoder
+10,Super Medio Porte Presumido/Real,1,CISSPoder,4,Vendas,842,CISS Process (Liberação Processos por Dispositivos Moveis)
+10,Super Medio Porte Presumido/Real,1,CISSPoder,4,Vendas,578,CISSPDV - Frente de Caixa
+10,Super Medio Porte Presumido/Real,1,CISSPoder,4,Vendas,366,Notas Fiscais Origem de Cupom
+10,Super Medio Porte Presumido/Real,1,CISSPoder,4,Vendas,44,"Tele-Vendas, DAV, Pré Vendas, Nota Diversas"
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,63,Cadastros Gerais,824,Acessos CISSPoder (Por retaguarda)
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,63,Cadastros Gerais,268,Cadastros / Utilitários / Relatórios / Ajuda
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,63,Cadastros Gerais,879,Cenários Fiscais para Tributação de Produtos
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,250,CISSPoder APP,1530,CISSPoder APP
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,254,CISSTarefas,1572,CISSTarefas (Por CNPJ)
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,322,Bonificação de Compra
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,42,Carga de Produtos para Balanças
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,43,Checagem de Produtos e Emissão de Etiquetas
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,909,Ciclo de Compras
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,867,CISS Control (Por Loja)
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,706,CISSCotação
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,996,Formação de Preços e Venda para o Atacarejo
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,673,Gestão de Promoções - Combo
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,41,Manutenção de Preços de Vendas e Ofertas
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,40,Notas de Entrada
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,364,Pedido de Compras
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,961,Radar XML NF-e de Entradas (Por Loja) 2.0
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,1594,Recepção Inteligente
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,3,Compras,365,Relacionamento de Produto com Fornecedor
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,590,Controladoria Contábil
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,592,Controladoria Fiscal
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,1091,Controle de Avarias
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,196,Controle de Desagregação
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,176,Controle de Produção
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,1253,Controle de Validade
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,47,Estoque de Produtos
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,1099,Exclusão de ICMS da Base de PIS/COFINS
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,1313,Exclusão de ICMS da Base de PIS/COFINS - Decisão STF
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,709,Importação XML da NF-e Notas de Entrada (Site/Arquivo)
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,353,NF-e - Nota Fiscal Eletrônica
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,904,NFC-e - Supermercados (por Fte. Cx.)
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,644,SPED - EFD Contribuições (por CNPJ)
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,5,Controladoria,351,SPED Fiscal (por CNPJ)
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,6,Financeiro,597,Caixa Geral
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,6,Financeiro,52,Contas a Pagar e Receber
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,6,Financeiro,1212,DDA - Débito Direto Autorizado
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,6,Financeiro,158,Geração de Arquivo Contas a Pagar
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,6,Financeiro,50,Tesouraria
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,40,Gerencial,184,Apoio a Decisão
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,253,Portal CISSPoder,1571,Portal CISSPoder
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,4,Vendas,842,CISS Process (Liberação Processos por Dispositivos Moveis)
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,4,Vendas,578,CISSPDV - Frente de Caixa
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,4,Vendas,366,Notas Fiscais Origem de Cupom
+17,Super Pequeno Porte Presumido/Real,1,CISSPoder,4,Vendas,44,"Tele-Vendas, DAV, Pré Vendas, Nota Diversas"
+9,Super Pequeno Porte Simples,1,CISSPoder,63,Cadastros Gerais,824,Acessos CISSPoder (Por retaguarda)
+9,Super Pequeno Porte Simples,1,CISSPoder,63,Cadastros Gerais,268,Cadastros / Utilitários / Relatórios / Ajuda
+9,Super Pequeno Porte Simples,1,CISSPoder,63,Cadastros Gerais,879,Cenários Fiscais para Tributação de Produtos
+9,Super Pequeno Porte Simples,1,CISSPoder,250,CISSPoder APP,1530,CISSPoder APP
+9,Super Pequeno Porte Simples,1,CISSPoder,254,CISSTarefas,1572,CISSTarefas (Por CNPJ)
+9,Super Pequeno Porte Simples,1,CISSPoder,3,Compras,42,Carga de Produtos para Balanças
+9,Super Pequeno Porte Simples,1,CISSPoder,3,Compras,43,Checagem de Produtos e Emissão de Etiquetas
+9,Super Pequeno Porte Simples,1,CISSPoder,3,Compras,673,Gestão de Promoções - Combo
+9,Super Pequeno Porte Simples,1,CISSPoder,3,Compras,41,Manutenção de Preços de Vendas e Ofertas
+9,Super Pequeno Porte Simples,1,CISSPoder,3,Compras,40,Notas de Entrada
+9,Super Pequeno Porte Simples,1,CISSPoder,3,Compras,364,Pedido de Compras
+9,Super Pequeno Porte Simples,1,CISSPoder,3,Compras,961,Radar XML NF-e de Entradas (Por Loja) 2.0
+9,Super Pequeno Porte Simples,1,CISSPoder,3,Compras,150,Recepção de Mercadorias (Conferencia Cega)
+9,Super Pequeno Porte Simples,1,CISSPoder,3,Compras,365,Relacionamento de Produto com Fornecedor
+9,Super Pequeno Porte Simples,1,CISSPoder,5,Controladoria,590,Controladoria Contábil
+9,Super Pequeno Porte Simples,1,CISSPoder,5,Controladoria,592,Controladoria Fiscal
+9,Super Pequeno Porte Simples,1,CISSPoder,5,Controladoria,47,Estoque de Produtos
+9,Super Pequeno Porte Simples,1,CISSPoder,5,Controladoria,709,Importação XML da NF-e Notas de Entrada (Site/Arquivo)
+9,Super Pequeno Porte Simples,1,CISSPoder,5,Controladoria,353,NF-e - Nota Fiscal Eletrônica
+9,Super Pequeno Porte Simples,1,CISSPoder,5,Controladoria,904,NFC-e - Supermercados (por Fte. Cx.)
+9,Super Pequeno Porte Simples,1,CISSPoder,6,Financeiro,597,Caixa Geral
+9,Super Pequeno Porte Simples,1,CISSPoder,6,Financeiro,1026,Conciliação Bancária OFX
+9,Super Pequeno Porte Simples,1,CISSPoder,6,Financeiro,52,Contas a Pagar e Receber
+9,Super Pequeno Porte Simples,1,CISSPoder,6,Financeiro,50,Tesouraria
+9,Super Pequeno Porte Simples,1,CISSPoder,40,Gerencial,184,Apoio a Decisão
+9,Super Pequeno Porte Simples,1,CISSPoder,4,Vendas,578,CISSPDV - Frente de Caixa
+9,Super Pequeno Porte Simples,1,CISSPoder,4,Vendas,366,Notas Fiscais Origem de Cupom
+9,Super Pequeno Porte Simples,1,CISSPoder,4,Vendas,44,"Tele-Vendas, DAV, Pré Vendas, Nota Diversas"

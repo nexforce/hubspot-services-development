@@ -22,6 +22,8 @@ const PIPELINE_THRESHOLDS = {
   872876956: 15, // PDV e Geral - SMB
   872876957: 15, // PDV e Geral - Enterprise
   911415619: 20, // Expansão - PDV e Geral
+  941855020: 15, // Expansão - PDV e Geral (pipeline novo, distinto de 911415619)
+  941856010: 15, // Expansão - Franquias (pipeline novo, distinto de 907963396)
 };
 
 const resolveAlcada = (pipelineId) =>
