@@ -105,6 +105,7 @@ exports.classifyLevel = classifyLevel;
 /**
  * Ponto de entrada serverless.
  * Parâmetros: { cpf } (dígitos; máscara é ignorada).
+ * Auth da API acadêmica: MULESOFT_USERNAME_ACADEMIC e MULESOFT_PASSWORD_ACADEMIC.
  */
 exports.main = async (context = {}) => {
   const { cpf } = context.parameters || {};
@@ -115,14 +116,15 @@ exports.main = async (context = {}) => {
   }
 
   const baseUrl = process.env.MULESOFT_BASE_URL;
-  const username = process.env.MULESOFT_USERNAME;
-  const password = process.env.MULESOFT_PASSWORD;
+  const username = process.env.MULESOFT_USERNAME_ACADEMIC;
+  const password = process.env.MULESOFT_PASSWORD_ACADEMIC;
 
   if (!baseUrl || !username || !password) {
     return {
       status: "ERROR",
+      origin: "SISTEMA",
       message:
-        "Secrets da API IPOG não configuradas (MULESOFT_BASE_URL, MULESOFT_USERNAME, MULESOFT_PASSWORD).",
+        "Secrets acadêmicas da API IPOG não configuradas (MULESOFT_BASE_URL, MULESOFT_USERNAME_ACADEMIC, MULESOFT_PASSWORD_ACADEMIC).",
     };
   }
 

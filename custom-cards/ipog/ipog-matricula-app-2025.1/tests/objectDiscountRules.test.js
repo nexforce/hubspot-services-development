@@ -4,7 +4,11 @@
  * Sem dependências: usa apenas o módulo assert do Node.
  */
 const assert = require("assert");
-const { evaluateObjectDiscounts } = require("../src/app/functions/evaluateObjectDiscounts");
+const {
+  evaluateObjectDiscounts,
+  resolveTeamName,
+  getTeamMapForPortal,
+} = require("../src/app/functions/evaluateObjectDiscounts");
 
 const REFERENCIA = "2026-10-07";
 
@@ -328,6 +332,40 @@ run(
   { rules: [baseRule({ equipe: "Goiânia;Teresina" })], equipeTime: "3.1.1.1.7. Teresina" },
   (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
 );
+
+// 12c. Mapas de equipes são isolados por portal; não há fallback entre ambientes.
+run("resolveTeamName: ID de homologação usa apenas mapa homolog", {}, () => {
+  assert.strictEqual(
+    resolveTeamName("83111810", 51406295),
+    "3.1.1.1.7. Teresina",
+  );
+}, { checkTrace: false });
+run("resolveTeamName: ID de produção usa apenas mapa produção", {}, () => {
+  assert.strictEqual(
+    resolveTeamName("73615946", 48837477),
+    "3.1.1.1.7. Teresina",
+  );
+}, { checkTrace: false });
+run("resolveTeamName: ID de produção não resolve no mapa homolog", {}, () => {
+  assert.strictEqual(resolveTeamName("73615946", 51406295), null);
+}, { checkTrace: false });
+run("resolveTeamName: ID de homolog não resolve no mapa produção", {}, () => {
+  assert.strictEqual(resolveTeamName("83111810", 48837477), null);
+}, { checkTrace: false });
+run("resolveTeamName: portal desconhecido não tem fallback", {}, () => {
+  assert.strictEqual(resolveTeamName("73615946", 12345678), null);
+}, { checkTrace: false });
+run("mapa equipe por portal retorna produção", {}, () => {
+  assert.ok(getTeamMapForPortal(48837477)["73615946"]);
+  assert.strictEqual(getTeamMapForPortal(48837477)["83111810"], undefined);
+}, { checkTrace: false });
+run("mapa equipe por portal retorna homologação", {}, () => {
+  assert.ok(getTeamMapForPortal(51406295)["83111810"]);
+  assert.strictEqual(getTeamMapForPortal(51406295)["73615946"], undefined);
+}, { checkTrace: false });
+run("mapa equipe não existe para portal desconhecido", {}, () => {
+  assert.strictEqual(getTeamMapForPortal(12345678), null);
+}, { checkTrace: false });
 
 // 13. Helper evaluateInstallments (usado pelo card para bloquear planos)
 const { evaluateInstallments } = require("../src/app/functions/evaluateObjectDiscounts");

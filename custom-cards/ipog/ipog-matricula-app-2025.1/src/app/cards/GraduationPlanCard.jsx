@@ -47,7 +47,6 @@ hubspot.extend(({ context, runServerlessFunction, actions }) => (
 const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const { properties } = useCrmProperties([
     "dealname",
-    "categoriacondicao",
     "desconto_aprovado",
     "categorias_aprovadas",
     "nivel_de_interesse",
@@ -167,12 +166,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       setIsRefreshing(false);
     }
   };
-
-  useEffect(() => {
-    if (properties.categoriacondicao) {
-      setSelectedCategory(properties.categoriacondicao);
-    }
-  }, [properties.categoriacondicao]);
 
   const handleSimulate = async () => {
     const startTime = performance.now();
@@ -343,7 +336,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
           dealId: context.crm.objectId,
           graduationPlan: graduationPlanWithoutConditions,
           selectedCondition: cleanedCondition,
-          selectedCategory: selectedCategory,
           discountAmount: discountAmount,
           discountType: discountType,
           discountValue: discountValue,
@@ -467,7 +459,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
           <Flex direction="column" gap="small">
             <Select
               label="Categoria do Desconto"
-              name="categoriacondicao"
+              name="discountCategory"
               value={selectedCategory}
               onChange={(value) => setSelectedCategory(String(value))}
               options={discountCategoryOptions}
