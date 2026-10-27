@@ -1,3 +1,10 @@
+// Busca a turma (objeto customizado) associada ao negócio no HubSpot: resolve
+// a associação deal -> turma e lê as propriedades da turma encontrada. Roda
+// no clique do botão "Atualizar dados de turma" do card "Plano Financeiro"
+// (custom-cards/ipog/ipog-matricula-app-2025.1/src/app/cards/MatriculaAppCard.jsx)
+// e alimenta tanto o bloco de Detalhes da Turma quanto a simulação do plano
+// financeiro. classObjectId varia por portal (sandbox/produção) e é definido
+// pelo card. Usa a secret HUBSPOT_API_KEY do portal.
 const axios = require("axios");
 
 exports.main = async (context = {}) => {
@@ -62,7 +69,7 @@ exports.main = async (context = {}) => {
       headers,
       params: {
         properties:
-          "unidadeensino,id_da_turma,id_do_curso,nome_da_turma,unidade_name,unidade,modalidade_da_turma,nivel_de_interesse,nome_do_curso,data_de_inauguracao,databasegeracaoparcelas",
+          "unidadeensino,id_da_turma,id_do_curso,nome_da_turma,unidade_name,unidade,modalidade_da_turma,nivel_de_interesse,nome_do_curso,data_de_inauguracao,databasegeracaoparcelas,numero_de_vagas,numero_de_vagas_disponiveis,dataprevisaofinalizacao",
       },
     });
 
