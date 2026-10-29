@@ -22,7 +22,8 @@ custom-code/js/clients/grupo-iter/
 │   ├── compraSiteNegadaCartao.js # evento compra-site-negada-cartao
 │   ├── cancelamentoTotal.js       # evento cancelamento (total)
 │   ├── reagendamento.js           # evento reagendamento
-│   └── addToCart.js               # evento add-to-cart
+│   ├── addToCart.js               # evento add-to-cart
+│   └── loginSite.js               # evento login-site
 ├── bondinho/
 │   ├── compraSiteSucesso.js          # evento compra-site-sucesso
 │   ├── compraSiteSucessoSocio.js     # evento compra-site-sucesso-socio
@@ -79,6 +80,7 @@ Brand da unidade de negócio: `hs_all_assigned_business_unit_ids = 4554143`.
 | compra-site-negada-cartao | `caracol/compraSiteNegadaCartao.js` | sandbox | `https://api.hubapi.com/automation/v4/webhook-triggers/52050136/acv4ud2` |
 | cancelamento | `caracol/cancelamentoTotal.js` | produção | a cadastrar |
 | reagendamento | `caracol/reagendamento.js` | produção | a cadastrar |
+| login-site | `caracol/loginSite.js` | sandbox | a cadastrar |
 
 ---
 
