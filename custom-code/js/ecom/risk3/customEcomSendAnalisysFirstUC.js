@@ -4,6 +4,9 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 // Ao mandar pro custom code do fluxo, copiar a partir desta linha até o comentário [FINAL]
+// Script: envia uma nova análise ao Risk3 (CPF ou CNPJ) e atualiza o registro de Unidade Consumidora (UC) com o resultado.
+// Cliente: ecom | Contexto: workflow action de custom code do HubSpot, primeira tentativa de envio da análise.
+// Secrets usadas: RISK_USER, RISK_PASSWORD (login no Risk3), UNIDADE_CONSUMIDORA_TOKEN (atualização do objeto UC no HubSpot).
 const axios = require("axios");
 
 async function loginOnRisk3() {
@@ -18,6 +21,38 @@ async function loginOnRisk3() {
     return response.data;
   } catch (error) {
     console.log("Error loggin on Risk3:", error.message);
+    throw error;
+  }
+}
+
+async function sendAnalysis(data) {
+  try {
+    let url;
+    if (data.documentType == "cpf") {
+      url = "https://express-api.risk3.live/api/v0/analises/cpf";
+    } else {
+      url = `https://express-api.risk3.live/api/v0/analises?product=${data.product}`;
+    }
+
+    const headers = {
+      ["Venidera-AuthToken"]: data.token,
+    };
+
+    const body = {
+      [`${data.documentType}s`]: [data.document],
+    };
+
+    const response = await axios({
+      url,
+      method: "POST",
+      headers,
+      data: body,
+      timeout: 8000,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.log("Error sending analysis:", error.message);
     throw error;
   }
 }
@@ -43,7 +78,7 @@ async function updateUCBy(id, data) {
   try {
     const hsToken = process.env.UNIDADE_CONSUMIDORA_TOKEN;
 
-    const url = `https://api.hubapi.com/crm/v3/objects/2-28064547/${id}`;
+    const url = `https://api.hubapi.com/crm/v3/objects/2-28158895/${id}`;
 
     const headers = {
       Authorization: `Bearer ${hsToken}`,
@@ -92,21 +127,89 @@ function ucPropertiesFormatter(analysisId, data) {
   };
 }
 
+function getDocumentType(document) {
+  document = document.replace(/\D/g, "");
+
+  const options = [
+    {
+      documentType: "cpf",
+      length: 11,
+    },
+    {
+      documentType: "cnpj",
+      length: 14,
+    },
+  ];
+
+  for (const option of options) {
+    if (document.length == option.length) {
+      return option.documentType;
+    }
+  }
+
+  return "Invalid document type";
+}
+
 exports.main = async (event, callback) => {
   try {
+    const start = new Date();
+
     const {
       data: { token },
     } = await loginOnRisk3();
+    console.log("LOGOU");
 
-    const analysisId = event.inputFields.identificador__id_;
+    const documentType = getDocumentType(event.inputFields.cnpj);
+    console.log("BUSCOU O TIPO DE DOCUMENTO");
+
+    let analysisId;
+    let dataTosend;
+    let analysisResponse;
+
+    switch (documentType) {
+      case "cpf":
+        dataTosend = {
+          documentType,
+          document: event.inputFields.cnpj,
+          token,
+        };
+
+        analysisResponse = await sendAnalysis(dataTosend);
+
+        analysisId = analysisResponse.data.records[0].id;
+        break;
+
+      case "cnpj":
+        dataTosend = {
+          documentType,
+          document: event.inputFields.cnpj,
+          token,
+          product: "express_light",
+        };
+
+        console.log("ENVIANDO ANÁLISE CNPJ");
+
+        analysisResponse = await sendAnalysis(dataTosend);
+
+        console.log("ANÁLISE CNPJ ENVIADA");
+
+        analysisId = analysisResponse?.data.records[0].id;
+        break;
+
+      default:
+        console.log(documentType);
+        break;
+    }
+
     const analysisResult = await getAnalysisBy(analysisId, token);
+
+    console.log("BUSCOU A ANÁLISE");
 
     if (analysisResult.data.status === "Concluída") {
       const infosToUpdate = ucPropertiesFormatter(
         analysisId,
         analysisResult.data
       );
-      console.log(infosToUpdate);
 
       await updateUCBy(event.object.objectId, infosToUpdate);
 
@@ -119,12 +222,26 @@ exports.main = async (event, callback) => {
       });
     }
 
+    await updateUCBy(event.object.objectId, {
+      properties: {
+        identificador__id_: analysisId,
+        produto_risk3: dataTosend.product || "express_pf",
+        recomendacao_final: null,
+      },
+    });
+
+    const end = new Date();
+    const time = (end - start) / 1000;
+
+    console.log(`Tempo de execução: ${time} segundos`);
+
     return await callback({
       outputFields: {
         hs_execution_state: "SUCCESS",
         hs_object_id: event.object.objectId,
         identificador__id_: analysisId,
         recomendacao_final: null,
+        produto_risk3: dataTosend.product || "express_pf",
       },
     });
   } catch (err) {
@@ -145,9 +262,9 @@ exports.main = async (event, callback) => {
 exports.main(
   {
     inputFields: {
-      identificador__id_: "ent3801_94802",
+      cnpj: "31.274.296/0001-62",
     },
-    object: { objectId: 13278618279 },
+    object: { objectId: 15448542571 },
   },
   console.log
 );

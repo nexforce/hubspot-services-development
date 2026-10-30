@@ -4,6 +4,10 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 // Ao mandar pro custom code do fluxo, copiar a partir desta linha até o comentário [FINAL]
+// Script: login na API do Risk3 (análise de risco/crédito).
+// Cliente: ecom | Contexto: workflow action de custom code do HubSpot.
+// Gera o token de autenticação usado pelos demais scripts de análise do Risk3 (UC e Parceiro).
+// Secrets usadas: RISK_USER, RISK_PASSWORD.
 const axios = require("axios");
 
 async function loginOnRisk3() {

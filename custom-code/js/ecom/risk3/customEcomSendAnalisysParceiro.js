@@ -4,6 +4,9 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 // Ao mandar pro custom code do fluxo, copiar a partir desta linha até o comentário [FINAL]
+// Script: envia uma nova análise ao Risk3 (CPF ou CNPJ) a partir de um token já obtido previamente.
+// Cliente: ecom | Contexto: workflow action de custom code do HubSpot, recebe o risk3_token já autenticado via inputFields.
+// Secrets usadas: nenhuma diretamente (o token do Risk3 chega pronto em inputFields.risk3_token, gerado por customEcomLoginOnRisk3.js).
 const axios = require("axios");
 
 async function sendAnalysisCnpj(data) {
@@ -135,8 +138,7 @@ exports.main(
     inputFields: {
       tipo_documento: "CNPJ",
       cnpj: "44.733.049/0001-29",
-      risk3_token:
-        "XhOudx8INXEkzIkOTGnyJo+G37bCVKUr0KPAMzmb2sikXz+1MWoq8jiqOmLwLpskru96pP0uzybsA7fLFipgZ+jtgatFPfVYbAMO/n/4klEDynagYzEAFIEez9elJGNHrupIhHc3N60XeCUtMj78efjuvXKz49CpuuSEytUrIi7oKBQ0O0UrMq8PNU6RCy0N0IDHVhhbmaDatA0vuHlGbfuu6VO1PAr+5y/yqoWeHckyP6jomIT/UvHToIS1HXdYchniOyxzEiJ4khnFL255QrzDl5lj60P5XfoQ83nDkuPyqUKbI7YKs4Ga3Uldl14BZq2UHs1XFsbWqpQQjrscGQNGvimKbnn+obmyAxzewEHk66xD1/46QFzYiaSSyH3TnzGZWjju4eysmIrUwvrMHppxv9psXwEkdV+dnTxY04Nl/IKHssqn5LmqDdETI6j44UkiGl/vK/3BBh3E+KlGPypzJf79knNeLgQq3f9oN7JifML1owQpn1X7RBRt32iynwhxzM6G2TKvaZyreI2kbjXyf0BtIYJRmVTo7YedEQm3W8cnQAKCL4MzCBMBThVlWR1v/VCZty9phpaFiw8gTMRDOOLimXUkD6ed/mzQIi9YJ8T3zdhR2H6zBMcuSW4Jn2KSYIDbGTVWRwNOShbgSiNK7BcFy2v/a5BgkBNegfGY6QU2QGDMsTV1/nEAZvvQASf9TpHL5+4NPMMesLWZ5o8grQVGB25DonvKAnLksR0=",
+      risk3_token: "SEU_TOKEN_DE_TESTE_AQUI",
     },
     object: { objectId: 12887363680 },
   },
