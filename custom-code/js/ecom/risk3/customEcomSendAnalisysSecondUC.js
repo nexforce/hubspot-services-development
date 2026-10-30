@@ -4,6 +4,9 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 // Ao mandar pro custom code do fluxo, copiar a partir desta linha até o comentário [FINAL]
+// Script: reenvia a análise de CNPJ ao Risk3 (produto Xpress Full) e atualiza o registro de Unidade Consumidora (UC) com o resultado.
+// Cliente: ecom | Contexto: workflow action de custom code do HubSpot, segunda tentativa de envio da análise.
+// Secrets usadas: RISK_USER, RISK_PASSWORD (login no Risk3), UNIDADE_CONSUMIDORA_TOKEN (atualização do objeto UC no HubSpot).
 const axios = require("axios");
 
 async function loginOnRisk3() {
@@ -64,7 +67,7 @@ async function updateUCBy(id, data) {
   try {
     const hsToken = process.env.UNIDADE_CONSUMIDORA_TOKEN;
 
-    const url = `https://api.hubapi.com/crm/v3/objects/2-28064547/${id}`;
+    const url = `https://api.hubapi.com/crm/v3/objects/2-28158895/${id}`;
 
     const headers = {
       Authorization: `Bearer ${hsToken}`,
@@ -80,6 +83,12 @@ async function updateUCBy(id, data) {
 }
 
 function ucPropertiesFormatter(analysisId, data) {
+  const productMapper = {
+    ["Xpress Full"]: "express_full",
+    ["Xpress Light"]: "express_light",
+    ["Xpress Pessoa Física"]: "express_pf",
+  };
+
   return {
     properties: {
       identificador__id_: analysisId,

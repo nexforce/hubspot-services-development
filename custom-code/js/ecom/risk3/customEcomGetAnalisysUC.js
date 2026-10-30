@@ -4,6 +4,9 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 // Ao mandar pro custom code do fluxo, copiar a partir desta linha até o comentário [FINAL]
+// Script: busca o resultado de uma análise já existente no Risk3 e atualiza o registro de Unidade Consumidora (UC).
+// Cliente: ecom | Contexto: workflow action de custom code do HubSpot, acionado com o identificador da análise (identificador__id_).
+// Secrets usadas: RISK_USER, RISK_PASSWORD (login no Risk3), UNIDADE_CONSUMIDORA_TOKEN (atualização do objeto UC no HubSpot).
 const axios = require("axios");
 
 async function loginOnRisk3() {
@@ -43,7 +46,7 @@ async function updateUCBy(id, data) {
   try {
     const hsToken = process.env.UNIDADE_CONSUMIDORA_TOKEN;
 
-    const url = `https://api.hubapi.com/crm/v3/objects/2-28064547/${id}`;
+    const url = `https://api.hubapi.com/crm/v3/objects/2-28158895/${id}`;
 
     const headers = {
       Authorization: `Bearer ${hsToken}`,
