@@ -176,6 +176,14 @@ exports.main = async (context = {}) => {
     diamondsOrcados,
   } = parameters;
 
+  // Must precede every line item payload: it feeds the description fallback.
+  const discountCodes = Array.isArray(allDiscounts)
+    ? allDiscounts
+        .map((discount) => discount.code)
+        .filter(Boolean)
+        .join(";")
+    : "";
+
   if (!dealId) {
     return {
       status: "ERROR",
@@ -358,11 +366,6 @@ exports.main = async (context = {}) => {
       );
       console.log("Line item created successfully:", lineItemCreated);
     }
-
-    const discountCodes = allDiscounts
-      .map((discount) => discount.code)
-      .filter(Boolean)
-      .join(";");
 
     const properties = {
       tipopagamento: financialPlan.tipoPagamento,
