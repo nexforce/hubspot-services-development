@@ -170,7 +170,10 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   );
   // Note: quantidade_de_indicacoes no longer used for diamond discount logic
 
-  const { results: associatedTurmaResult } = useAssociations(
+  const {
+    results: associatedTurmaResult,
+    isLoading: isLoadingTurmaAssociation,
+  } = useAssociations(
     {
       toObjectType: classObjectId,
       properties: [
@@ -185,6 +188,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
         "nome_do_curso",
         "data_de_inauguracao",
         "databasegeracaoparcelas",
+        "numero_de_vagas",
+        "numero_de_vagas_disponiveis",
+        "dataprevisaofinalizacao",
       ],
       pageLength: 1,
     },
@@ -261,6 +267,15 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const [enrollmentData, setEnrollmentData] = useState(null);
 
   const turmaAtual = manualTurmaData || associatedTurmaResult[0];
+
+  // Controla se o card mostra só o botão "Atualizar dados de turma" (negócio
+  // sem turma associada, pedido da tarefa [IPOG] Melhoria card Plano
+  // Financeiro e Turma) ou o conteúdo completo de turma + plano financeiro.
+  // Enquanto a associação automática ainda está carregando e a busca manual
+  // (handleRefreshAssociations) nunca rodou, mostramos um texto neutro em vez
+  // de "sem turma", para não piscar a visão reduzida para quem já tem turma.
+  const hasTurma = Boolean(turmaAtual?.properties?.id_da_turma);
+  const turmaStatusLoading = isLoadingTurmaAssociation && manualTurmaData === null;
 
   // Determina se é CEU ou Pós sem matrículas (para regra de limite de diamantes).
   // Fonte única = contagens da API de matrículas por CPF (mesma base do motor legado);
@@ -1284,36 +1299,129 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   return (
     <Card>
       <Flex direction="column" gap="medium">
-        <BrandHeader title="Gerar plano financeiro" />
+        <BrandHeader title="Plano Financeiro - Detalhes da Turma e Financeiro" />
 
-        {/* Header Info: turma, unidade e atualização de dados no topo */}
-        <Flex direction="row" justify="between" gap="medium" align="end">
-          <Flex direction="column" gap="extra-small">
-            <Text format={{ fontWeight: "regular" }}>Turma</Text>
-            <Text format={{ fontWeight: "demibold" }}>
-              {turmaAtual?.properties?.id_da_turma || "N/A"}
+        {/* Fusão dos cards "Plano Financeiro" e "Turma associada" (nativo do
+            HubSpot) em um único custom card, pedida na tarefa [IPOG] Melhoria
+            card Plano Financeiro e Turma. Sem turma associada ao negócio, o
+            card mostra só o botão de atualizar; com turma associada, mostra
+            os detalhes da turma seguidos do plano financeiro, como no layout
+            validado com o solicitante. */}
+        {turmaStatusLoading ? (
+          <Text format={{ fontSize: "small" }}>
+            Carregando dados da turma associada...
+          </Text>
+        ) : !hasTurma ? (
+          <Flex direction="column" gap="small" align="start">
+            <Text format={{ fontSize: "small" }}>
+              Nenhuma turma associada a este negócio. Associe uma turma e
+              clique no botão abaixo para carregar os dados.
             </Text>
-          </Flex>
-
-          <Flex direction="column" gap="extra-small">
-            <Text format={{ fontWeight: "regular" }}>Unidade ID</Text>
-            <Text format={{ fontWeight: "demibold" }}>
-              {turmaAtual?.properties?.unidadeensino || "N/A"}
-            </Text>
-          </Flex>
-
-          <Flex direction="column" gap="extra-small">
             <Button
               onClick={handleRefreshAssociations}
-              variant="secondary"
-              size="small"
+              variant="primary"
               disabled={isRefreshing}
             >
               <Icon name="refresh" />
               {isRefreshing ? "Atualizando..." : "Atualizar dados de turma"}
             </Button>
           </Flex>
-        </Flex>
+        ) : (
+          <>
+            <Flex direction="row" justify="between" gap="medium" align="center">
+              <Heading>Detalhes da Turma</Heading>
+              <Button
+                onClick={handleRefreshAssociations}
+                variant="secondary"
+                size="small"
+                disabled={isRefreshing}
+              >
+                <Icon name="refresh" />
+                {isRefreshing ? "Atualizando..." : "Atualizar dados de turma"}
+              </Button>
+            </Flex>
+
+            <Flex direction="row" justify="between" gap="medium">
+              <Flex direction="column" gap="extra-small">
+                <Text format={{ fontWeight: "regular" }}>Associação</Text>
+                <Text format={{ fontWeight: "demibold" }}>
+                  {turmaAtual?.properties?.nome_da_turma || "N/A"}
+                </Text>
+              </Flex>
+              <Flex direction="column" gap="extra-small">
+                <Text format={{ fontWeight: "regular" }}>Turma ID</Text>
+                <Text format={{ fontWeight: "demibold" }}>
+                  {turmaAtual?.properties?.id_da_turma || "N/A"}
+                </Text>
+              </Flex>
+              <Flex direction="column" gap="extra-small">
+                <Text format={{ fontWeight: "regular" }}>Unidade ID</Text>
+                <Text format={{ fontWeight: "demibold" }}>
+                  {turmaAtual?.properties?.unidadeensino || "N/A"}
+                </Text>
+              </Flex>
+            </Flex>
+
+            <Flex direction="row" justify="between" gap="medium">
+              <Flex direction="column" gap="extra-small">
+                <Text format={{ fontWeight: "regular" }}>Nome do curso</Text>
+                <Text format={{ fontWeight: "demibold" }}>
+                  {turmaAtual?.properties?.nome_do_curso || "N/A"}
+                </Text>
+              </Flex>
+              <Flex direction="column" gap="extra-small">
+                <Text format={{ fontWeight: "regular" }}>Unidade da turma</Text>
+                <Text format={{ fontWeight: "demibold" }}>
+                  {turmaAtual?.properties?.unidade_name || "N/A"}
+                </Text>
+              </Flex>
+              <Flex direction="column" gap="extra-small">
+                <Text format={{ fontWeight: "regular" }}>Nível educacional</Text>
+                <Text format={{ fontWeight: "demibold" }}>
+                  {turmaAtual?.properties?.nivel_de_interesse || "N/A"}
+                </Text>
+              </Flex>
+              <Flex direction="column" gap="extra-small">
+                <Text format={{ fontWeight: "regular" }}>Modalidade da turma</Text>
+                <Text format={{ fontWeight: "demibold" }}>
+                  {turmaAtual?.properties?.modalidade_da_turma || "N/A"}
+                </Text>
+              </Flex>
+            </Flex>
+
+            <Flex direction="row" justify="between" gap="medium">
+              <Flex direction="column" gap="extra-small">
+                <Text format={{ fontWeight: "regular" }}>Número de vagas</Text>
+                <Text format={{ fontWeight: "demibold" }}>
+                  {turmaAtual?.properties?.numero_de_vagas ?? "N/A"}
+                </Text>
+              </Flex>
+              <Flex direction="column" gap="extra-small">
+                <Text format={{ fontWeight: "regular" }}>
+                  Número de vagas disponíveis
+                </Text>
+                <Text format={{ fontWeight: "demibold" }}>
+                  {turmaAtual?.properties?.numero_de_vagas_disponiveis ?? "N/A"}
+                </Text>
+              </Flex>
+              <Flex direction="column" gap="extra-small">
+                <Text format={{ fontWeight: "regular" }}>Data de Inauguração</Text>
+                <Text format={{ fontWeight: "demibold" }}>
+                  {turmaAtual?.properties?.data_de_inauguracao || "N/A"}
+                </Text>
+              </Flex>
+              <Flex direction="column" gap="extra-small">
+                <Text format={{ fontWeight: "regular" }}>
+                  Data prevista de finalização
+                </Text>
+                <Text format={{ fontWeight: "demibold" }}>
+                  {turmaAtual?.properties?.dataprevisaofinalizacao || "N/A"}
+                </Text>
+              </Flex>
+            </Flex>
+
+            <Divider />
+            <Heading>Plano Financeiro</Heading>
 
         {/* CPF do aluno e matrículas: no meio. Os descontos de ex-aluno dependem da
             consulta de matrículas por CPF (fonte única das contagens). */}
@@ -1907,6 +2015,8 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               de turma, unidade e tipo de pagamento.
             </Alert>
           )}
+          </>
+        )}
       </Flex>
     </Card>
   );
