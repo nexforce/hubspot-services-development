@@ -580,6 +580,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     "turmacodigo",
     "id_da_matricula",
     "link_de_checkout",
+    "link_ficha_do_aluno",
     "tipopagamento",
     "valoracrescimo",
     "modalidade_de_interesse",
@@ -652,6 +653,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const [loadingCopyEnrollmentId, setLoadingCopyEnrollmentId] = useState(false);
   const [loadingCopyCheckoutLink, setLoadingCopyCheckoutLink] = useState(false);
   const [loadingCopyCronograma, setLoadingCopyCronograma] = useState(false);
+  const [loadingCopyStudentFormLink, setLoadingCopyStudentFormLink] = useState(false);
 
   const today = new Date();
   const anoAtual = today.getFullYear();
@@ -706,6 +708,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const isWonEnrollmentStage = MATRICULA_GANHA_STAGE_IDS.includes(dealStage);
   const canCancelPreEnrollment = Boolean(enrollmentId) && !isWonEnrollmentStage;
   const link = dealProperties.link_de_checkout || "";
+  const studentFormLink = dealProperties.link_ficha_do_aluno || "";
   const typeOfInterest = dealProperties.modalidade_de_interesse || "";
   const levelOfInterest = dealProperties.nivel_de_interesse || "";
   const installmentBaseDate = dealProperties.databasegeracaoparcela || "";
@@ -1548,6 +1551,26 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     }
   };
 
+  const handleCopyStudentFormLink = async () => {
+    if (!studentFormLink) return;
+    setLoadingCopyStudentFormLink(true);
+    try {
+      await actions.copyTextToClipboard(String(studentFormLink));
+      setAlertMessage({
+        type: "success",
+        message: "Link da ficha do aluno copiado para a área de transferência.",
+      });
+    } catch (error) {
+      console.error("Erro ao copiar o link da ficha do aluno:", error);
+      setAlertMessage({
+        type: "danger",
+        message: "Não foi possível copiar o link da ficha do aluno.",
+      });
+    } finally {
+      setLoadingCopyStudentFormLink(false);
+    }
+  };
+
   const handleCpfInput = (value) => {
     setCpf(formatCpf(value));
     // O consultor assumiu o campo: a sincronização com a propriedade não sobrescreve
@@ -1597,6 +1620,30 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
 
       <Accordion title="Cadastro de aluno" defaultOpen={true}>
         <Flex direction="column" gap="small">
+          <Flex direction="row" gap="extra-small" align="end">
+            <Box flex={1}>
+              <Input
+                label="Link Ficha do Aluno"
+                name="studentFormLink"
+                value={studentFormLink}
+                readOnly={true}
+              />
+            </Box>
+            <LoadingButton
+              type="button"
+              variant="transparent"
+              size="small"
+              loading={loadingCopyStudentFormLink}
+              onClick={handleCopyStudentFormLink}
+              disabled={!studentFormLink}
+            >
+              <Icon
+                name="copy"
+                screenReaderText="Copiar link da ficha do aluno"
+              />
+            </LoadingButton>
+          </Flex>
+
           <Input
             label={SECTION_A_LABELS.fullName}
             name="fullName"
