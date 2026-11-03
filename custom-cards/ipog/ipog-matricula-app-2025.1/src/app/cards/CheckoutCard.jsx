@@ -66,6 +66,7 @@ const SECTION_A_LABELS = {
   cpf: "CPF",
   phoneNumber: "Número de Telefone",
   birthDate: "Data de Nascimento",
+  nationality: "Nacionalidade",
   educationType: "Escolaridade",
   postalCode: "CEP",
   street: "Rua",
@@ -581,6 +582,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     "id_da_matricula",
     "link_de_checkout",
     "link_ficha_do_aluno",
+    "nome_nacionalidade",
     "tipopagamento",
     "valoracrescimo",
     "modalidade_de_interesse",
@@ -635,6 +637,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const [cpfGateMessage, setCpfGateMessage] = useState(null);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [educationType, setEducationType] = useState("");
+  const [nationality, setNationality] = useState("");
   const [registeredCpf, setRegisteredCpf] = useState(null);
 
   // Cancelamento de pré-matrícula: loading fica no botão principal (que é o
@@ -934,6 +937,8 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       if (dealProperties.bairro) setNeighborhood(dealProperties.bairro);
       if (dealProperties.city) setCity(dealProperties.city);
       if (dealProperties.sigla_estado) setState(dealProperties.sigla_estado);
+      if (dealProperties.nome_nacionalidade)
+        setNationality(dealProperties.nome_nacionalidade);
 
       // Os campos só iniciam preenchidos quando a data gravada ainda é
       // escolhível. Data no passado abre vazia, para o consultor escolher o
@@ -1023,6 +1028,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       bairro: neighborhood,
       city: city,
       sigla_estado: state,
+      nome_nacionalidade: nationality,
     };
   };
 
@@ -1698,15 +1704,28 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
             />
           </Flex>
 
-          <Select
-            label={SECTION_A_LABELS.educationType}
-            name="educationType"
-            value={educationType}
-            onChange={(value) => setEducationType(String(value))}
-            options={EDUCATION_LEVEL_OPTIONS}
-            placeholder="Selecione a escolaridade"
-            required={true}
-          />
+          <Flex direction="row" gap="small">
+            <Box flex={1}>
+              <Select
+                label={SECTION_A_LABELS.educationType}
+                name="educationType"
+                value={educationType}
+                onChange={(value) => setEducationType(String(value))}
+                options={EDUCATION_LEVEL_OPTIONS}
+                placeholder="Selecione a escolaridade"
+                required={true}
+              />
+            </Box>
+            <Box flex={1}>
+              <Input
+                label={SECTION_A_LABELS.nationality}
+                name="nationality"
+                value={nationality}
+                onChange={setNationality}
+                placeholder="Ex: Brasileira"
+              />
+            </Box>
+          </Flex>
 
           <Divider />
 
