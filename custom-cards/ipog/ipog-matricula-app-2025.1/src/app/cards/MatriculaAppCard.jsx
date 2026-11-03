@@ -1343,20 +1343,20 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
             <Flex direction="row" justify="between" gap="medium">
               <Flex direction="column" gap="extra-small">
-                <Text format={{ fontWeight: "regular" }}>Associação</Text>
-                <Text format={{ fontWeight: "demibold" }}>
+                <Text variant="microcopy" format={{ fontWeight: "regular" }}>Associação</Text>
+                <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
                   {turmaAtual?.properties?.nome_da_turma || "N/A"}
                 </Text>
               </Flex>
               <Flex direction="column" gap="extra-small">
-                <Text format={{ fontWeight: "regular" }}>Turma ID</Text>
-                <Text format={{ fontWeight: "demibold" }}>
+                <Text variant="microcopy" format={{ fontWeight: "regular" }}>Turma ID</Text>
+                <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
                   {turmaAtual?.properties?.id_da_turma || "N/A"}
                 </Text>
               </Flex>
               <Flex direction="column" gap="extra-small">
-                <Text format={{ fontWeight: "regular" }}>Unidade ID</Text>
-                <Text format={{ fontWeight: "demibold" }}>
+                <Text variant="microcopy" format={{ fontWeight: "regular" }}>Unidade ID</Text>
+                <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
                   {turmaAtual?.properties?.unidadeensino || "N/A"}
                 </Text>
               </Flex>
@@ -1364,26 +1364,26 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
             <Flex direction="row" justify="between" gap="medium">
               <Flex direction="column" gap="extra-small">
-                <Text format={{ fontWeight: "regular" }}>Nome do curso</Text>
-                <Text format={{ fontWeight: "demibold" }}>
+                <Text variant="microcopy" format={{ fontWeight: "regular" }}>Nome do curso</Text>
+                <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
                   {turmaAtual?.properties?.nome_do_curso || "N/A"}
                 </Text>
               </Flex>
               <Flex direction="column" gap="extra-small">
-                <Text format={{ fontWeight: "regular" }}>Unidade da turma</Text>
-                <Text format={{ fontWeight: "demibold" }}>
+                <Text variant="microcopy" format={{ fontWeight: "regular" }}>Unidade da turma</Text>
+                <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
                   {turmaAtual?.properties?.unidade_name || "N/A"}
                 </Text>
               </Flex>
               <Flex direction="column" gap="extra-small">
-                <Text format={{ fontWeight: "regular" }}>Nível educacional</Text>
-                <Text format={{ fontWeight: "demibold" }}>
+                <Text variant="microcopy" format={{ fontWeight: "regular" }}>Nível educacional</Text>
+                <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
                   {turmaAtual?.properties?.nivel_de_interesse || "N/A"}
                 </Text>
               </Flex>
               <Flex direction="column" gap="extra-small">
-                <Text format={{ fontWeight: "regular" }}>Modalidade da turma</Text>
-                <Text format={{ fontWeight: "demibold" }}>
+                <Text variant="microcopy" format={{ fontWeight: "regular" }}>Modalidade da turma</Text>
+                <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
                   {turmaAtual?.properties?.modalidade_da_turma || "N/A"}
                 </Text>
               </Flex>
@@ -1391,30 +1391,30 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
             <Flex direction="row" justify="between" gap="medium">
               <Flex direction="column" gap="extra-small">
-                <Text format={{ fontWeight: "regular" }}>Número de vagas</Text>
-                <Text format={{ fontWeight: "demibold" }}>
+                <Text variant="microcopy" format={{ fontWeight: "regular" }}>Número de vagas</Text>
+                <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
                   {turmaAtual?.properties?.numero_de_vagas ?? "N/A"}
                 </Text>
               </Flex>
               <Flex direction="column" gap="extra-small">
-                <Text format={{ fontWeight: "regular" }}>
+                <Text variant="microcopy" format={{ fontWeight: "regular" }}>
                   Número de vagas disponíveis
                 </Text>
-                <Text format={{ fontWeight: "demibold" }}>
+                <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
                   {turmaAtual?.properties?.numero_de_vagas_disponiveis ?? "N/A"}
                 </Text>
               </Flex>
               <Flex direction="column" gap="extra-small">
-                <Text format={{ fontWeight: "regular" }}>Data de Inauguração</Text>
-                <Text format={{ fontWeight: "demibold" }}>
+                <Text variant="microcopy" format={{ fontWeight: "regular" }}>Data de Inauguração</Text>
+                <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
                   {turmaAtual?.properties?.data_de_inauguracao || "N/A"}
                 </Text>
               </Flex>
               <Flex direction="column" gap="extra-small">
-                <Text format={{ fontWeight: "regular" }}>
+                <Text variant="microcopy" format={{ fontWeight: "regular" }}>
                   Data prevista de finalização
                 </Text>
-                <Text format={{ fontWeight: "demibold" }}>
+                <Text variant="microcopy" format={{ fontWeight: "demibold" }}>
                   {turmaAtual?.properties?.dataprevisaofinalizacao || "N/A"}
                 </Text>
               </Flex>
