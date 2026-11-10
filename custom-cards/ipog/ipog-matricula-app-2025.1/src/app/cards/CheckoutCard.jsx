@@ -2040,14 +2040,12 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
             </Text>
             <Toggle
               name="studentOrigin"
-              size="md"
+              size="sm"
               checked={isForeignStudent}
               initialIsChecked={false}
               onChange={(checked) =>
                 handleStudentOriginChange(checked ? "estrangeiro" : "nacional")
               }
-              textChecked="Estrangeiro"
-              textUnchecked="Estrangeiro"
             />
             <Text
               format={{ fontWeight: isForeignStudent ? "bold" : "regular" }}
