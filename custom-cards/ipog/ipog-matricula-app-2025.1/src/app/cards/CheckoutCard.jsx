@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableBody,
   TableCell,
+  Toggle,
 } from "@hubspot/ui-extensions";
 import { useCrmProperties } from "@hubspot/ui-extensions/crm";
 import ipogLogo from "./assets/ipog-logo.png";
@@ -69,7 +70,7 @@ const SECTION_A_LABELS = {
   fullName: "Nome Completo",
   email: "E-mail",
   cpf: "CPF",
-  studentOrigin: "Origem do Aluno",
+  studentOrigin: "Tipo de Aluno",
   phoneNumber: "Número de Telefone",
   birthDate: "Data de Nascimento",
   nationality: "Nacionalidade",
@@ -306,13 +307,9 @@ const NATIONALITY_OPTIONS = [
   { label: "Zimbabuense", value: "Zimbabuense" },
 ];
 
-// Origem do aluno: o modo estrangeiro troca o CPF pelo documento e oculta o CEP.
+// Tipo de aluno: o modo estrangeiro troca o CPF pelo documento e oculta o CEP.
 // É um estado de tela, não o dado que vai para o Negócio; quem persiste é
 // utilizar_documento_estrangeiro.
-const STUDENT_ORIGIN_OPTIONS = [
-  { label: "Aluno Nacional", value: "nacional" },
-  { label: "Aluno Estrangeiro", value: "estrangeiro" },
-];
 
 // Os quatro tipos que a MuleSoft aceita em tipoDocumentoEstrangeiro. O value é o
 // mesmo enum do endpoint, para o card não traduzir nada na hora de enviar.
@@ -2033,15 +2030,31 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       <Accordion title="Cadastro de aluno" defaultOpen={true}>
         <Flex direction="column" gap="small">
           {/* A origem decide CPF, CEP e documento, então fica antes de todos os
-              campos que ela muda. */}
-          <Select
-            label={SECTION_A_LABELS.studentOrigin}
-            name="studentOrigin"
-            value={studentOrigin}
-            onChange={handleStudentOriginChange}
-            options={STUDENT_ORIGIN_OPTIONS}
-            required={true}
-          />
+              campos que ela muda. O Toggle é a chave on/off: desligado é o
+              brasileiro (o padrão), ligado é o estrangeiro. */}
+          <Flex direction="row" gap="small" align="center">
+            <Text
+              format={{ fontWeight: isForeignStudent ? "regular" : "bold" }}
+            >
+              Brasileiro
+            </Text>
+            <Toggle
+              name="studentOrigin"
+              size="md"
+              checked={isForeignStudent}
+              initialIsChecked={false}
+              onChange={(checked) =>
+                handleStudentOriginChange(checked ? "estrangeiro" : "nacional")
+              }
+              textChecked="Estrangeiro"
+              textUnchecked="Estrangeiro"
+            />
+            <Text
+              format={{ fontWeight: isForeignStudent ? "bold" : "regular" }}
+            >
+              Estrangeiro
+            </Text>
+          </Flex>
 
           <Flex direction="row" gap="extra-small" align="end">
             <Box flex={1}>
