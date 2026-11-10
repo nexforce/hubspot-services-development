@@ -50,6 +50,11 @@ const BrandHeader = ({ title }) => (
 const CPF_DIGITS = 11;
 const POSTAL_CODE_DIGITS = 8;
 
+// Aluno estrangeiro não tem CEP brasileiro para o ViaCEP resolver, e o campo
+// fica oculto. O valor fixo existe porque a MuleSoft exige um cep no cadastro da
+// pessoa, então ele é gravado sem consultar o ViaCEP.
+const FOREIGN_POSTAL_CODE = "99999999";
+
 // Telefone brasileiro: DDI fixo, DDD de 2 dígitos e assinante de 8 (fixo) ou 9
 // (celular). PHONE_LOCAL_* conta DDD + assinante, sem o DDI, porque é isso que o
 // consultor digita. O DDI quem põe é a máscara.
@@ -64,9 +69,12 @@ const SECTION_A_LABELS = {
   fullName: "Nome Completo",
   email: "E-mail",
   cpf: "CPF",
+  studentOrigin: "Origem do Aluno",
   phoneNumber: "Número de Telefone",
   birthDate: "Data de Nascimento",
   nationality: "Nacionalidade",
+  foreignDocumentType: "Tipo de Documento Estrangeiro",
+  foreignDocumentNumber: "Número do Documento Estrangeiro",
   educationType: "Escolaridade",
   postalCode: "CEP",
   street: "Rua",
@@ -298,6 +306,32 @@ const NATIONALITY_OPTIONS = [
   { label: "Zimbabuense", value: "Zimbabuense" },
 ];
 
+// Origem do aluno: o modo estrangeiro troca o CPF pelo documento e oculta o CEP.
+// É um estado de tela, não o dado que vai para o Negócio; quem persiste é
+// utilizar_documento_estrangeiro.
+const STUDENT_ORIGIN_OPTIONS = [
+  { label: "Aluno Nacional", value: "nacional" },
+  { label: "Aluno Estrangeiro", value: "estrangeiro" },
+];
+
+// Os quatro tipos que a MuleSoft aceita em tipoDocumentoEstrangeiro. O value é o
+// mesmo enum do endpoint, para o card não traduzir nada na hora de enviar.
+const FOREIGN_DOCUMENT_TYPE_OPTIONS = [
+  { label: "Passaporte", value: "PASSAPORTE" },
+  {
+    label: "Documento de identificação estrangeiro",
+    value: "DOCUMENTO_IDENTIFICACAO_ESTRANGEIRO",
+  },
+  {
+    label: "Registro Nacional Migratório",
+    value: "REGISTRO_NACIONAL_MIGRATORIO",
+  },
+  {
+    label: "Registro Nacional Estrangeiro",
+    value: "REGISTRO_NACIONAL_ESTRANGEIRO",
+  },
+];
+
 // O gate e a microcopy dizem a mesma coisa ao consultor, então cada frase existe
 // uma vez. O guard pós-clique é inalcançável enquanto o disabled do botão vale,
 // mas ele é mantido de propósito, e uma segunda tradução da frase divergiria.
@@ -456,6 +490,34 @@ const postalCodeReason = (value) => {
   }
   return null;
 };
+
+const FOREIGN_DOCUMENT_TYPES = FOREIGN_DOCUMENT_TYPE_OPTIONS.map(
+  (option) => option.value,
+);
+
+// O card não aceita chave de objeto sem valor, então cada motivo é escrito depois
+// que os dois campos são conferidos. Um tipo gravado que saiu da lista (o
+// consultor trocou para outro Negócio) conta como pendente.
+const foreignDocumentTypeMissing = (documentType) =>
+  !FOREIGN_DOCUMENT_TYPES.includes(documentType);
+
+const foreignDocumentNumberMissing = (documentNumber) =>
+  String(documentNumber || "").trim() === "";
+
+// O tipo só é cobrado quando o número já foi preenchido, e o número só quando o
+// tipo foi escolhido. Com os dois vazios a tela fica silenciosa e o botão
+// travado, e a frase de campos pendentes é quem diz o que falta.
+const foreignDocumentTypeReason = (documentType, documentNumber) =>
+  foreignDocumentTypeMissing(documentType) &&
+  !foreignDocumentNumberMissing(documentNumber)
+    ? "escolha um tipo"
+    : null;
+
+const foreignDocumentNumberReason = (documentType, documentNumber) => 
+  !foreignDocumentTypeMissing(documentType) &&
+  foreignDocumentNumberMissing(documentNumber)
+    ? EMPTY_FIELD_REASON
+    : null;
 
 const birthDateReason = (value) =>
   value && value.year != null && value.month != null && value.date != null
@@ -803,6 +865,9 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     "sigla_estado",
     "diamantes_orcados",
     "aluno_cadastrado_status",
+    "utilizar_documento_estrangeiro",
+    "tipo_documento_estrangeiro",
+    "numero_documento_estrangeiro",
     "dealstage"
   ]);
 
@@ -842,6 +907,11 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [educationType, setEducationType] = useState("");
   const [nationality, setNationality] = useState("Brasileira");
+  // O select de origem é a única fonte do modo: o estado deriva dele, para não
+  // existir um modo gravado no Negócio e outro na tela.
+  const [studentOrigin, setStudentOrigin] = useState("nacional");
+  const [foreignDocumentType, setForeignDocumentType] = useState("");
+  const [foreignDocumentNumber, setForeignDocumentNumber] = useState("");
   const [registeredCpf, setRegisteredCpf] = useState(null);
 
   // Cancelamento de pré-matrícula: loading fica no botão principal (que é o
@@ -978,6 +1048,13 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     return `[${label}] ${message || "Erro desconhecido."}`;
   };
 
+  // O modo vem do select de origem, estado de tela. Toda a regra do aluno
+  // estrangeiro (CEP, CPF, documento) parte deste booleano.
+  const isForeignStudent = studentOrigin === "estrangeiro";
+  // Guarda a última consulta de CEP que saiu, para o efeito da carga inicial e o
+  // handler do campo não pedirem o mesmo CEP duas vezes.
+  const lastRequestedPostalCodeRef = useRef("");
+
   const fetchAddressByPostalCode = async (postalCodeValue) => {
     if (!postalCodeValue || postalCodeValue.length < POSTAL_CODE_DIGITS) return;
 
@@ -1016,6 +1093,57 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     } finally {
       setLoadingPostalCode(false);
     }
+  };
+
+  // Uma busca por CEP completo: devolve se a busca saiu, para a carga inicial
+  // checar o retorno e não deixar o loading de pé quando o CEP é o fixo do
+  // estrangeiro. O lastRequestedPostalCodeRef evita que o efeito e o handler do
+  // campo peçam o mesmo CEP duas vezes.
+  const requestPostalCodeLookup = (postalCodeValue) => {
+    const digits = normalizeDigits(postalCodeValue);
+    if (digits.length !== POSTAL_CODE_DIGITS) return false;
+    if (isForeignStudent) return false;
+    if (lastRequestedPostalCodeRef.current === digits) return false;
+    lastRequestedPostalCodeRef.current = digits;
+    fetchAddressByPostalCode(digits);
+    return true;
+  };
+
+  // A consulta da carga inicial roda quando o campo já mostra o CEP do Negócio.
+  useEffect(() => {
+    if (!initialLoadDone || isForeignStudent) {
+      setLoadingPostalCode(false);
+      return;
+    }
+    if (!requestPostalCodeLookup(postalCode)) setLoadingPostalCode(false);
+  }, [postalCode, initialLoadDone, isForeignStudent]);
+
+  // Só o nacional busca no ViaCEP: o estrangeiro tem o CEP fixo, que não existe
+  // na base dos Correios. CEP apagado libera a próxima consulta do mesmo CEP.
+  const handlePostalCodeChange = (value) => {
+    const masked = formatPostalCode(value);
+    if (normalizeDigits(masked) === "") lastRequestedPostalCodeRef.current = "";
+    setPostalCode(masked);
+    if (!isForeignStudent) requestPostalCodeLookup(masked);
+  };
+
+  // Alternar a origem troca o CEP entre fixo e manual. No estrangeiro o campo
+  // some e o valor fixo entra no Negócio; na volta, o campo abre vazio para o
+  // consultor digitar o CEP do aluno brasileiro. A gravação só acontece no
+  // Salvar rascunho ou no Cadastrar, como os demais campos da seção.
+  const handleStudentOriginChange = (value) => {
+    const origin = String(value);
+    setStudentOrigin(origin);
+    setCpfError(false);
+    setCpfValidationMessage("");
+    setAlertMessage(null);
+    lastRequestedPostalCodeRef.current = "";
+    if (origin === "estrangeiro") {
+      setPostalCode(FOREIGN_POSTAL_CODE);
+      setLoadingPostalCode(false);
+      return;
+    }
+    setPostalCode("");
   };
 
   const resetCronograma = () => {
@@ -1134,8 +1262,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       }
 
       if (dealProperties.cep) setPostalCode(dealProperties.cep);
-      if (dealProperties.rua) setStreet(dealProperties.rua);
-      if (dealProperties.numero) setStreetNumber(dealProperties.numero);
+      if (dealProperties.rua) setStreet(dealProperties.rua);      if (dealProperties.numero) setStreetNumber(dealProperties.numero);
       if (dealProperties.complemento)
         setAddressComplement(dealProperties.complemento);
       if (dealProperties.bairro) setNeighborhood(dealProperties.bairro);
@@ -1146,6 +1273,21 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       } else {
         setNationality("Brasileira");
       }
+
+      // A propriedade do Negócio manda sobre a origem quando chega preenchida,
+      // que é o caso de um rascunho salvo ou de um link reaberto em outra aba.
+      // O CEP fixo sempre acompanha o modo estrangeiro, mesmo em Negócio salvo
+      // antes desta regra, para a tela não depender de o consultor alternar.
+      const savedOrigin = String(
+        dealProperties.utilizar_documento_estrangeiro || "",
+      ).toLowerCase();
+      const savedIsForeignStudent = savedOrigin === "true";
+      setStudentOrigin(savedIsForeignStudent ? "estrangeiro" : "nacional");
+      if (savedIsForeignStudent) setPostalCode(FOREIGN_POSTAL_CODE);
+      setForeignDocumentType(dealProperties.tipo_documento_estrangeiro || "");
+      setForeignDocumentNumber(
+        dealProperties.numero_documento_estrangeiro || "",
+      );
 
       // Os campos só iniciam preenchidos quando a data gravada ainda é
       // escolhível. Data no passado abre vazia, para o consultor escolher o
@@ -1196,15 +1338,6 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     setNationality(dealProperties.nome_nacionalidade || "Brasileira");
   }, [dealProperties.nome_nacionalidade]);
 
-  useEffect(() => {
-    if (!initialLoadDone) return;
-
-    const cleanedPostalCode = normalizeDigits(postalCode);
-    if (cleanedPostalCode.length === POSTAL_CODE_DIGITS) {
-      fetchAddressByPostalCode(cleanedPostalCode);
-    }
-  }, [postalCode, initialLoadDone]);
-
   const formatBirthDateForDeal = (dateObj) => {
     if (!dateObj) return "";
     try {
@@ -1228,7 +1361,9 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     return {
       nome_completo: fullName,
       e_mail: email,
-      cpf: cpf,
+      // No estrangeiro o CPF não existe na tela e o Negócio fica sem CPF: o
+      // valor vazio é o que limpa um CPF gravado antes de trocar a origem.
+      cpf: isForeignStudent ? "" : cpf,
       numero_de_telefone: phoneNumber,
       data_de_nascimento: formatBirthDateForDeal(birthDate),
       escolaridade_do_aluno: educationType,
@@ -1240,6 +1375,16 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       city: city,
       sigla_estado: state,
       nome_nacionalidade: nationality,
+      // Os três campos que a MuleSoft recebe em incluirPessoa. No nacional o
+      // tipo e o número saem vazios para o Negócio não guardar documento de um
+      // aluno que foi cadastrado como brasileiro.
+      utilizar_documento_estrangeiro: isForeignStudent ? "true" : "false",
+      tipo_documento_estrangeiro: isForeignStudent
+        ? foreignDocumentType
+        : "",
+      numero_documento_estrangeiro: isForeignStudent
+        ? foreignDocumentNumber.trim()
+        : "",
     };
   };
 
@@ -1304,13 +1449,35 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   // os dois nunca discordarem. Os rótulos vêm de SECTION_A_LABELS, a mesma fonte
   // dos labels dos Inputs. Um campo, um motivo, e reason null é o único critério
   // de válido, então o gate e o texto que o explica não podem divergir.
+  // Nacional e estrangeiro dividem a mesma lista: cada modo inclui só os campos
+  // que existem na tela, para a frase nunca pedir um campo oculto.
   const requiredFieldChecks = [
     { label: SECTION_A_LABELS.fullName, reason: filledReason(fullName) },
     { label: SECTION_A_LABELS.email, reason: filledReason(email) },
-    {
-      label: `${SECTION_A_LABELS.cpf} (${CPF_DIGITS} dígitos válidos)`,
-      reason: cpfReason(cpf),
-    },
+    ...(isForeignStudent
+      ? [
+          // Os dois motivos são exclusivos: nunca aparecem juntos na frase.
+          {
+            label: `${SECTION_A_LABELS.foreignDocumentType} (escolha um tipo)`,
+            reason: foreignDocumentTypeReason(
+              foreignDocumentType,
+              foreignDocumentNumber,
+            ),
+          },
+          {
+            label: SECTION_A_LABELS.foreignDocumentNumber,
+            reason: foreignDocumentNumberReason(
+              foreignDocumentType,
+              foreignDocumentNumber,
+            ),
+          },
+        ]
+      : [
+          {
+            label: `${SECTION_A_LABELS.cpf} (${CPF_DIGITS} dígitos válidos)`,
+            reason: cpfReason(cpf),
+          },
+        ]),
     {
       label: `${SECTION_A_LABELS.phoneNumber} (DDD e 8 ou 9 dígitos)`,
       reason: phoneReason(phoneNumber),
@@ -1320,7 +1487,14 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       label: SECTION_A_LABELS.educationType,
       reason: filledReason(educationType),
     },
-    { label: SECTION_A_LABELS.postalCode, reason: postalCodeReason(postalCode) },
+    ...(isForeignStudent
+      ? []
+      : [
+          {
+            label: SECTION_A_LABELS.postalCode,
+            reason: postalCodeReason(postalCode),
+          },
+        ]),
     { label: SECTION_A_LABELS.street, reason: filledReason(street) },
     { label: SECTION_A_LABELS.streetNumber, reason: filledReason(streetNumber) },
     { label: SECTION_A_LABELS.neighborhood, reason: filledReason(neighborhood) },
@@ -1341,6 +1515,27 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   );
   const isRegistrationFormValid = invalidRequiredFields.length === 0;
   const hasResponsibleUser = responsibleUser.trim() !== "";
+
+  // Erros e mensagens inline dos dois campos do documento estrangeiro, no mesmo
+  // formato do CPF: o aviso só aparece quando já existe o que corrigir.
+  const foreignDocumentTypeMissingReason = foreignDocumentTypeReason(
+    foreignDocumentType,
+    foreignDocumentNumber,
+  );
+  const foreignDocumentNumberMissingReason = foreignDocumentNumberReason(
+    foreignDocumentType,
+    foreignDocumentNumber,
+  );
+  const hasForeignDocumentTypeError =
+    foreignDocumentTypeMissingReason !== null;
+  const hasForeignDocumentNumberError =
+    foreignDocumentNumberMissingReason !== null;
+  const foreignDocumentTypeMessage = foreignDocumentTypeMissingReason
+    ? fieldMessage(foreignDocumentTypeMissingReason)
+    : "";
+  const foreignDocumentNumberMessage = foreignDocumentNumberMissingReason
+    ? fieldMessage(foreignDocumentNumberMissingReason)
+    : "";
 
   const handleRegisterStudent = async () => {
     if (invalidRequiredFields.length > 0) {
@@ -1837,6 +2032,17 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
 
       <Accordion title="Cadastro de aluno" defaultOpen={true}>
         <Flex direction="column" gap="small">
+          {/* A origem decide CPF, CEP e documento, então fica antes de todos os
+              campos que ela muda. */}
+          <Select
+            label={SECTION_A_LABELS.studentOrigin}
+            name="studentOrigin"
+            value={studentOrigin}
+            onChange={handleStudentOriginChange}
+            options={STUDENT_ORIGIN_OPTIONS}
+            required={true}
+          />
+
           <Flex direction="row" gap="extra-small" align="end">
             <Box flex={1}>
               <Input
@@ -1879,19 +2085,49 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
               required={true}
               placeholder="email@exemplo.com"
             />
-            <Input
-              label={SECTION_A_LABELS.cpf}
-              name="cpf"
-              value={cpf}
-              onInput={handleCpfInput}
-              onChange={handleCpfInput}
-              onBlur={(value) => validateCpf(value)}
-              placeholder="000.000.000-00"
-              required={true}
-              error={cpfError}
-              validationMessage={cpfValidationMessage}
-              readOnly={cpfLockedByDiscount}
-            />
+            {isForeignStudent ? (
+              <>
+                <Box flex={1}>
+                  <Select
+                    label={SECTION_A_LABELS.foreignDocumentType}
+                    name="foreignDocumentType"
+                    value={foreignDocumentType}
+                    onChange={(value) => setForeignDocumentType(String(value))}
+                    options={FOREIGN_DOCUMENT_TYPE_OPTIONS}
+                    placeholder="Selecione o tipo de documento"
+                    required={true}
+                    error={hasForeignDocumentTypeError}
+                    validationMessage={foreignDocumentTypeMessage}
+                  />
+                </Box>
+                <Box flex={1}>
+                  <Input
+                    label={SECTION_A_LABELS.foreignDocumentNumber}
+                    name="foreignDocumentNumber"
+                    value={foreignDocumentNumber}
+                    onChange={setForeignDocumentNumber}
+                    placeholder="Número conforme o documento"
+                    required={true}
+                    error={hasForeignDocumentNumberError}
+                    validationMessage={foreignDocumentNumberMessage}
+                  />
+                </Box>
+              </>
+            ) : (
+              <Input
+                label={SECTION_A_LABELS.cpf}
+                name="cpf"
+                value={cpf}
+                onInput={handleCpfInput}
+                onChange={handleCpfInput}
+                onBlur={(value) => validateCpf(value)}
+                placeholder="000.000.000-00"
+                required={true}
+                error={cpfError}
+                validationMessage={cpfValidationMessage}
+                readOnly={cpfLockedByDiscount}
+              />
+            )}
             <Input
               label={SECTION_A_LABELS.phoneNumber}
               name="phoneNumber"
@@ -1941,19 +2177,23 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
 
           <Divider />
 
-          <Input
-            label={SECTION_A_LABELS.postalCode}
-            name="postalCode"
-            value={postalCode}
-            onChange={(value) => setPostalCode(formatPostalCode(value))}
-            placeholder="00000-000"
-            required={true}
-            description={
-              loadingPostalCode
-                ? "Buscando endereço..."
-                : "Digite o CEP para preencher automaticamente"
-            }
-          />
+          {/* O estrangeiro não tem CEP brasileiro: o campo some e o valor fixo
+              (FOREIGN_POSTAL_CODE) entra no Negócio no Salvar rascunho. */}
+          {!isForeignStudent && (
+            <Input
+              label={SECTION_A_LABELS.postalCode}
+              name="postalCode"
+              value={postalCode}
+              onChange={handlePostalCodeChange}
+              placeholder="00000-000"
+              required={true}
+              description={
+                loadingPostalCode
+                  ? "Buscando endereço..."
+                  : "Digite o CEP para preencher automaticamente"
+              }
+            />
+          )}
 
           {/* Street and Number - Row */}
           <Flex direction="row" gap="small">

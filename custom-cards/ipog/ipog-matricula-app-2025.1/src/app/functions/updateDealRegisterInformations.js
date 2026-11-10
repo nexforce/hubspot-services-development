@@ -112,6 +112,9 @@ exports.main = async (context = {}) => {
     city,
     sigla_estado,
     nome_nacionalidade,
+    utilizar_documento_estrangeiro,
+    tipo_documento_estrangeiro,
+    numero_documento_estrangeiro,
   } = parameters || {};
 
   const properties = {};
@@ -160,6 +163,16 @@ exports.main = async (context = {}) => {
     if (sigla_estado !== undefined) properties.sigla_estado = sigla_estado;
     if (nome_nacionalidade !== undefined)
       properties.nome_nacionalidade = nome_nacionalidade;
+    // O card manda "true"/"false" em texto porque a propriedade é de checkbox:
+    // o HubSpot aceita a string booleana e o valor vazio sai como não marcado.
+    if (utilizar_documento_estrangeiro !== undefined)
+      properties.utilizar_documento_estrangeiro = String(
+        utilizar_documento_estrangeiro,
+      );
+    if (tipo_documento_estrangeiro !== undefined)
+      properties.tipo_documento_estrangeiro = tipo_documento_estrangeiro;
+    if (numero_documento_estrangeiro !== undefined)
+      properties.numero_documento_estrangeiro = numero_documento_estrangeiro;
 
     console.log("Updating deal with properties:", properties);
 
