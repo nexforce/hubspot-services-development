@@ -68,6 +68,53 @@ const COMPANY_PROPERTIES = ["billingpostalcode"];
 // Objeto customizado "Locais de Coleta" (objectTypeId confirmado na live do portal).
 const COLLECTION_SITE_OBJECT_TYPE_ID = "2-71880835";
 
+// Associacao Local de Coleta -> Itens de linha, confirmada na live do portal.
+const COLLECTION_SITE_LINE_ITEM_TYPE_ID = 84;
+
+const LINE_ITEM_OBJECT_TYPE = "line_items";
+
+// Propriedades do item de linha usadas para montar os residuos.
+const LINE_ITEM_PROPERTIES = ["codigo_do_residuo", "frequencia_coleta", "name"];
+
+// Mapa de "Frequencia de coleta" do HubSpot para o codigo numerico da Uplog, conforme
+// o de/para:
+//   1 = Conforme solicitado (somente por agendamento)
+//   2 = Diario (todos os dias)
+//   3 = Semanal, com o dia da semana: 3,1 (segunda) ate 3,7 (domingo)
+//   4 = Mensal, com o dia do mes: 4,5 / 4,10 / 4,15 / 4,20
+//   5 = Sequencia, com a semana e o dia: 5,<semana 1-4>-<dia 1-7>
+// As chaves sao normalizadas (minusculas, sem acento). Os codigos 3, 4 e 5 exigem um
+// detalhe (dia da semana / dia do mes / semana) que a propriedade do HubSpot nao
+// carrega hoje; nesse caso o codigo base e enviado e um aviso e registrado no log.
+const FREQUENCY_CODE_MAP = {
+  "conforme solicitacao": "1",
+  "conforme solicitado": "1",
+  "diaria": "2",
+  "diario": "2",
+  "semanal": "3",
+  "mensal": "4",
+  "sequencia": "5",
+};
+
+// Codigos que precisam de um complemento (dia/semana) para ficarem completos.
+const FREQUENCY_REQUIRES_DETAIL = new Set(["3", "4", "5"]);
+
+function normalizeKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function resolveFrequencyCode(value) {
+  const code = FREQUENCY_CODE_MAP[normalizeKey(value)];
+  if (!code) {
+    return { code: "", mapped: false, requiresDetail: false };
+  }
+  return { code, mapped: true, requiresDetail: FREQUENCY_REQUIRES_DETAIL.has(code) };
+}
+
 const COLLECTION_SITE_PROPERTIES = [
   "titulo",
   "nome",
@@ -80,13 +127,6 @@ const COLLECTION_SITE_PROPERTIES = [
   "estado_regiao",
   "observacao",
   "status",
-  "codigo_residuo_1",
-  "codigo_residuo_2",
-  "codigo_residuo_3",
-  "codigo_residuo_4",
-  "codigo_residuo_5",
-  "frequencia_de_coleta",
-  "quantidade_de_residuo",
 ];
 
 // Configuracao de credenciais por ambiente (hom/prod). Usuario e senha do login,
@@ -264,20 +304,34 @@ function firstNonEmpty(...values) {
   return found === undefined ? "" : String(found).trim();
 }
 
-function buildResiduos(collectionSiteProperties) {
-  // Premissa registrada no README: frequencia_de_coleta e um unico campo por local,
-  // entao o mesmo valor e aplicado a todos os residuos. Isolado aqui para ajuste facil.
-  const frequency = collectionSiteProperties.frequencia_de_coleta || "";
+function buildResiduos(lineItemPropertiesList) {
+  // Cada residuo e um item de linha associado ao local de coleta. Um item vira um
+  // elemento de residuos com o codigo do residuo e a frequencia convertida para o
+  // codigo numerico da Uplog (FREQUENCY_CODE_MAP).
   const residuos = [];
-  for (let index = 1; index <= 5; index += 1) {
-    const residueCode = collectionSiteProperties[`codigo_residuo_${index}`];
-    if (residueCode !== undefined && residueCode !== null && String(residueCode).trim() !== "") {
-      residuos.push({
-        codigoResiduo: String(residueCode).trim(),
-        frequencia: frequency,
-      });
+  (lineItemPropertiesList || []).forEach((properties) => {
+    if (!properties) {
+      return;
     }
-  }
+    const residueCode = properties.codigo_do_residuo;
+    if (residueCode === undefined || residueCode === null || String(residueCode).trim() === "") {
+      return;
+    }
+    const frequency = resolveFrequencyCode(properties.frequencia_coleta);
+    if (!frequency.mapped) {
+      console.warn(
+        `[veolia][uplog] frequencia_coleta sem mapeamento: '${properties.frequencia_coleta || ""}' (residuo ${residueCode})`,
+      );
+    } else if (frequency.requiresDetail) {
+      console.warn(
+        `[veolia][uplog] frequencia '${properties.frequencia_coleta}' mapeada para '${frequency.code}' sem o detalhe (dia/semana) que a Uplog espera (residuo ${residueCode})`,
+      );
+    }
+    residuos.push({
+      codigoResiduo: String(residueCode).trim(),
+      frequencia: frequency.code,
+    });
+  });
   return residuos;
 }
 
@@ -294,6 +348,31 @@ async function hubspotRequest(path, token) {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
+  });
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new UplogError(
+      "HUBSPOT_READ_FAILED",
+      `falha ao ler o HubSpot (HTTP ${response.status}): ${errorBody.slice(0, 300)}`,
+    );
+  }
+  return response.json();
+}
+
+async function hubspotPost(path, token, body) {
+  if (!token) {
+    throw new UplogError(
+      "MISSING_HUBSPOT_TOKEN",
+      `${HUBSPOT_TOKEN_ENV} ausente. Configure a secret com o token do HubSpot da conta Veolia.`,
+    );
+  }
+  const response = await fetch(`${HUBSPOT_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
   });
   if (!response.ok) {
     const errorBody = await response.text();
@@ -359,6 +438,46 @@ async function fetchCompanyPostalCode(dealId, token) {
   return (company.properties && company.properties.billingpostalcode) || "";
 }
 
+async function fetchLineItemIdsForSite(siteId, token) {
+  const associations = await hubspotRequest(
+    `/crm/v4/objects/${COLLECTION_SITE_OBJECT_TYPE_ID}/${siteId}/associations/${LINE_ITEM_OBJECT_TYPE}`,
+    token,
+  );
+  const results = (associations && associations.results) || [];
+  return results
+    .filter((association) => {
+      const types = association.associationTypes || [];
+      if (types.length === 0) {
+        return true;
+      }
+      return types.some(
+        (type) => Number(type.typeId) === COLLECTION_SITE_LINE_ITEM_TYPE_ID,
+      );
+    })
+    .map((association) => association.toObjectId)
+    .filter(Boolean);
+}
+
+async function fetchLineItemsByIds(ids, token) {
+  if (ids.length === 0) {
+    return {};
+  }
+  const body = {
+    inputs: ids.map((id) => ({ id: String(id) })),
+    properties: LINE_ITEM_PROPERTIES,
+  };
+  const result = await hubspotPost(
+    `/crm/v3/objects/${LINE_ITEM_OBJECT_TYPE}/batch/read`,
+    token,
+    body,
+  );
+  const byId = {};
+  ((result && result.results) || []).forEach((item) => {
+    byId[String(item.id)] = item.properties || {};
+  });
+  return byId;
+}
+
 async function fetchCollectionSites(dealId, token) {
   const associations = await hubspotRequest(
     `/crm/v3/objects/deals/${dealId}/associations/${COLLECTION_SITE_OBJECT_TYPE_ID}`,
@@ -376,10 +495,24 @@ async function fetchCollectionSites(dealId, token) {
         `/crm/v3/objects/${COLLECTION_SITE_OBJECT_TYPE_ID}/${siteId}?${query}`,
         token,
       );
-      return { id: siteId, properties: site.properties || {} };
+      const lineItemIds = await fetchLineItemIdsForSite(siteId, token);
+      return { id: String(siteId), properties: site.properties || {}, lineItemIds };
     }),
   );
-  return sites;
+
+  // Uma unica leitura em lote cobre os itens de linha de todos os locais de coleta.
+  const allLineItemIds = [
+    ...new Set(sites.flatMap((site) => site.lineItemIds.map((id) => String(id)))),
+  ];
+  const lineItemsById = await fetchLineItemsByIds(allLineItemIds, token);
+
+  return sites.map((site) => ({
+    id: site.id,
+    properties: site.properties,
+    lineItems: site.lineItemIds
+      .map((id) => lineItemsById[String(id)])
+      .filter(Boolean),
+  }));
 }
 
 async function loginToUplog(credentials) {
@@ -606,7 +739,7 @@ exports.main = async (event) => {
         uf: toUf(site.properties.estado_regiao),
         observacao: site.properties.observacao || "",
         status: site.properties.status || "",
-        residuos: buildResiduos(site.properties),
+        residuos: buildResiduos(site.lineItems),
       })),
     };
     const contractResult = await postUplog(

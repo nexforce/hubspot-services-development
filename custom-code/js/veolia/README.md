@@ -125,8 +125,38 @@ O script considera sucesso apenas `response === true`.
 | `estado_regiao` | `uf` | via `toUf` |
 | `observacao` | `observacao` | |
 | `status` | `status` | |
-| `codigo_residuo_1` ate `codigo_residuo_5` | `residuos[].codigoResiduo` | um item por campo preenchido |
-| `frequencia_de_coleta` | `residuos[].frequencia` | premissa: um valor unico aplicado a todos os residuos |
+
+### Residuos (itens de linha do local de coleta)
+
+Cada residuo e um item de linha (`line_items`) associado ao local de coleta
+(`2-71880835`), pela associacao de typeId `84`. Um item de linha vira um elemento
+de `residuos`.
+
+| Origem no HubSpot (item de linha) | Campo na Uplog | Observacao |
+| --- | --- | --- |
+| `codigo_do_residuo` | `residuos[].codigoResiduo` | itens sem codigo sao ignorados |
+| `frequencia_coleta` | `residuos[].frequencia` | convertida para o codigo numerico da Uplog via `FREQUENCY_CODE_MAP` |
+
+#### Mapeamento de frequencia (`FREQUENCY_CODE_MAP`)
+
+O valor interno de `frequencia_coleta` no HubSpot nao esta no padrao da Uplog, entao
+e convertido para o codigo numerico do de/para:
+
+| Valor no HubSpot | Codigo Uplog | Significado |
+| --- | --- | --- |
+| `Conforme solicitação` | `1` | coleta somente por agendamento |
+| `Diária` | `2` | coleta todos os dias |
+| `Semanal` | `3` | semanal (exige o dia da semana: `3,1` a `3,7`) |
+| `Mensal` | `4` | mensal (exige o dia do mes: `4,5` / `4,10` / `4,15` / `4,20`) |
+| `Sequência` | `5` | sequencia (exige semana e dia: `5,<semana>-<dia>`) |
+
+Pendencia conhecida: a propriedade `frequencia_coleta` do HubSpot so carrega a
+frequencia base. Os codigos `3`, `4` e `5` precisam de um complemento (dia da
+semana, dia do mes ou semana) que hoje nao existe na propriedade. Nesses casos o
+codigo base e enviado e um aviso e registrado no log. Valores do HubSpot sem
+equivalente no de/para (`Quinzenal`, `Bimestral`, `Trimestral`, `Semestral`,
+`Anual`, `Eventual`, `2 X ao Mes`, `Única`, `2x na semana`, `3x na semana`,
+`Emergencial`) ficam sem codigo (`""`) e sao registrados como "sem mapeamento".
 
 ## Ambiente
 
@@ -206,9 +236,10 @@ retornados pela Uplog.
 - **Roteamento por `unidade_de_atendimento`.** O value interno da propriedade
   decide a unidade: `PMA Sul` = Florianopolis, `Serquip` = Alagoas. Se a Veolia
   adicionar ou renomear values no enum, o `UNIT_MAP` no codigo precisa acompanhar.
-- **Frequencia unica por local de coleta.** `frequencia_de_coleta` e um campo
-  unico, entao o mesmo valor e aplicado a todos os residuos do local. A montagem
-  esta isolada em `buildResiduos(local)`, para ajuste sem mexer no resto.
+- **Residuos vem de itens de linha.** Cada residuo e um item de linha (`line_items`)
+  associado ao local de coleta (`2-71880835`) pelo typeId `84`. `codigo_do_residuo`
+  vira `codigoResiduo` e `frequencia_coleta` vira `frequencia`, por item. A montagem
+  esta isolada em `buildResiduos(lineItems)`.
 - **Local de coleta usa o contato do negocio.** Nesta fase o `email` do local de
   coleta reaproveita o e-mail do contato do negocio. Se a Veolia passar a usar um
   contato proprio por local, isso precisa mudar.
