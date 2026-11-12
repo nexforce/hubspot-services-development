@@ -101,7 +101,6 @@ const SECTION_A_LABELS = {
   state: "Estado",
   ibgeCityCode: "Código IBGE da Cidade",
   ibgeBirthplaceCode: "Código IBGE da Naturalidade",
-  birthplaceCountry: "País de Nascimento",
 };
 
 // Os valores são os mesmos que o Negócio grava em escolaridade_do_aluno e os
@@ -905,12 +904,6 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const [city, setCity] = useState("");
   const [ibgeCityCode, setIbgeCityCode] = useState("");
   const [ibgeBirthplaceCode, setIbgeBirthplaceCode] = useState("");
-  // País de nascimento do aluno estrangeiro: o Select usa o código M49 do IBGE,
-  // que é o valor enviado em codigoIBGENaturalidade.
-  const [birthplaceCountryCode, setBirthplaceCountryCode] = useState("");
-  const [countries, setCountries] = useState([]);
-  const [loadingCountries, setLoadingCountries] = useState(false);
-  const [countriesError, setCountriesError] = useState("");
   const [loadingPostalCode, setLoadingPostalCode] = useState(false);
   const [loadingRegistration, setLoadingRegistration] = useState(false);
   const [loadingEnrollment, setLoadingEnrollment] = useState(false);
@@ -1079,21 +1072,9 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     : "";
   const effectiveCpf = isForeignStudent ? foreignStudentCpf : cpf;
 
-  // No estrangeiro a naturalidade é o país, não o município: o nome do país vai em
-  // nomeNaturalidade e o código recebe o sentinela de 7 dígitos definido pela IPOG.
-  const effectiveBirthplaceCode = isForeignStudent
-    ? FOREIGN_IBGE_CODE
-    : ibgeBirthplaceCode;
-  const birthplaceCountryName =
-    countries.find((country) => country.value === birthplaceCountryCode)?.label ||
-    "";
   // Guarda a última consulta de CEP que saiu, para o efeito da carga inicial e o
   // handler do campo não pedirem o mesmo CEP duas vezes.
   const lastRequestedPostalCodeRef = useRef("");
-  // Marca que a lista de países já foi pedida, para o efeito e a alternância de
-  // tipo de aluno não dispararem a mesma chamada.
-  const countriesRequestedRef = useRef(false);
-
   const fetchAddressByPostalCode = async (postalCodeValue) => {
     if (!postalCodeValue || postalCodeValue.length < POSTAL_CODE_DIGITS) return;
 
@@ -1148,42 +1129,6 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     return true;
   };
 
-  // A lista de países é pública e não muda, então carrega uma vez por sessão do
-  // card. O ref evita nova chamada a cada alternância de tipo de aluno; em caso de
-  // falha ele volta a false para o consultor poder tentar de novo ao alternar.
-  const loadCountries = async () => {
-    if (countriesRequestedRef.current) return;
-    countriesRequestedRef.current = true;
-    setLoadingCountries(true);
-    setCountriesError("");
-
-    try {
-      const { response } = await runServerless({ name: "fetchCountries" });
-
-      if (
-        response?.status === "SUCCESS" &&
-        Array.isArray(response.response?.countries) &&
-        response.response.countries.length > 0
-      ) {
-        setCountries(response.response.countries);
-        return;
-      }
-
-      countriesRequestedRef.current = false;
-      setCountriesError(
-        "Não foi possível carregar a lista de países. Alterne o tipo de aluno para tentar novamente.",
-      );
-    } catch (error) {
-      console.error("Erro ao buscar países:", error);
-      countriesRequestedRef.current = false;
-      setCountriesError(
-        "Não foi possível carregar a lista de países. Alterne o tipo de aluno para tentar novamente.",
-      );
-    } finally {
-      setLoadingCountries(false);
-    }
-  };
-
   // A consulta da carga inicial roda quando o campo já mostra o CEP do Negócio.
   useEffect(() => {
     if (!initialLoadDone || isForeignStudent) {
@@ -1223,9 +1168,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       setState(FOREIGN_ADDRESS_PLACEHOLDER);
       setCity(FOREIGN_ADDRESS_PLACEHOLDER);
       setIbgeCityCode(FOREIGN_IBGE_CODE);
-      // A naturalidade passa a ser o país de nascimento, então a lista precisa
-      // estar carregada antes de o Select abrir.
-      loadCountries();
+      setIbgeBirthplaceCode(FOREIGN_IBGE_CODE);
       return;
     }
     setPostalCode("");
@@ -1238,7 +1181,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       ibgeCityCode === FOREIGN_ADDRESS_PLACEHOLDER
     )
       setIbgeCityCode("");
-    setBirthplaceCountryCode("");
+    if (ibgeBirthplaceCode === FOREIGN_IBGE_CODE) setIbgeBirthplaceCode("");
   };
 
   const resetCronograma = () => {
@@ -1389,7 +1332,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
         setState(FOREIGN_ADDRESS_PLACEHOLDER);
         setCity(FOREIGN_ADDRESS_PLACEHOLDER);
         setIbgeCityCode(FOREIGN_IBGE_CODE);
-        loadCountries();
+        setIbgeBirthplaceCode(FOREIGN_IBGE_CODE);
       }
       setForeignDocumentType(dealProperties.tipo_documento_estrangeiro || "");
       setForeignDocumentNumber(
@@ -1617,14 +1560,8 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       reason: filledReason(ibgeCityCode),
     },
     {
-      // No estrangeiro o que a tela pede é o país, porque é o nome dele que vai em
-      // nomeNaturalidade. O código enviado é o sentinela, sempre preenchido.
-      label: isForeignStudent
-        ? SECTION_A_LABELS.birthplaceCountry
-        : SECTION_A_LABELS.ibgeBirthplaceCode,
-      reason: filledReason(
-        isForeignStudent ? birthplaceCountryCode : ibgeBirthplaceCode,
-      ),
+      label: SECTION_A_LABELS.ibgeBirthplaceCode,
+      reason: filledReason(ibgeBirthplaceCode),
     },
   ];
 
@@ -1696,9 +1633,11 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
           neighborhood,
           city,
           ibgeCityCode,
-          ibgeBirthplaceCode: effectiveBirthplaceCode,
+          ibgeBirthplaceCode,
+          // O estrangeiro não tem município brasileiro de nascimento: o campo de
+          // naturalidade recebe o mesmo sentinela do endereço.
           nomeNaturalidade: isForeignStudent
-            ? birthplaceCountryName
+            ? FOREIGN_ADDRESS_PLACEHOLDER
             : "Brasileiro",
         },
       });
@@ -2399,33 +2338,14 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
             />
           </Flex>
 
-          {isForeignStudent ? (
-            <Select
-              label={SECTION_A_LABELS.birthplaceCountry}
-              name="birthplaceCountry"
-              value={birthplaceCountryCode}
-              onChange={(value) => setBirthplaceCountryCode(String(value))}
-              options={countries}
-              placeholder={
-                loadingCountries
-                  ? "Carregando países..."
-                  : "Selecione o país de nascimento"
-              }
-              required={true}
-              description={
-                countriesError ||
-                "País de nascimento do aluno. O nome do país é enviado ao cadastro como naturalidade."
-              }
-            />
-          ) : (
-            <Input
-              label={SECTION_A_LABELS.ibgeBirthplaceCode}
-              name="ibgeBirthplaceCode"
-              value={ibgeBirthplaceCode}
-              onChange={setIbgeBirthplaceCode}
-              required={true}
-            />
-          )}
+          <Input
+            label={SECTION_A_LABELS.ibgeBirthplaceCode}
+            name="ibgeBirthplaceCode"
+            value={ibgeBirthplaceCode}
+            onChange={setIbgeBirthplaceCode}
+            required={true}
+            readOnly={isForeignStudent}
+          />
 
           <Divider />
 
