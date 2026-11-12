@@ -195,18 +195,37 @@ negocio:
 
 | Campo | Conteudo |
 | --- | --- |
-| `uplog_status` | `SUCCESS` ou `ERROR` |
-| `uplog_unidade` | unidade resolvida (`floripa`, `alagoas`) ou vazio |
-| `uplog_gerador_ok` | `true` ou `false` |
-| `uplog_contrato_ok` | `true` ou `false` |
-| `uplog_erro_code` | codigo do erro, quando houver |
-| `uplog_erro_message` | mensagem do erro, quando houver |
+| `uplog_status` | sempre `SUCCESS` (em erro a action falha, ver abaixo) |
+| `uplog_unidade` | unidade resolvida (`floripa`, `alagoas`) |
+| `uplog_gerador_ok` | `true` |
+| `uplog_contrato_ok` | `true` |
 
-Como nada e gravado no negocio, o workflow deve usar `uplog_status` para decidir
-o proximo passo (por exemplo, criar uma tarefa ou enviar um aviso quando o status
-for `ERROR`).
+### Quando a Uplog (ou uma etapa anterior) rejeita o envio
+
+A action falha de verdade: o script lanca uma excecao e o HubSpot registra a
+execucao como falha no historico do workflow, sem gravar nenhum output field.
+Antes, a action sempre aparecia como "concluida com exito" e so o campo
+`uplog_status` indicava erro, o que escondia a falha de quem olhasse apenas o
+resultado da action (decisao corrigida a pedido do operador).
+
+A mensagem de erro, visivel no painel de falha da action, vem neste formato:
+
+```
+unidade=<floripa|alagoas|-> gerador=<true|false> contrato=<true|false> [<codigo>] <mensagem>
+```
+
+`gerador=true` com `contrato=false` e uma falha parcial: o gerador ja foi criado na
+Uplog, mas o contrato nao. Esse caso precisa de acompanhamento manual, porque este
+de/para nao tem endpoint de cancelamento do gerador.
+
+Para reagir a uma falha (criar tarefa, enviar aviso), configure o workflow pela
+propria ramificacao de falha da action, e nao mais por uma condicao sobre
+`uplog_status`.
 
 ## Tratamento de erro
+
+Qualquer um dos codigos abaixo faz a action falhar (lanca excecao), nao apenas
+devolve um status de erro nos campos de saida.
 
 | Codigo | Quando acontece | Retry |
 | --- | --- | --- |
@@ -288,8 +307,10 @@ O que esperar:
 - `OutputFields:` com `uplog_status: "SUCCESS"`, `uplog_unidade: "floripa"`,
   `uplog_gerador_ok: "true"` e `uplog_contrato_ok: "true"`.
 - No painel da Uplog, um gerador e um contrato novos para o negocio testado.
-- Se faltar alguma secret ou o mapa estiver vazio, o retorno vem com
-  `uplog_status: "ERROR"` e o codigo correspondente na tabela de erros.
+- Se faltar alguma secret ou o mapa estiver vazio, o teste local imprime
+  `Action falhou:` com a mensagem de erro (`unidade=... gerador=... contrato=...
+  [codigo] mensagem`) e termina com codigo de saida 1; no portal, a action aparece
+  como falha no historico do workflow.
 
 Antes de ligar em producao, conferir: a constante `UPLOG_ENVIRONMENT` trocada
 para `"prod"` no codigo, as secrets de producao preenchidas e o `UNIT_MAP` com os

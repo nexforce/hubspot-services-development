@@ -759,22 +759,23 @@ exports.main = async (event) => {
       uplog_unidade: unit,
       uplog_gerador_ok: String(generatorOk),
       uplog_contrato_ok: String(contractOk),
-      uplog_erro_code: "",
-      uplog_erro_message: "",
     };
   } catch (error) {
     const code = error && error.code ? error.code : "UNEXPECTED_ERROR";
     const message = error && error.message ? error.message : String(error);
     // Log sem dados sensiveis: apenas codigo, mensagem e status retornados.
     console.error(`[veolia][uplog][main] Uplog erro [${code}]: ${message}`);
-    return {
-      uplog_status: "ERROR",
-      uplog_unidade: unit,
-      uplog_gerador_ok: String(generatorOk),
-      uplog_contrato_ok: String(contractOk),
-      uplog_erro_code: String(code),
-      uplog_erro_message: String(message).slice(0, 500),
-    };
+    // Decisao confirmada com o operador: a action tem que falhar de verdade no
+    // historico do workflow quando a Uplog (ou qualquer etapa anterior) rejeitar o
+    // envio, em vez de devolver sucesso com uplog_status=ERROR nos campos de saida.
+    // Por isso a excecao e relancada aqui; o HubSpot registra a execucao como
+    // "failed" e mostra esta mensagem, mas nenhum output field e gravado neste caso.
+    // unidade/gerador/contrato vao embutidos na mensagem porque sao o unico jeito de
+    // saber, por uma falha parcial (gerador=true, contrato=false), que o gerador ja
+    // foi criado na Uplog e precisa de acompanhamento manual.
+    throw new Error(
+      `unidade=${unit || "-"} gerador=${generatorOk} contrato=${contractOk} [${code}] ${String(message).slice(0, 500)}`,
+    );
   }
 };
 
@@ -793,8 +794,15 @@ async function runLocalTest() {
     process.exitCode = 1;
     return;
   }
-  const output = await exports.main({ object: { objectId: dealId } });
-  console.log("OutputFields:", JSON.stringify(output, null, 2));
+  try {
+    const output = await exports.main({ object: { objectId: dealId } });
+    console.log("OutputFields:", JSON.stringify(output, null, 2));
+  } catch (error) {
+    // exports.main agora lanca em caso de erro (a action falha de verdade no
+    // HubSpot); aqui so evita o stack trace cru do Node e marca o teste como falho.
+    console.error("Action falhou:", error && error.message ? error.message : error);
+    process.exitCode = 1;
+  }
 }
 
 if (require.main === module) {
