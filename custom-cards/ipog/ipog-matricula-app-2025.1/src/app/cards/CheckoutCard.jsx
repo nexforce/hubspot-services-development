@@ -66,6 +66,11 @@ const FOREIGN_CPF_PREFIX = "T-";
 // valor nos dois.
 const FOREIGN_ADDRESS_PLACEHOLDER = "ESTRANGEIRO";
 
+// Os dois campos de código IBGE não têm valor para aluno estrangeiro, mas a
+// MuleSoft cobra preenchimento. A IPOG definiu o sentinela com a mesma contagem
+// de dígitos de um código de município, 7, para o campo não quebrar por formato.
+const FOREIGN_IBGE_CODE = "9999999";
+
 // Telefone brasileiro: DDI fixo, DDD de 2 dígitos e assinante de 8 (fixo) ou 9
 // (celular). PHONE_LOCAL_* conta DDD + assinante, sem o DDI, porque é isso que o
 // consultor digita. O DDI quem põe é a máscara.
@@ -1074,10 +1079,10 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     : "";
   const effectiveCpf = isForeignStudent ? foreignStudentCpf : cpf;
 
-  // No estrangeiro a naturalidade é o país, não o município: o código vem do
-  // Select de país (código M49 do IBGE) e ocupa o lugar do código de município.
+  // No estrangeiro a naturalidade é o país, não o município: o nome do país vai em
+  // nomeNaturalidade e o código recebe o sentinela de 7 dígitos definido pela IPOG.
   const effectiveBirthplaceCode = isForeignStudent
-    ? birthplaceCountryCode
+    ? FOREIGN_IBGE_CODE
     : ibgeBirthplaceCode;
   const birthplaceCountryName =
     countries.find((country) => country.value === birthplaceCountryCode)?.label ||
@@ -1212,22 +1217,27 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     if (origin === "estrangeiro") {
       setPostalCode(FOREIGN_POSTAL_CODE);
       setLoadingPostalCode(false);
-      // Estado, município e o código IBGE do município não existem para endereço
-      // de fora do país: entram bloqueados com o texto que a MuleSoft recebe.
+      // Estado e município não existem para endereço de fora do país: entram
+      // bloqueados com o texto que a MuleSoft recebe. Os dois códigos IBGE entram
+      // com o sentinela de 7 dígitos.
       setState(FOREIGN_ADDRESS_PLACEHOLDER);
       setCity(FOREIGN_ADDRESS_PLACEHOLDER);
-      setIbgeCityCode(FOREIGN_ADDRESS_PLACEHOLDER);
+      setIbgeCityCode(FOREIGN_IBGE_CODE);
       // A naturalidade passa a ser o país de nascimento, então a lista precisa
       // estar carregada antes de o Select abrir.
       loadCountries();
       return;
     }
     setPostalCode("");
-    // Na volta ao brasileiro os três abrem vazios, para o consultor digitar o
-    // endereço nacional. O texto fixo nunca fica como se fosse dado digitado.
+    // Na volta ao brasileiro os campos abrem vazios, para o consultor digitar o
+    // endereço nacional. Os valores fixos nunca ficam como se fossem digitados.
     if (state === FOREIGN_ADDRESS_PLACEHOLDER) setState("");
     if (city === FOREIGN_ADDRESS_PLACEHOLDER) setCity("");
-    if (ibgeCityCode === FOREIGN_ADDRESS_PLACEHOLDER) setIbgeCityCode("");
+    if (
+      ibgeCityCode === FOREIGN_IBGE_CODE ||
+      ibgeCityCode === FOREIGN_ADDRESS_PLACEHOLDER
+    )
+      setIbgeCityCode("");
     setBirthplaceCountryCode("");
   };
 
@@ -1374,11 +1384,11 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       setStudentOrigin(savedIsForeignStudent ? "estrangeiro" : "nacional");
       if (savedIsForeignStudent) {
         setPostalCode(FOREIGN_POSTAL_CODE);
-        // O Negócio já guardou o texto fixo, mas reaplicar garante que a tela
+        // O Negócio já guardou os valores fixos, mas reaplicar garante que a tela
         // mostre bloqueado mesmo em Negócio salvo antes desta regra.
         setState(FOREIGN_ADDRESS_PLACEHOLDER);
         setCity(FOREIGN_ADDRESS_PLACEHOLDER);
-        setIbgeCityCode(FOREIGN_ADDRESS_PLACEHOLDER);
+        setIbgeCityCode(FOREIGN_IBGE_CODE);
         loadCountries();
       }
       setForeignDocumentType(dealProperties.tipo_documento_estrangeiro || "");
@@ -1607,10 +1617,14 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       reason: filledReason(ibgeCityCode),
     },
     {
+      // No estrangeiro o que a tela pede é o país, porque é o nome dele que vai em
+      // nomeNaturalidade. O código enviado é o sentinela, sempre preenchido.
       label: isForeignStudent
         ? SECTION_A_LABELS.birthplaceCountry
         : SECTION_A_LABELS.ibgeBirthplaceCode,
-      reason: filledReason(effectiveBirthplaceCode),
+      reason: filledReason(
+        isForeignStudent ? birthplaceCountryCode : ibgeBirthplaceCode,
+      ),
     },
   ];
 
@@ -2400,7 +2414,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
               required={true}
               description={
                 countriesError ||
-                "Naturalidade do aluno nascido no exterior. O código IBGE do país (M49) é enviado ao cadastro."
+                "País de nascimento do aluno. O nome do país é enviado ao cadastro como naturalidade."
               }
             />
           ) : (
