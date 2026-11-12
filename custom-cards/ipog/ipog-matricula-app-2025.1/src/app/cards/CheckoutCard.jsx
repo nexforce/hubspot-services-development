@@ -56,6 +56,16 @@ const POSTAL_CODE_DIGITS = 8;
 // pessoa, então ele é gravado sem consultar o ViaCEP.
 const FOREIGN_POSTAL_CODE = "99999999";
 
+// O aluno estrangeiro não tem CPF. A identidade usada pela IPOG é "T-" seguido do
+// número do documento, e o mesmo valor precisa existir no Negócio e no payload do
+// incluirPessoa, porque generateEnrollment cruza os dois para liberar a matrícula.
+const FOREIGN_CPF_PREFIX = "T-";
+
+// Estado e município não existem no endereço de fora do Brasil. Os dois campos
+// ficam bloqueados com este texto, e é ele que vai para a MuleSoft, que exige
+// valor nos dois.
+const FOREIGN_ADDRESS_PLACEHOLDER = "ESTRANGEIRO";
+
 // Telefone brasileiro: DDI fixo, DDD de 2 dígitos e assinante de 8 (fixo) ou 9
 // (celular). PHONE_LOCAL_* conta DDD + assinante, sem o DDI, porque é isso que o
 // consultor digita. O DDI quem põe é a máscara.
@@ -1045,9 +1055,17 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     return `[${label}] ${message || "Erro desconhecido."}`;
   };
 
-  // O modo vem do select de origem, estado de tela. Toda a regra do aluno
+  // O modo vem da chave de tipo de aluno, estado de tela. Toda a regra do aluno
   // estrangeiro (CEP, CPF, documento) parte deste booleano.
   const isForeignStudent = studentOrigin === "estrangeiro";
+
+  // O CPF do estrangeiro é sintético, derivado do número do documento. Sem número
+  // ainda não existe identidade, então o valor fica vazio e a validação obrigatória
+  // do documento segura o cadastro.
+  const foreignStudentCpf = foreignDocumentNumber.trim()
+    ? `${FOREIGN_CPF_PREFIX}${foreignDocumentNumber.trim()}`
+    : "";
+  const effectiveCpf = isForeignStudent ? foreignStudentCpf : cpf;
   // Guarda a última consulta de CEP que saiu, para o efeito da carga inicial e o
   // handler do campo não pedirem o mesmo CEP duas vezes.
   const lastRequestedPostalCodeRef = useRef("");
@@ -1124,10 +1142,11 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     if (!isForeignStudent) requestPostalCodeLookup(masked);
   };
 
-  // Alternar a origem troca o CEP entre fixo e manual. No estrangeiro o campo
-  // some e o valor fixo entra no Negócio; na volta, o campo abre vazio para o
-  // consultor digitar o CEP do aluno brasileiro. A gravação só acontece no
-  // Salvar rascunho ou no Cadastrar, como os demais campos da seção.
+  // Alternar o tipo de aluno troca o CEP entre fixo e manual e trava o bloco de
+  // endereço que não existe fora do Brasil. No estrangeiro o CEP some e o valor
+  // fixo entra no Negócio; na volta, os campos abrem vazios para o consultor
+  // digitar o endereço nacional. A gravação só acontece no Salvar rascunho ou no
+  // Cadastrar, como os demais campos da seção.
   const handleStudentOriginChange = (value) => {
     const origin = String(value);
     setStudentOrigin(origin);
@@ -1138,9 +1157,19 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     if (origin === "estrangeiro") {
       setPostalCode(FOREIGN_POSTAL_CODE);
       setLoadingPostalCode(false);
+      // Estado, município e o código IBGE do município não existem para endereço
+      // de fora do país: entram bloqueados com o texto que a MuleSoft recebe.
+      setState(FOREIGN_ADDRESS_PLACEHOLDER);
+      setCity(FOREIGN_ADDRESS_PLACEHOLDER);
+      setIbgeCityCode(FOREIGN_ADDRESS_PLACEHOLDER);
       return;
     }
     setPostalCode("");
+    // Na volta ao brasileiro os três abrem vazios, para o consultor digitar o
+    // endereço nacional. O texto fixo nunca fica como se fosse dado digitado.
+    if (state === FOREIGN_ADDRESS_PLACEHOLDER) setState("");
+    if (city === FOREIGN_ADDRESS_PLACEHOLDER) setCity("");
+    if (ibgeCityCode === FOREIGN_ADDRESS_PLACEHOLDER) setIbgeCityCode("");
   };
 
   const resetCronograma = () => {
@@ -1240,9 +1269,16 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       dealProperties && Object.keys(dealProperties).length > 0;
 
     if (!initialLoadDone && hasLoadedProperties) {
+      // O Negócio estrangeiro guarda a identidade sintética "T-" + documento no
+      // cpf. Passar isso pela máscara de CPF criaria um número falso na tela.
+      const dealIsForeignStudent =
+        String(
+          dealProperties.utilizar_documento_estrangeiro || "",
+        ).toLowerCase() === "true";
       // Passa pela máscara: a propriedade do Negócio pode ter vindo sem
       // pontuação, e sem isso o campo abre num formato que ele mesmo não produz.
-      if (dealProperties.cpf) setCpf(formatCpf(dealProperties.cpf));
+      if (dealProperties.cpf && !dealIsForeignStudent)
+        setCpf(formatCpf(dealProperties.cpf));
       if (dealProperties.e_mail) setEmail(dealProperties.e_mail);
       if (dealProperties.nome_completo)
         setFullName(dealProperties.nome_completo);
@@ -1275,12 +1311,16 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       // que é o caso de um rascunho salvo ou de um link reaberto em outra aba.
       // O CEP fixo sempre acompanha o modo estrangeiro, mesmo em Negócio salvo
       // antes desta regra, para a tela não depender de o consultor alternar.
-      const savedOrigin = String(
-        dealProperties.utilizar_documento_estrangeiro || "",
-      ).toLowerCase();
-      const savedIsForeignStudent = savedOrigin === "true";
+      const savedIsForeignStudent = dealIsForeignStudent;
       setStudentOrigin(savedIsForeignStudent ? "estrangeiro" : "nacional");
-      if (savedIsForeignStudent) setPostalCode(FOREIGN_POSTAL_CODE);
+      if (savedIsForeignStudent) {
+        setPostalCode(FOREIGN_POSTAL_CODE);
+        // O Negócio já guardou o texto fixo, mas reaplicar garante que a tela
+        // mostre bloqueado mesmo em Negócio salvo antes desta regra.
+        setState(FOREIGN_ADDRESS_PLACEHOLDER);
+        setCity(FOREIGN_ADDRESS_PLACEHOLDER);
+        setIbgeCityCode(FOREIGN_ADDRESS_PLACEHOLDER);
+      }
       setForeignDocumentType(dealProperties.tipo_documento_estrangeiro || "");
       setForeignDocumentNumber(
         dealProperties.numero_documento_estrangeiro || "",
@@ -1312,6 +1352,10 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   // sincronização: se ele digitou algo, o valor digitado é preservado.
   useEffect(() => {
     if (!initialLoadDone) return;
+    // No estrangeiro o CPF do Negócio é a identidade sintética "T-" + documento.
+    // Espelhar esse valor na máscara de CPF produziria um número falso na tela se o
+    // consultor voltasse para brasileiro.
+    if (isForeignStudent) return;
     const propertyCpf = formatCpf(dealProperties.cpf || "");
     if (propertyCpf === cpf) {
       // Campo e propriedade coincidem: o consultor não tem edição pendente.
@@ -1322,7 +1366,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     // ele digitou. A sincronização volta a valer quando os dois coincidirem.
     if (cpfDirtyRef.current) return;
     setCpf(propertyCpf);
-  }, [dealProperties.cpf, initialLoadDone, cpf]);
+  }, [dealProperties.cpf, initialLoadDone, cpf, isForeignStudent]);
 
   // A propriedade do Negócio manda enquanto chega preenchida. Quando vem vazia,
   // o Select da Seção A fica à disposição do consultor, e o fallback para string
@@ -1358,9 +1402,10 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     return {
       nome_completo: fullName,
       e_mail: email,
-      // No estrangeiro o CPF não existe na tela e o Negócio fica sem CPF: o
-      // valor vazio é o que limpa um CPF gravado antes de trocar a origem.
-      cpf: isForeignStudent ? "" : cpf,
+      // No estrangeiro o CPF da tela não existe: o Negócio recebe a identidade
+      // sintética "T-" + número do documento, que é a mesma enviada ao incluirPessoa
+      // e a que generateEnrollment confere antes de matricular.
+      cpf: effectiveCpf,
       numero_de_telefone: phoneNumber,
       data_de_nascimento: formatBirthDateForDeal(birthDate),
       escolaridade_do_aluno: educationType,
@@ -1565,7 +1610,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
           email: email,
           phoneNumber: phoneNumber,
           user: responsibleUser,
-          cpf,
+          cpf: effectiveCpf,
           birthDate,
           postalCode: normalizeDigits(postalCode),
           state,
@@ -1580,7 +1625,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       });
 
       if (response.status === "SUCCESS") {
-        setRegisteredCpf(normalizeDigits(cpf));
+        setRegisteredCpf(normalizeDigits(effectiveCpf));
         await actions.refreshObjectProperties();
         setAlertMessage({
           type: "success",
@@ -2249,6 +2294,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
               value={city}
               onChange={setCity}
               required={true}
+              readOnly={isForeignStudent}
             />
           </Flex>
 
@@ -2258,6 +2304,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
             value={ibgeCityCode}
             onChange={setIbgeCityCode}
             required={true}
+            readOnly={isForeignStudent}
           />
 
           <Divider />
@@ -2269,6 +2316,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
               value={state}
               onChange={setState}
               required={true}
+              readOnly={isForeignStudent}
             />
           </Flex>
 
