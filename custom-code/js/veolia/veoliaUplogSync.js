@@ -76,43 +76,30 @@ const LINE_ITEM_OBJECT_TYPE = "line_items";
 // Propriedades do item de linha usadas para montar os residuos.
 const LINE_ITEM_PROPERTIES = ["codigo_do_residuo", "frequencia_coleta", "name"];
 
-// Mapa de "Frequencia de coleta" do HubSpot para o codigo numerico da Uplog, conforme
-// o de/para:
-//   1 = Conforme solicitado (somente por agendamento)
-//   2 = Diario (todos os dias)
-//   3 = Semanal, com o dia da semana: 3,1 (segunda) ate 3,7 (domingo)
-//   4 = Mensal, com o dia do mes: 4,5 / 4,10 / 4,15 / 4,20
-//   5 = Sequencia, com a semana e o dia: 5,<semana 1-4>-<dia 1-7>
-// As chaves sao normalizadas (minusculas, sem acento). Os codigos 3, 4 e 5 exigem um
-// detalhe (dia da semana / dia do mes / semana) que a propriedade do HubSpot nao
-// carrega hoje; nesse caso o codigo base e enviado e um aviso e registrado no log.
+// Mapa de "Frequencia de coleta" do HubSpot para o codigo numerico da Uplog.
+// As chaves sao exatamente os internal values da propriedade frequencia_coleta
+// (objeto line_items), com acento e caixa originais, sem normalizacao.
+// Valores considerados por enquanto (definidos pelo consultor):
+//   "Conforme solicitação" = 1
+//   "Diária"               = 2
+//   "Semanal"              = 3,0 (padrao; o dia da semana ainda nao e detalhado)
+//   "Mensal"               = 4,0 (padrao; o dia do mes ainda nao e detalhado)
+// O de/para preve tambem o codigo 5 (Sequencia), mas esse valor nao existe no enum
+// atual da propriedade.
 const FREQUENCY_CODE_MAP = {
-  "conforme solicitacao": "1",
-  "conforme solicitado": "1",
-  "diaria": "2",
-  "diario": "2",
-  "semanal": "3",
-  "mensal": "4",
-  "sequencia": "5",
+  "Conforme solicitação": "1",
+  "Diária": "2",
+  "Semanal": "3,0",
+  "Mensal": "4,0",
 };
 
-// Codigos que precisam de um complemento (dia/semana) para ficarem completos.
-const FREQUENCY_REQUIRES_DETAIL = new Set(["3", "4", "5"]);
-
-function normalizeKey(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
 function resolveFrequencyCode(value) {
-  const code = FREQUENCY_CODE_MAP[normalizeKey(value)];
+  const key = String(value || "").trim();
+  const code = FREQUENCY_CODE_MAP[key];
   if (!code) {
-    return { code: "", mapped: false, requiresDetail: false };
+    return { code: "", mapped: false };
   }
-  return { code, mapped: true, requiresDetail: FREQUENCY_REQUIRES_DETAIL.has(code) };
+  return { code, mapped: true };
 }
 
 const COLLECTION_SITE_PROPERTIES = [
@@ -321,10 +308,6 @@ function buildResiduos(lineItemPropertiesList) {
     if (!frequency.mapped) {
       console.warn(
         `[veolia][uplog] frequencia_coleta sem mapeamento: '${properties.frequencia_coleta || ""}' (residuo ${residueCode})`,
-      );
-    } else if (frequency.requiresDetail) {
-      console.warn(
-        `[veolia][uplog] frequencia '${properties.frequencia_coleta}' mapeada para '${frequency.code}' sem o detalhe (dia/semana) que a Uplog espera (residuo ${residueCode})`,
       );
     }
     residuos.push({

@@ -140,23 +140,24 @@ de `residuos`.
 #### Mapeamento de frequencia (`FREQUENCY_CODE_MAP`)
 
 O valor interno de `frequencia_coleta` no HubSpot nao esta no padrao da Uplog, entao
-e convertido para o codigo numerico do de/para:
+e convertido para o codigo numerico. As chaves do mapa sao **exatamente** os internal
+values da propriedade `frequencia_coleta` (`line_items`), com acento e caixa originais,
+comparadas por igualdade exata (sem normalizacao):
 
-| Valor no HubSpot | Codigo Uplog | Significado |
+| Internal value no HubSpot | Codigo Uplog | Significado |
 | --- | --- | --- |
 | `Conforme solicitação` | `1` | coleta somente por agendamento |
 | `Diária` | `2` | coleta todos os dias |
-| `Semanal` | `3` | semanal (exige o dia da semana: `3,1` a `3,7`) |
-| `Mensal` | `4` | mensal (exige o dia do mes: `4,5` / `4,10` / `4,15` / `4,20`) |
-| `Sequência` | `5` | sequencia (exige semana e dia: `5,<semana>-<dia>`) |
+| `Semanal` | `3,0` | semanal (padrao; dia da semana ainda nao detalhado) |
+| `Mensal` | `4,0` | mensal (padrao; dia do mes ainda nao detalhado) |
 
-Pendencia conhecida: a propriedade `frequencia_coleta` do HubSpot so carrega a
-frequencia base. Os codigos `3`, `4` e `5` precisam de um complemento (dia da
-semana, dia do mes ou semana) que hoje nao existe na propriedade. Nesses casos o
-codigo base e enviado e um aviso e registrado no log. Valores do HubSpot sem
-equivalente no de/para (`Quinzenal`, `Bimestral`, `Trimestral`, `Semestral`,
-`Anual`, `Eventual`, `2 X ao Mes`, `Única`, `2x na semana`, `3x na semana`,
-`Emergencial`) ficam sem codigo (`""`) e sao registrados como "sem mapeamento".
+Valores considerados por enquanto, definidos pelo consultor: `2` diario, `3,0`
+semanal, `4,0` mensal. O de/para preve tambem o codigo `5` (Sequencia), mas esse
+valor nao existe no enum atual da propriedade, por isso nao esta no mapa. Os demais
+valores do HubSpot sem equivalente (`Quinzenal`, `Bimestral`, `Trimestral`,
+`Semestral`, `Anual`, `Eventual`, `2 X ao Mes`, `Única`, `2x na semana`,
+`3x na semana`, `Emergencial`) ficam sem codigo (`""`) e sao registrados como
+"sem mapeamento" no log.
 
 ## Ambiente
 
