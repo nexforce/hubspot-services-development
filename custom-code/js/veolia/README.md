@@ -128,6 +128,7 @@ falha (`UPLOG_CONTRACT_FAILED`) mesmo com o contrato criado de verdade na Uplog.
 | `titulo` | `titulo` | |
 | contato do negocio `email` | `email` | premissa: nesta fase reaproveita o contato do negocio |
 | `cep` | `cep` | |
+| `distrito` | `distrito` | |
 | `logadouro` | `logradouro` | |
 | `numero` | `numero` | |
 | `complemento` | `complemento` | |

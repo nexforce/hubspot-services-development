@@ -114,6 +114,7 @@ const COLLECTION_SITE_PROPERTIES = [
   "estado_regiao",
   "observacao",
   "status",
+  "distrito",
 ];
 
 // Configuracao de credenciais por ambiente (hom/prod). Usuario e senha do login,
@@ -731,6 +732,7 @@ exports.main = async (event) => {
         // Premissa: nesta fase o local de coleta reaproveita o e-mail do contato do negocio.
         email: contact.email || "",
         cep: site.properties.cep || "",
+        distrito: site.properties.distrito || "",
         logradouro: site.properties.logadouro || "",
         numero: site.properties.numero || "",
         complemento: site.properties.complemento || "",
