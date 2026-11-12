@@ -130,6 +130,7 @@ exports.main = async (context = {}) => {
     city,
     ibgeCityCode,
     ibgeBirthplaceCode,
+    nomeNaturalidade,
   } = context.parameters;
 
   console.log("Required data for register student: ", {
@@ -188,7 +189,9 @@ exports.main = async (context = {}) => {
     complemento: addressComplement,
     codigoIBGECidade: ibgeCityCode,
     codigoIBGENaturalidade: ibgeBirthplaceCode,
-    nomeNaturalidade: "Brasileiro",
+    // O card manda o país para aluno nascido no exterior e "Brasileiro" para o
+    // brasileiro. O fallback cobre chamada antiga sem o parâmetro.
+    nomeNaturalidade: nomeNaturalidade || "Brasileiro",
     setor: neighborhood,
     usuarioResponsavel: +user,
   };

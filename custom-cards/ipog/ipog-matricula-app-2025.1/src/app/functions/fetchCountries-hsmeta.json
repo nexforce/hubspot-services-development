@@ -1,0 +1,7 @@
+{
+  "config": {
+    "entrypoint": "app/functions/fetchCountries.js"
+  },
+  "uid": "fetchCountries",
+  "type": "app-function"
+}
