@@ -736,6 +736,13 @@ exports.main = async (event) => {
         residuos: buildResiduos(site.lineItems),
       })),
     };
+    // Log do payload de contrato antes do envio. Usa JSON.stringify, nunca
+    // console.log(objeto), porque o console.log do Node trunca estruturas
+    // aninhadas a partir do terceiro nivel (mostra "[Array]"/"[Object]"), o que
+    // escondia o conteudo de locaisDeColeta[].residuos no historico da action.
+    console.log(
+      `[veolia][uplog][main] Payload de contrato: ${JSON.stringify(contractPayload, null, 2)}`,
+    );
     const contractResult = await postUplog(
       credentials,
       "/wp-json/api/v11/contrato",
