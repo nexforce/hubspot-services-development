@@ -537,7 +537,13 @@ async function loginToUplog(credentials) {
 }
 
 function interpretUplogResponse(body) {
-  const responseFlag = body && body.response === true;
+  // "response" nao e sempre o booleano true no sucesso: o endpoint de contrato
+  // confirmado devolve um numero (o id do registro criado na Uplog, ex.: 20840),
+  // nao o booleano true. O erro, por outro lado, sempre traz response: false
+  // (conforme documentado pela Uplog). Por isso a checagem e por "truthy", nao
+  // por igualdade estrita com true; um body vazio ou sem o campo (ex.: falha de
+  // parse do JSON) continua caindo em falha, porque undefined/null sao falsy.
+  const responseFlag = Boolean(body && body.response);
   const statusCode = body && body.data && body.data.status !== undefined ? body.data.status : null;
   return {
     ok: responseFlag,
@@ -711,7 +717,7 @@ exports.main = async (event) => {
         email: deal.e_mail_de_contato || "",
         cep: companyPostalCode || "",
         logradouro: deal.logadouro || "",
-        numero: deal.numero || "",
+        numero: Number(deal.numero) || 0,
         complemento: deal.complemento || "",
         distrito: deal.distrito || "",
         bairro: deal.bairro || "",
@@ -785,33 +791,3 @@ exports.main = async (event) => {
     );
   }
 };
-
-// [FINAL]
-
-// ===== Bloco de teste local. NAO colar no portal. =====
-// Uso: node custom-code/js/veolia/veoliaUplogSync.js <dealId>
-// As variaveis de ambiente devem estar exportadas no shell antes de rodar.
-const dotenv = require("dotenv");
-dotenv.config();
-
-async function runLocalTest() {
-  const dealId = process.argv[2];
-  if (!dealId) {
-    console.error("Informe o id do negocio: node veoliaUplogSync.js <dealId>");
-    process.exitCode = 1;
-    return;
-  }
-  try {
-    const output = await exports.main({ object: { objectId: dealId } });
-    console.log("OutputFields:", JSON.stringify(output, null, 2));
-  } catch (error) {
-    // exports.main agora lanca em caso de erro (a action falha de verdade no
-    // HubSpot); aqui so evita o stack trace cru do Node e marca o teste como falho.
-    console.error("Action falhou:", error && error.message ? error.message : error);
-    process.exitCode = 1;
-  }
-}
-
-if (require.main === module) {
-  runLocalTest();
-}

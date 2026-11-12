@@ -65,7 +65,18 @@ conforme o de/para. Apenas o roteamento usa `unidade_de_atendimento`.
 { "response": true, "code": "123", "message": "Operacao concluida", "data": { "status": 200 } }
 ```
 
-O script considera sucesso apenas `response === true`.
+No endpoint de contrato, confirmado em teste de homologacao, o sucesso aparece assim,
+com `response` como o id numerico do registro criado na Uplog, nao o booleano `true`:
+
+```json
+{ "data": { "status": "200" }, "response": 20840 }
+```
+
+O script considera sucesso qualquer valor "truthy" de `response` (booleano `true` ou
+um numero de id, por exemplo), e falha apenas quando `response` vem `false` (conforme
+documentado pela Uplog) ou ausente. Checagem por igualdade estrita com `true` foi
+removida porque não cobria o formato real do endpoint de contrato: o script reportava
+falha (`UPLOG_CONTRACT_FAILED`) mesmo com o contrato criado de verdade na Uplog.
 
 ## De/para implementado
 
@@ -240,8 +251,8 @@ devolve um status de erro nos campos de saida.
 | `UPLOG_LOGIN_FAILED` | login recusado (401/403) | nao, erro de credencial |
 | `UPLOG_UNAUTHORIZED` | 401 nas chamadas de negocio depois de reautenticar | reautentica uma vez |
 | `UPLOG_TRANSIENT_EXHAUSTED` | 429 ou 5xx apos 3 tentativas | 3 tentativas com backoff |
-| `UPLOG_GENERATOR_FAILED` | gerador retornou `response: false` | nao, sem loop |
-| `UPLOG_CONTRACT_FAILED` | contrato retornou `response: false` | nao, sem loop |
+| `UPLOG_GENERATOR_FAILED` | gerador retornou `response` falsy (`false` ou ausente) | nao, sem loop |
+| `UPLOG_CONTRACT_FAILED` | contrato retornou `response` falsy (`false` ou ausente) | nao, sem loop |
 
 Politica completa: 401 no login para na hora; 401 nas chamadas de negocio
 reautentica uma unica vez e repete; 429 e 5xx entram em backoff simples com no
