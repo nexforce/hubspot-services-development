@@ -47,7 +47,7 @@ const DEAL_PROPERTIES = [
   "utilizado_para_alimentar_o_lats_an8",
   "codigo_da_unidade_da_veolia",
   "unidade_de_atendimento",
-  "record_type_id",
+  "hs_object_id",
   "observacao",
   "titulo",
   "e_mail_de_contato",
@@ -307,7 +307,7 @@ function buildResiduos(lineItemPropertiesList) {
     const frequency = resolveFrequencyCode(properties.frequencia_coleta);
     if (!frequency.mapped) {
       console.warn(
-        `[veolia][uplog] frequencia_coleta sem mapeamento: '${properties.frequencia_coleta || ""}' (residuo ${residueCode})`,
+        `[veolia][uplog][buildResiduos] frequencia_coleta sem mapeamento: '${properties.frequencia_coleta || ""}' (residuo ${residueCode})`,
       );
     }
     residuos.push({
@@ -688,7 +688,7 @@ exports.main = async (event) => {
     const contractPayload = {
       codigoCliente: generatorPayload.codigoCliente,
       codigoCnpj: deal.codigo_da_unidade_da_veolia || "",
-      codigoContrato: deal.record_type_id || "",
+      codigoContrato: deal.hs_object_id || "",
       nome: contactName,
       email: contact.email || "",
       telefone: contact.phone || "",
@@ -740,7 +740,7 @@ exports.main = async (event) => {
     contractOk = true;
 
     console.log(
-      `Uplog OK. unidade=${unit} gerador=${generatorOk} contrato=${contractOk} locais=${contractPayload.locaisDeColeta.length}`,
+      `[veolia][uplog][main] Uplog OK. unidade=${unit} gerador=${generatorOk} contrato=${contractOk} locais=${contractPayload.locaisDeColeta.length}`,
     );
 
     return {
@@ -755,7 +755,7 @@ exports.main = async (event) => {
     const code = error && error.code ? error.code : "UNEXPECTED_ERROR";
     const message = error && error.message ? error.message : String(error);
     // Log sem dados sensiveis: apenas codigo, mensagem e status retornados.
-    console.error(`Uplog erro [${code}]: ${message}`);
+    console.error(`[veolia][uplog][main] Uplog erro [${code}]: ${message}`);
     return {
       uplog_status: "ERROR",
       uplog_unidade: unit,
