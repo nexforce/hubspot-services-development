@@ -73,7 +73,7 @@ O script considera sucesso apenas `response === true`.
 
 | Origem no HubSpot | Campo na Uplog | Observacao |
 | --- | --- | --- |
-| `cpf` (senao `cnpj`) | `cnpjCpf` | se os dois estiverem vazios, erro `MISSING_DOCUMENT` |
+| `cpf` (senao `cnpj`) | `cnpjCpf` | sem formatacao (so digitos, via `onlyDigits`); se os dois estiverem vazios, erro `MISSING_DOCUMENT` |
 | `veo_commercialname__c` | `razaoSocial` | |
 | `nome_fantasia` | `nomeFantasia` | |
 | `codigo_cliente` | `codigoCliente` | mesmo valor reaproveitado no contrato |
@@ -231,6 +231,14 @@ validacao de payload nao tem retry.
 
 O log nunca imprime token nem senha. So aparecem `code`, `message` e `status`
 retornados pela Uplog.
+
+## Normalizacao de CPF/CNPJ
+
+As propriedades `cpf` e `cnpj` do negocio podem vir formatadas no HubSpot (pontos,
+traco, barra). Antes de montar `cnpjCpf` para o gerador, o script remove toda
+formatacao com `onlyDigits`, deixando so os digitos, porque e esse o formato que a
+Uplog espera. A escolha entre `cpf` e `cnpj` (o primeiro preenchido) acontece depois
+da limpeza, entao um campo com so caracteres de formatacao conta como vazio.
 
 ## Premissas e pendencias
 

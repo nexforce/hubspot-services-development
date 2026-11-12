@@ -291,6 +291,16 @@ function firstNonEmpty(...values) {
   return found === undefined ? "" : String(found).trim();
 }
 
+// Remove qualquer formatacao de CPF/CNPJ (pontos, traco, barra, espacos), deixando
+// so os digitos. A propriedade do HubSpot pode vir formatada (ex.: "123.456.789-00"
+// ou "12.345.678/0001-00"), mas a Uplog espera o numero em string sem formatacao.
+function onlyDigits(value) {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  return String(value).replace(/\D/g, "");
+}
+
 function buildResiduos(lineItemPropertiesList) {
   // Cada residuo e um item de linha associado ao local de coleta. Um item vira um
   // elemento de residuos com o codigo do residuo e a frequencia convertida para o
@@ -654,8 +664,9 @@ exports.main = async (event) => {
       return cachedToken;
     };
 
-    // Etapa 1, gerador.
-    const cnpjCpf = firstNonEmpty(deal.cpf, deal.cnpj);
+    // Etapa 1, gerador. cpf/cnpj podem vir formatados do HubSpot; onlyDigits remove
+    // a formatacao antes de decidir qual dos dois esta preenchido.
+    const cnpjCpf = firstNonEmpty(onlyDigits(deal.cpf), onlyDigits(deal.cnpj));
     if (!cnpjCpf) {
       throw new UplogError(
         "MISSING_DOCUMENT",
