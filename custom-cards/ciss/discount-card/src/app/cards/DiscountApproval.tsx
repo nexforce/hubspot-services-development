@@ -134,8 +134,10 @@ const formatHoras = (value: number): string =>
 
 // Espelha `calcDiscountPercent` de `discountMath.ts`, inclusive nos nulos:
 // edição só de horas dá bruto === líquido, e "over" dá líquido > bruto.
+// `liquido === 0` é desconto de 100% e tem que render 100, não null (ver o
+// comentário em `calcDiscountPercent`). Só `liquido < 0` continua bloqueado.
 const percentualDesconto = (bruto: number, liquido: number): number | null => {
-  if (bruto <= 0 || liquido <= 0 || liquido >= bruto) return null;
+  if (bruto <= 0 || liquido < 0 || liquido >= bruto) return null;
   return ((bruto - liquido) / bruto) * 100;
 };
 

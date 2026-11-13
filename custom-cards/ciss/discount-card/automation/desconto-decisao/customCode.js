@@ -537,10 +537,14 @@ const buildTargets = (categories) => {
   const targets = {};
   for (const { fieldName } of FIELDS) {
     const category = categories[fieldName];
+    // `novo === 0` é desconto de 100% (valor final R$ 0,00), cenário válido:
+    // excluí-lo deixava o sistema aprovado sem o item ser atualizado. Mesmo
+    // ajuste em `buildDiscountMap` de ApplyDiscounts.js: as duas rotas de
+    // escrita têm que concordar. Só negativo continua bloqueado.
     if (
       category &&
       category.original > 0 &&
-      category.novo > 0 &&
+      category.novo >= 0 &&
       category.novo !== category.original
     ) {
       targets[fieldName] = category.novo;
@@ -559,8 +563,10 @@ const buildRateHoursMap = (categories) => {
     const hoursOriginal = parseFloat(category.horasOriginal || 0);
     const hoursNew =
       category.horasNovo == null ? null : parseFloat(category.horasNovo);
+    // `unitNew === 0` é desconto de 100% na categoria hora×valor, mesmo
+    // ajuste do campo flat acima: não pode ficar de fora do mapa.
     const hasUnitChange =
-      unitOriginal > 0 && unitNew > 0 && unitNew !== unitOriginal;
+      unitOriginal > 0 && unitNew >= 0 && unitNew !== unitOriginal;
     const hoursEdited = hoursNew != null && hoursNew !== hoursOriginal;
     if (hasUnitChange || hoursEdited) {
       // `alvoTotal` espelha `rateHoursLiquido` do card: é o líquido que a prévia

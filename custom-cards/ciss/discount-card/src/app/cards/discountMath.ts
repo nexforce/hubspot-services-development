@@ -82,11 +82,17 @@ export const hasAnyValue = (line: ContractLine): boolean =>
   ) ||
   hasRateHoursValue(line.consultoriaValorUnitario, line.consultoriaTotalBruto);
 
+// `newValue === 0` é desconto de 100% (valor final R$ 0,00), um cenário de
+// negociação válido (ex.: item de mensalidade ou de licença zerado) que tem
+// que render 100, não null: tratá-lo como inválido fazia `hasAnyFieldOverThreshold`
+// e `calcTotalDiscountPercent` nunca verem esse sistema como acima da alçada,
+// então ele nunca ia para aprovação, relato de operações de novembro/2026.
+// Só `newValue < 0` continua bloqueado.
 export const calcDiscountPercent = (
   original: number,
   newValue: number,
 ): number | null => {
-  if (original <= 0 || newValue <= 0 || newValue >= original) return null;
+  if (original <= 0 || newValue < 0 || newValue >= original) return null;
   return ((original - newValue) / original) * 100;
 };
 
