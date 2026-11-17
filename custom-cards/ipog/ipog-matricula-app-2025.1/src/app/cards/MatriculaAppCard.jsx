@@ -1103,42 +1103,41 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   ) => {
     let antecipationValue = totalValue;
 
-    // O desconto de antecipação soma à regra fixa. A flag vem do desconto selecionado,
-    // porque a categoria marcada no objeto Descontos chega junto do plano do SEI.
+    // Critério exclusivo: quando o desconto de antecipação foi aplicado, vale só ele,
+    // independente de nível e modalidade, e a regra base não é aplicada.
     const temDescontoAntecipacao = Object.values(
       selectedDiscountsByCategory || {},
     ).some((discount) => discount?.somenteAntecipacao);
-    const descontoAntecipacao = temDescontoAntecipacao
-      ? VALOR_DESCONTO_ANTECIPACAO
-      : 0;
+    if (temDescontoAntecipacao) {
+      return totalValue - VALOR_DESCONTO_ANTECIPACAO;
+    }
 
     if (
       properties.nivel_de_interesse === NIVEL_INTERESSE_CEU &&
       selectedCondition.valorMatricula === 150
     ) {
-      antecipationValue = totalValue - 20 - descontoAntecipacao;
+      antecipationValue = totalValue - 20;
     } else if (
       properties.nivel_de_interesse === NIVEL_INTERESSE_CEU &&
       selectedCondition.valorMatricula === 250
     ) {
-      antecipationValue = totalValue - 50 - descontoAntecipacao;
+      antecipationValue = totalValue - 50;
     } else if (
       properties.nivel_de_interesse === "Pós-graduação" &&
       (properties.modalidade_de_interesse === "Presencial" ||
         properties.modalidade_de_interesse === "Ao Vivo") &&
       !selectedCategory.includes("ex_aluno_4")
     ) {
-      antecipationValue = totalValue - 30 - descontoAntecipacao;
+      antecipationValue = totalValue - 30;
     } else if (
       properties.nivel_de_interesse === "Pós-graduação" &&
       (properties.modalidade_de_interesse === "Presencial" ||
         properties.modalidade_de_interesse === "Ao Vivo") &&
        selectedCategory.includes("ex_aluno_4")
     ) {
-      antecipationValue = totalValue - 15 - descontoAntecipacao;
+      antecipationValue = totalValue - 15;
     } else if (properties.nivel_de_interesse === "Graduação") {
-      antecipationValue =
-        totalValue - totalValue * 0.05 - descontoAntecipacao;
+      antecipationValue = totalValue - totalValue * 0.05;
     }
     return antecipationValue < 50 ? totalValue : antecipationValue;
   };
