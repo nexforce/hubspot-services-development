@@ -418,4 +418,40 @@ run("evaluateInstallments: entre 3 e 6 com 7 = false", {}, (r) => {
   assert.strictEqual(evaluateInstallments("entre", "3", "6", 7), false);
 }, { checkTrace: false });
 
+// 14. Flag "somente antecipação"
+run("flag de antecipação ausente não marca a categoria", { rules: [baseRule()] }, (r) => {
+  assert.strictEqual(r.categories[0].somenteAntecipacao, false);
+});
+run(
+  "flag de antecipação true marca a categoria",
+  { rules: [baseRule({ aplicar_somente_desconto_antecipacao: "true" })] },
+  (r) => {
+    assert.strictEqual(r.categories[0].somenteAntecipacao, true);
+  },
+);
+run(
+  "flag de antecipação false não marca a categoria",
+  { rules: [baseRule({ aplicar_somente_desconto_antecipacao: "false" })] },
+  (r) => {
+    assert.strictEqual(r.categories[0].somenteAntecipacao, false);
+  },
+);
+run(
+  "flag de antecipação não interfere na elegibilidade",
+  {
+    rules: [baseRule({ aplicar_somente_desconto_antecipacao: "true", turma: "ADM11262M" })],
+    turma: "OUTRA",
+  },
+  (r) => {
+    assert.deepStrictEqual(values(r), []);
+  },
+);
+run(
+  "trace identifica a categoria marcada como somente antecipação",
+  { rules: [baseRule({ aplicar_somente_desconto_antecipacao: "true" })] },
+  (r) => {
+    assert.ok(r.trace.some((line) => line.includes("somente antecipação")));
+  },
+);
+
 console.log(`\n${passed} testes do motor de descontos do objeto passaram.`);

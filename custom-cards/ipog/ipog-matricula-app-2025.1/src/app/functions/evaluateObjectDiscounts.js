@@ -25,6 +25,11 @@ const axios = require("axios");
  *   desconto para N turmas sem duplicar registro (2026-11-17).
  * - Acumulação é verificada apenas entre descontos do objeto; desconto novo sempre pode
  *   acumular com desconto legado (pendente de validação com o cliente).
+ * - `aplicar_somente_desconto_antecipacao` marca a categoria como "somente antecipação":
+ *   o card não aplica valor nenhum (resumo, orçamento e item de linha ficam sem efeito),
+ *   mas o código segue em `codigodesconto` e vai em `planoDescontoVOs` na pré-matrícula.
+ *   A marca é por categoria, porque um registro do objeto mapeia para um `categoria_sei`
+ *   (2026-11-17).
  *
  * Módulo autocontido de propósito: o empacotador do HubSpot não inclui arquivos
  * auxiliares importados por caminho relativo (lição dos builds #38/#39).
@@ -370,6 +375,10 @@ const MAPEAMENTO_EQUIPES_POR_PORTAL = {
 
 const STATUS_ATIVO = "Ativo";
 
+// Marca a categoria como "somente antecipação": o código é salvo e enviado na
+// pré-matrícula, mas o valor não é aplicado no resumo, no item de linha nem na cotação.
+const ANTECIPACAO_FLAG = "aplicar_somente_desconto_antecipacao";
+
 // Valor de regra que funciona como curinga: quando presente em um critério de
 // elegibilidade, aquele critério deixa de restringir (casa com qualquer valor do
 // negócio). Vale para unidade_ensino, nivel_interesse, modalidade_ensino,
@@ -391,6 +400,7 @@ const DISCOUNT_PROPERTIES = [
   "status",
   "prioridade",
   "permite_acumulacao",
+  ANTECIPACAO_FLAG,
   "data_inicio_vigencia",
   "data_fim_vigencia",
   "unidade_ensino",
@@ -636,9 +646,12 @@ function evaluateObjectDiscounts(ctx = {}) {
       codigoDesconto: rule.codigo_desconto || "",
       prioridade: parseNumber(rule.prioridade),
       permiteAcumulacao: normalize(rule.permite_acumulacao) === "true",
+      somenteAntecipacao: normalize(rule[ANTECIPACAO_FLAG]) === "true",
       condicaoParcelas,
     });
-    trace.push(`elegível: ${nome} → ${categoria}`);
+    trace.push(
+      `elegível: ${nome} → ${categoria}${normalize(rule[ANTECIPACAO_FLAG]) === "true" ? " (somente antecipação)" : ""}`,
+    );
   }
 
   // Mesma categoria em regras diferentes: menor prioridade (número) vence.
@@ -675,6 +688,33 @@ exports.resolveTeamName = resolveTeamName;
 exports.getTeamMapForPortal = getTeamMapForPortal;
 exports.parseNumber = parseNumber;
 exports.evaluateInstallments = evaluateInstallments;
+
+/**
+ * Pagina o search do objeto Descontos e devolve só as propriedades das regras.
+ * Isolado para permitir o fallback quando a propriedade da flag ainda não existe.
+ */
+async function fetchAllRules(headers, discountsObjectId, properties) {
+  const rules = [];
+  let after;
+  do {
+    const searchResponse = await axios({
+      method: "POST",
+      url: `https://api.hubapi.com/crm/v3/objects/${discountsObjectId}/search`,
+      headers,
+      data: {
+        filterGroups: [
+          { filters: [{ propertyName: "status", operator: "EQ", value: STATUS_ATIVO }] },
+        ],
+        properties,
+        limit: 100,
+        ...(after ? { after } : {}),
+      },
+    });
+    rules.push(...(searchResponse.data.results || []).map((record) => record.properties || {}));
+    after = searchResponse.data.paging?.next?.after;
+  } while (after);
+  return rules;
+}
 
 /**
  * Ponto de entrada serverless.
@@ -721,25 +761,26 @@ exports.main = async (context = {}) => {
     });
     const dealProps = dealResponse.data.properties || {};
 
-    const rules = [];
-    let after;
-    do {
-      const searchResponse = await axios({
-        method: "POST",
-        url: `https://api.hubapi.com/crm/v3/objects/${discountsObjectId}/search`,
-        headers,
-        data: {
-          filterGroups: [
-            { filters: [{ propertyName: "status", operator: "EQ", value: STATUS_ATIVO }] },
-          ],
-          properties: DISCOUNT_PROPERTIES,
-          limit: 100,
-          ...(after ? { after } : {}),
-        },
-      });
-      rules.push(...(searchResponse.data.results || []).map((record) => record.properties || {}));
-      after = searchResponse.data.paging?.next?.after;
-    } while (after);
+    let rules;
+    try {
+      rules = await fetchAllRules(headers, discountsObjectId, DISCOUNT_PROPERTIES);
+    } catch (error) {
+      // A propriedade da flag precisa existir na conta antes do deploy: o search
+      // devolve 400 quando ela não existe, e isso derrubaria TODA a avaliação.
+      // O fallback avalia sem a flag, então nada é marcado, em vez de sumir com
+      // todos os descontos do card.
+      const mensagem = String(error.response?.data?.message || "");
+      if (error.response?.status === 400 && mensagem.includes(ANTECIPACAO_FLAG)) {
+        console.warn(`${ANTECIPACAO_FLAG} ausente nesta conta; avaliando sem a flag.`);
+        rules = await fetchAllRules(
+          headers,
+          discountsObjectId,
+          DISCOUNT_PROPERTIES.filter((name) => name !== ANTECIPACAO_FLAG),
+        );
+      } else {
+        throw error;
+      }
+    }
 
     const equipeTime = resolveTeamName(dealProps.hubspot_team_id, portalId);
     console.log(

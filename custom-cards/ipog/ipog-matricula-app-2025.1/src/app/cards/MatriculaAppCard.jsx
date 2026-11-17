@@ -646,8 +646,11 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   // disparado no onChange do Tipo de Pagamento usar o valor novo imediatamente, sem
   // depender do clique em Simular. A elegibilidade não depende mais do plano escolhido:
   // o critério de parcelas é aplicado no bloqueio dos planos, não aqui.
+  // Devolve as categorias avaliadas para o chamador usar a flag de antecipação
+  // no mesmo clique, sem depender do estado do React já atualizado.
   const refreshObjectDiscounts = async (formaPagamento = null) => {
-    if (!envConfig.discountsObjectId) return;
+    if (!envConfig.discountsObjectId) return [];
+    let avaliadas = [];
     setIsEvaluatingObjectDiscounts(true);
     try {
       const { response } = await runServerless({
@@ -661,7 +664,8 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       });
 
       if (response?.status === "SUCCESS") {
-        setObjectDiscountCategories(response.response?.categories || []);
+        avaliadas = response.response?.categories || [];
+        setObjectDiscountCategories(avaliadas);
         setObjectDiscountsEvaluated(true);
       } else {
         setObjectDiscountCategories([]);
@@ -686,6 +690,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     } finally {
       setIsEvaluatingObjectDiscounts(false);
     }
+    return avaliadas;
   };
 
   useEffect(() => {
@@ -745,7 +750,14 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     // Motores da etapa 2 + legado: reavaliam os descontos elegíveis no clique único
     // (legado roda também ao abrir o card; aqui garante frescor com o tipo selecionado).
     handleVerifyDiscounts();
-    refreshObjectDiscounts(selectedTipoPagamento || null);
+    const objectCategories = await refreshObjectDiscounts(selectedTipoPagamento || null);
+    // Categorias marcadas como "somente antecipação": o valor não entra no resumo nem
+    // no orçamento, mas o código segue em codigodesconto e vai para a pré-matrícula.
+    const categoriasSomenteAntecipacao = new Set(
+      (objectCategories || [])
+        .filter((item) => item?.somenteAntecipacao)
+        .map((item) => String(item.value)),
+    );
 
     try {
       const promises =
@@ -781,7 +793,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               parameters: {
                 categoriadesconto: category,
               },
-            }),
+            }).then((resultado) => ({ ...resultado, __categoria: category })),
           );
         });
       }
@@ -794,7 +806,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
           parameters: {
             categoriadesconto: avistaCategoria,
           },
-        }),
+        }).then((resultado) => ({ ...resultado, __categoria: "acao_comercial" })),
       );
 
       // Fetch diamante indications if aluno_diamante is in selected categories
@@ -836,7 +848,20 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
           const discounts = Array.isArray(resp.response.response)
             ? resp.response.response
             : [resp.response.response];
-          allDiscounts.push(...discounts);
+          const categoriaDaResposta = resp.__categoria || null;
+          allDiscounts.push(
+            ...discounts.map((discount) => {
+              const categoria = discount.categoria || categoriaDaResposta || "";
+              const marcadoPelaCategoria =
+                categoria !== "" && categoriasSomenteAntecipacao.has(String(categoria));
+              return {
+                ...discount,
+                ...(categoria ? { categoria } : {}),
+                somenteAntecipacao:
+                  discount.somenteAntecipacao === true || marcadoPelaCategoria,
+              };
+            }),
+          );
         } else if (resp?.response?.status === "ERROR") {
           sendAlert({
             type: "warning",
@@ -966,6 +991,23 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
     // Step 3: Apply category discounts multiplicatively
     sortedDiscounts.forEach((discount) => {
+      // Marcado como somente antecipação: o código é registrado, mas não há efeito
+      // monetário no resumo, no item de linha nem na cotação.
+      if (discount.somenteAntecipacao) {
+        discountDetails.push({
+          name: discount.nomeplanodesconto,
+          categoria: discount.categoria,
+          type: discount.tipodescontoparcela,
+          originalValue:
+            discount.tipodescontoparcela === "VA"
+              ? discount.percdescontoparcela
+              : discount.percdescontoparcela + "%",
+          appliedValue: 0,
+          naoAplicado: true,
+          code: discount.codigoplanodesconto,
+        });
+        return;
+      }
       if (discount.tipodescontoparcela === "VA") {
         const discountAmount = Math.min(parseFloat(discount.percdescontoparcela || 0), currentValue);
         currentValue -= discountAmount;
@@ -1002,7 +1044,18 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     const avistaDiscount = selectedDiscounts?.["acao_comercial"];
     let pagamentoAVistaPercent = 0;
     let pagamentoAVistaValue = 0;
-    if (avistaDiscount) {
+    if (avistaDiscount && avistaDiscount.somenteAntecipacao) {
+      // Ação comercial marcada: registra o código sem reduzir o valor.
+      discountDetails.push({
+        name: avistaDiscount.nomeplanodesconto,
+        categoria: "acao_comercial",
+        type: avistaDiscount.tipodescontoparcela,
+        originalValue: avistaDiscount.percdescontoparcela + "%",
+        appliedValue: 0,
+        naoAplicado: true,
+        code: avistaDiscount.codigoplanodesconto,
+      });
+    } else if (avistaDiscount) {
       pagamentoAVistaPercent = parseFloat(avistaDiscount.percdescontoparcela || 0);
       pagamentoAVistaValue = currentValue * (pagamentoAVistaPercent / 100);
       currentValue = currentValue * (1 - pagamentoAVistaPercent / 100);
@@ -1598,6 +1651,11 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                           <Text format={{ fontSize: "small" }}>
                             {desconto.nomeplanodesconto}
                           </Text>
+                          {desconto.somenteAntecipacao && (
+                            <Text format={{ fontSize: "small" }}>
+                              Somente antecipação
+                            </Text>
+                          )}
                           <Button
                             onClick={() => handleSelectDiscountForCategory(categoria, desconto)}
                             variant={
@@ -1641,6 +1699,11 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                       <Text format={{ fontSize: "small" }}>
                         {desconto.nomeplanodesconto}
                       </Text>
+                      {desconto.somenteAntecipacao && (
+                        <Text format={{ fontSize: "small" }}>
+                          Somente antecipação
+                        </Text>
+                      )}
                       <Button
                         onClick={() => handleSelectDiscountForCategory("acao_comercial", desconto)}
                         variant={
@@ -1803,7 +1866,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                     const diamondLabel = getDiamondDiscountLabel();
                     const discountNames = [
                       ...(diamondLabel ? [diamondLabel] : []),
-                      ...(discountData.allDiscounts || []).filter(d => d.categoria !== "aluno_diamante").map(d => d.name)
+                      ...(discountData.allDiscounts || []).filter(d => d.categoria !== "aluno_diamante").map(d => d.naoAplicado ? `${d.name} (somente antecipação)` : d.name)
                     ];
                     // Planos incompatíveis com o critério de parcelas dos descontos
                     // selecionados: continuam visíveis, mas não podem ser escolhidos.
@@ -1948,9 +2011,12 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                         <Flex key={index} direction="row" justify="between">
                           <Text>
                             {discount.name} ({discount.originalValue})
+                            {discount.naoAplicado ? " · somente antecipação" : ""}
                           </Text>
                           <Text format={{ fontWeight: "bold" }}>
-                            - {formatCurrency(discount.appliedValue)}
+                            {discount.naoAplicado
+                              ? "Não aplicado ao valor"
+                              : `- ${formatCurrency(discount.appliedValue)}`}
                           </Text>
                         </Flex>
                       ))}
