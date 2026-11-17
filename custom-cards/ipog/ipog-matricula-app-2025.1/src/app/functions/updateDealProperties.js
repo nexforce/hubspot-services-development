@@ -163,6 +163,7 @@ exports.main = async (context = {}) => {
     selectedCondition,
     lineItem,
     selectedCategory,
+    categoriasSomenteAntecipacao = [],
     unitId,
     courseId,
     className,
@@ -232,11 +233,23 @@ exports.main = async (context = {}) => {
     const categoriaMap = Object.fromEntries(
       (propertyResponse.data.options || []).map(({ value, label }) => [value, label]),
     );
+    // Categorias marcadas como "somente antecipação" não entram na descrição do item
+    // de linha: o código segue em codigodesconto, mas o desconto não aparece no orçamento.
+    const categoriasIgnoradasNaDescricao = new Set(
+      (categoriasSomenteAntecipacao || []).map(String),
+    );
     const categoriaLabel = String(selectedCategory || "")
       .split(";")
       .filter(Boolean)
+      .filter((cat) => !categoriasIgnoradasNaDescricao.has(String(cat)))
       .map((cat) => categoriaMap[cat] || cat)
       .join(", ");
+    // Fallback da descrição: só códigos de descontos efetivamente aplicados, para que
+    // o desconto de antecipação não apareça nem como nome nem como código.
+    const codigosParaDescricao = (Array.isArray(allDiscounts) ? allDiscounts : [])
+      .filter((discount) => discount.code && !discount.naoAplicado)
+      .map((discount) => discount.code)
+      .join(";");
 
     let lineItemId = null;
     if (lineItemData.total > 0) {
@@ -274,7 +287,7 @@ exports.main = async (context = {}) => {
               ? selectedCondition.qtdeParcelas + "x"
               : selectedCondition.qtdeParcelas
           } - ${parameters.course} (${parameters.class})`,
-          description: categoriaLabel || discountCodes || "",
+          description: categoriaLabel || codigosParaDescricao || "",
           price: selectedCondition.valorParcela,
           recurringbillingfrequency: frequencia,
           discount: lineItem.discount,
@@ -322,7 +335,7 @@ exports.main = async (context = {}) => {
               ? selectedCondition.qtdeParcelas + "x"
               : selectedCondition.qtdeParcelas
           } - ${parameters.course}`,
-          description: categoriaLabel || discountCodes || "",
+          description: categoriaLabel || codigosParaDescricao || "",
           price: selectedCondition.valorParcela,
           recurringbillingfrequency: frequencia,
           discount: lineItem.discount,
