@@ -110,7 +110,7 @@ run(
   (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
 );
 
-// 6. Turma (texto, comparação exata normalizada)
+// 6. Turma (texto normalizado; multivalorada por ";", OR entre turmas)
 run(
   "turma casa ignorando caixa",
   { rules: [baseRule({ turma: "ADM11262M" })], turma: "adm11262m" },
@@ -120,6 +120,36 @@ run(
   "turma diferente não casa",
   { rules: [baseRule({ turma: "ADM11262M" })], turma: "OUTRA" },
   (r) => assert.deepStrictEqual(values(r), []),
+);
+run(
+  "turma multivalorada casa com a segunda turma do negócio",
+  { rules: [baseRule({ turma: "ADM11262M;ADM11263M" })], turma: "ADM11263M" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
+);
+run(
+  "turma multivalorada casa com a primeira turma do negócio",
+  { rules: [baseRule({ turma: "ADM11262M;ADM11263M" })], turma: "adm11262m" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
+);
+run(
+  "turma multivalorada não casa fora da lista",
+  { rules: [baseRule({ turma: "ADM11262M;ADM11263M" })], turma: "ADM99999X" },
+  (r) => assert.deepStrictEqual(values(r), []),
+);
+run(
+  "turma multivalorada ignora separador sobrando",
+  { rules: [baseRule({ turma: " ADM11262M ; ;ADM11263M " })], turma: "ADM11263M" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
+);
+run(
+  "turma vazia na multisseleção não casa negócio sem turma",
+  { rules: [baseRule({ turma: "ADM11262M;ADM11263M" })], turma: "" },
+  (r) => assert.deepStrictEqual(values(r), []),
+);
+run(
+  "turma com curinga junto de valor concreto não restringe",
+  { rules: [baseRule({ turma: "Todas as opções;ADM11262M" })], turma: "OUTRA" },
+  (r) => assert.deepStrictEqual(values(r), ["CAT_TESTE"]),
 );
 
 // 7. Forma de pagamento (vem do card)
