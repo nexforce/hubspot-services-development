@@ -73,6 +73,11 @@ const CONFIG = {
 
 const NIVEL_INTERESSE_CEU = "Curso de extensão universitária";
 
+// Desconto fixo de antecipação, somado à regra fixa quando o desconto marcado como
+// "somente antecipação" foi selecionado. Precisa ser igual ao valor da fórmula da
+// propriedade calculada valor_da_parcela_antecipada.
+const VALOR_DESCONTO_ANTECIPACAO = 130;
+
 // PIX e cartão à vista seguem as mesmas regras de pagamento à vista.
 const isPagamentoAVista = (tipoPagamento) =>
   tipoPagamento === "PIX" || tipoPagamento === "A_VISTA";
@@ -1098,32 +1103,42 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   ) => {
     let antecipationValue = totalValue;
 
+    // O desconto de antecipação soma à regra fixa. A flag vem do desconto selecionado,
+    // porque a categoria marcada no objeto Descontos chega junto do plano do SEI.
+    const temDescontoAntecipacao = Object.values(
+      selectedDiscountsByCategory || {},
+    ).some((discount) => discount?.somenteAntecipacao);
+    const descontoAntecipacao = temDescontoAntecipacao
+      ? VALOR_DESCONTO_ANTECIPACAO
+      : 0;
+
     if (
       properties.nivel_de_interesse === NIVEL_INTERESSE_CEU &&
       selectedCondition.valorMatricula === 150
     ) {
-      antecipationValue = totalValue - 20;
+      antecipationValue = totalValue - 20 - descontoAntecipacao;
     } else if (
       properties.nivel_de_interesse === NIVEL_INTERESSE_CEU &&
       selectedCondition.valorMatricula === 250
     ) {
-      antecipationValue = totalValue - 50;
+      antecipationValue = totalValue - 50 - descontoAntecipacao;
     } else if (
       properties.nivel_de_interesse === "Pós-graduação" &&
       (properties.modalidade_de_interesse === "Presencial" ||
         properties.modalidade_de_interesse === "Ao Vivo") &&
       !selectedCategory.includes("ex_aluno_4")
     ) {
-      antecipationValue = totalValue - 30;
+      antecipationValue = totalValue - 30 - descontoAntecipacao;
     } else if (
       properties.nivel_de_interesse === "Pós-graduação" &&
       (properties.modalidade_de_interesse === "Presencial" ||
         properties.modalidade_de_interesse === "Ao Vivo") &&
        selectedCategory.includes("ex_aluno_4")
     ) {
-      antecipationValue = totalValue - 15;
+      antecipationValue = totalValue - 15 - descontoAntecipacao;
     } else if (properties.nivel_de_interesse === "Graduação") {
-      antecipationValue = totalValue - totalValue * 0.05;
+      antecipationValue =
+        totalValue - totalValue * 0.05 - descontoAntecipacao;
     }
     return antecipationValue < 50 ? totalValue : antecipationValue;
   };
