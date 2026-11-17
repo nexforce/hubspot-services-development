@@ -20,6 +20,9 @@ const axios = require("axios");
  * - `forma_pagamento` usa o mesmo vocabulário de `tipopagamento` do negócio
  *   (PIX, A_VISTA, PARCELADO, RECORRENTE, BOLETO), sem tradução no card (2026-10-15).
  * - `prioridade` menor vence quando o mesmo `categoria_sei` aparece em mais de uma regra.
+ * - `turma` aceita múltiplas turmas separadas por ";" (OR entre elas), com o mesmo
+ *   comportamento dos demais critérios multivalorados. Uma regra pode liberar o
+ *   desconto para N turmas sem duplicar registro (2026-11-17).
  * - Acumulação é verificada apenas entre descontos do objeto; desconto novo sempre pode
  *   acumular com desconto legado (pendente de validação com o cliente).
  *
@@ -468,15 +471,6 @@ function matchTeam(ruleRaw, teamName) {
   return { applies: true, matched };
 }
 
-/** Texto simples (turma): comparação exata normalizada; vazio e "Todas as opções" não restringem. */
-function matchTextValue(ruleRaw, dealValue) {
-  const ruleValue = normalize(ruleRaw);
-  if (!ruleValue) return { applies: false, matched: true };
-  if (ruleValue === TODAS_AS_OPCOES) return { applies: false, matched: true };
-  const deal = normalize(dealValue);
-  return { applies: true, matched: deal !== "" && deal === ruleValue };
-}
-
 /**
  * Avalia uma quantidade de parcelas contra um critério (operador, valor, valor2).
  * Retorna `null` quando não há critério (a regra não restringe parcelas).
@@ -605,7 +599,7 @@ function evaluateObjectDiscounts(ctx = {}) {
       ["nivel_interesse", matchMultiValues(rule.nivel_interesse, nivelDeInteresse)],
       ["modalidade_ensino", matchMultiValues(rule.modalidade_ensino, modalidadeDeInteresse)],
       ["equipe", matchTeam(rule.equipe, equipeTime)],
-      ["turma", matchTextValue(rule.turma, turma)],
+      ["turma", matchMultiValues(rule.turma, turma)],
       ["forma_pagamento", matchMultiValues(rule.forma_pagamento, formaPagamento)],
     ];
     const failed = checks.filter(([, result]) => result.applies && !result.matched);
