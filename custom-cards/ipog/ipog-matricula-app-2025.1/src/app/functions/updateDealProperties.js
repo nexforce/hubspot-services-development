@@ -390,6 +390,10 @@ exports.main = async (context = {}) => {
       valormatricula: selectedCondition.valorMatricula,
       valoracrescimo: selectedCondition.valorAcrescimo,
       desconto_aprovado: lineItem.discount,
+      // Criterio lido pela propriedade calculada. O valor do desconto de antecipacao
+      // fica na formula, porque o SEI nao envia esse numero.
+      desconto_antecipacao_aplicado:
+        (categoriasSomenteAntecipacao || []).length > 0 ? "Sim" : "Não",
       codigocondicao: selectedCondition.codigoCondicao,
       turmacodigo: financialPlan.turmaCodigo,
       codigodesconto: discountCodes || "",
