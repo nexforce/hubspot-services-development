@@ -1202,6 +1202,10 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
           financialPlan: financialPlanData,
           selectedCondition: selectedCondition,
           selectedCategory: selectedCategory.join(";"),
+          categoriasSomenteAntecipacao: Object.values(selectedDiscountsByCategory)
+            .filter((discount) => discount?.somenteAntecipacao)
+            .map((discount) => discount.categoria)
+            .filter(Boolean),
           discountPercent: totalCategoryDiscountPercent,
           discountValue: totalCategoryDiscountValue,
           allDiscounts: allDiscounts,
