@@ -111,6 +111,7 @@ exports.main = async (context = {}) => {
     bairro,
     city,
     sigla_estado,
+    nome_nacionalidade,
   } = parameters || {};
 
   const properties = {};
@@ -157,6 +158,8 @@ exports.main = async (context = {}) => {
     if (bairro !== undefined) properties.bairro = bairro;
     if (city !== undefined) properties.city = city;
     if (sigla_estado !== undefined) properties.sigla_estado = sigla_estado;
+    if (nome_nacionalidade !== undefined)
+      properties.nome_nacionalidade = nome_nacionalidade;
 
     console.log("Updating deal with properties:", properties);
 

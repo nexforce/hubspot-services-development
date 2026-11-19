@@ -66,6 +66,7 @@ const SECTION_A_LABELS = {
   cpf: "CPF",
   phoneNumber: "Número de Telefone",
   birthDate: "Data de Nascimento",
+  nationality: "Nacionalidade",
   educationType: "Escolaridade",
   postalCode: "CEP",
   street: "Rua",
@@ -91,6 +92,210 @@ const EDUCATION_LEVEL_OPTIONS = [
   { label: "Pós-graduação", value: "Pós-graduação" },
   { label: "Mestrado", value: "Mestrado" },
   { label: "Doutorado", value: "Doutorado" },
+];
+
+const NATIONALITY_OPTIONS = [
+  { label: "Brasileira", value: "Brasileira" },
+  { label: "Afegã", value: "Afegã" },
+  { label: "Albanesa", value: "Albanesa" },
+  { label: "Alemã", value: "Alemã" },
+  { label: "Andorrana", value: "Andorrana" },
+  { label: "Angolana", value: "Angolana" },
+  { label: "Antiguana", value: "Antiguana" },
+  { label: "Argelina", value: "Argelina" },
+  { label: "Argentina", value: "Argentina" },
+  { label: "Armênia", value: "Armênia" },
+  { label: "Australiana", value: "Australiana" },
+  { label: "Austríaca", value: "Austríaca" },
+  { label: "Azerbaijana", value: "Azerbaijana" },
+  { label: "Bahamense", value: "Bahamense" },
+  { label: "Bahreinita", value: "Bahreinita" },
+  { label: "Bangladeshiana", value: "Bangladeshiana" },
+  { label: "Barbadense", value: "Barbadense" },
+  { label: "Belga", value: "Belga" },
+  { label: "Belizense", value: "Belizense" },
+  { label: "Beninense", value: "Beninense" },
+  { label: "Bielorrussa", value: "Bielorrussa" },
+  { label: "Birmanesa", value: "Birmanesa" },
+  { label: "Boliviana", value: "Boliviana" },
+  { label: "Bósnia", value: "Bósnia" },
+  { label: "Botsuanesa", value: "Botsuanesa" },
+  { label: "Brasileiro", value: "Brasileiro" },
+  { label: "Britânica", value: "Britânica" },
+  { label: "Bruneiana", value: "Bruneiana" },
+  { label: "Búlgara", value: "Búlgara" },
+  { label: "Burquinense", value: "Burquinense" },
+  { label: "Burundinesa", value: "Burundinesa" },
+  { label: "Butanesa", value: "Butanesa" },
+  { label: "Cabo-verdiana", value: "Cabo-verdiana" },
+  { label: "Camaronesa", value: "Camaronesa" },
+  { label: "Cambojana", value: "Cambojana" },
+  { label: "Canadense", value: "Canadense" },
+  { label: "Catarense", value: "Catarense" },
+  { label: "Cazaque", value: "Cazaque" },
+  { label: "Centro-africana", value: "Centro-africana" },
+  { label: "Chadiana", value: "Chadiana" },
+  { label: "Chilena", value: "Chilena" },
+  { label: "Chinesa", value: "Chinesa" },
+  { label: "Cipriota", value: "Cipriota" },
+  { label: "Colombiana", value: "Colombiana" },
+  { label: "Comoriana", value: "Comoriana" },
+  { label: "Congolesa", value: "Congolesa" },
+  { label: "Coreana", value: "Coreana" },
+  { label: "Costa-marfinense", value: "Costa-marfinense" },
+  { label: "Costarriquenha", value: "Costarriquenha" },
+  { label: "Croata", value: "Croata" },
+  { label: "Cubana", value: "Cubana" },
+  { label: "Dinamarquesa", value: "Dinamarquesa" },
+  { label: "Djibutiana", value: "Djibutiana" },
+  { label: "Dominicana", value: "Dominicana" },
+  { label: "Dominicense", value: "Dominicense" },
+  { label: "Egípcia", value: "Egípcia" },
+  { label: "Emiratense", value: "Emiratense" },
+  { label: "Equatoriana", value: "Equatoriana" },
+  { label: "Eritreia", value: "Eritreia" },
+  { label: "Escocesa", value: "Escocesa" },
+  { label: "Eslovaca", value: "Eslovaca" },
+  { label: "Eslovena", value: "Eslovena" },
+  { label: "Espanhola", value: "Espanhola" },
+  { label: "Estadunidense", value: "Estadunidense" },
+  { label: "Estoniana", value: "Estoniana" },
+  { label: "Eswatiniana", value: "Eswatiniana" },
+  { label: "Etiope", value: "Etiope" },
+  { label: "Etíope", value: "Etíope" },
+  { label: "Fijiana", value: "Fijiana" },
+  { label: "Filipina", value: "Filipina" },
+  { label: "Finlandesa", value: "Finlandesa" },
+  { label: "Francesa", value: "Francesa" },
+  { label: "Gabonesa", value: "Gabonesa" },
+  { label: "Gambiana", value: "Gambiana" },
+  { label: "Ganesa", value: "Ganesa" },
+  { label: "Georgiana", value: "Georgiana" },
+  { label: "Granadina", value: "Granadina" },
+  { label: "Grega", value: "Grega" },
+  { label: "Guatemalteca", value: "Guatemalteca" },
+  { label: "Guianense", value: "Guianense" },
+  { label: "Guineana", value: "Guineana" },
+  { label: "Guineense", value: "Guineense" },
+  { label: "Guinéu-equatorial", value: "Guinéu-equatorial" },
+  { label: "Haitiana", value: "Haitiana" },
+  { label: "Holandesa", value: "Holandesa" },
+  { label: "Hondurenha", value: "Hondurenha" },
+  { label: "Húngara", value: "Húngara" },
+  { label: "Iemenita", value: "Iemenita" },
+  { label: "Indiana", value: "Indiana" },
+  { label: "Indonésia", value: "Indonésia" },
+  { label: "Iraniana", value: "Iraniana" },
+  { label: "Iraquiana", value: "Iraquiana" },
+  { label: "Irlandesa", value: "Irlandesa" },
+  { label: "Islandesa", value: "Islandesa" },
+  { label: "Israelense", value: "Israelense" },
+  { label: "Italiana", value: "Italiana" },
+  { label: "Jamaicana", value: "Jamaicana" },
+  { label: "Japonesa", value: "Japonesa" },
+  { label: "Jordaniana", value: "Jordaniana" },
+  { label: "Kiribatiana", value: "Kiribatiana" },
+  { label: "Kuwaitiana", value: "Kuwaitiana" },
+  { label: "Laosiana", value: "Laosiana" },
+  { label: "Lesotiana", value: "Lesotiana" },
+  { label: "Letã", value: "Letã" },
+  { label: "Libanesa", value: "Libanesa" },
+  { label: "Liberiana", value: "Liberiana" },
+  { label: "Líbia", value: "Líbia" },
+  { label: "Liechtensteiniense", value: "Liechtensteiniense" },
+  { label: "Lituana", value: "Lituana" },
+  { label: "Luxemburguesa", value: "Luxemburguesa" },
+  { label: "Malaia", value: "Malaia" },
+  { label: "Malauiana", value: "Malauiana" },
+  { label: "Maldiva", value: "Maldiva" },
+  { label: "Malgaxe", value: "Malgaxe" },
+  { label: "Malinesa", value: "Malinesa" },
+  { label: "Maltesa", value: "Maltesa" },
+  { label: "Marfinense", value: "Marfinense" },
+  { label: "Marroquina", value: "Marroquina" },
+  { label: "Marshallina", value: "Marshallina" },
+  { label: "Mauriciana", value: "Mauriciana" },
+  { label: "Mauritana", value: "Mauritana" },
+  { label: "Mexicana", value: "Mexicana" },
+  { label: "Micronésia", value: "Micronésia" },
+  { label: "Moçambicana", value: "Moçambicana" },
+  { label: "Moldava", value: "Moldava" },
+  { label: "Monegasca", value: "Monegasca" },
+  { label: "Mongol", value: "Mongol" },
+  { label: "Montenegrina", value: "Montenegrina" },
+  { label: "Namibiana", value: "Namibiana" },
+  { label: "Nauruana", value: "Nauruana" },
+  { label: "Neozelandesa", value: "Neozelandesa" },
+  { label: "Nepalesa", value: "Nepalesa" },
+  { label: "Nicaraguense", value: "Nicaraguense" },
+  { label: "Nigeriana", value: "Nigeriana" },
+  { label: "Nigerina", value: "Nigerina" },
+  { label: "Norte-coreana", value: "Norte-coreana" },
+  { label: "Norte-macedônia", value: "Norte-macedônia" },
+  { label: "Norueguesa", value: "Norueguesa" },
+  { label: "Omanense", value: "Omanense" },
+  { label: "Palauana", value: "Palauana" },
+  { label: "Palestina", value: "Palestina" },
+  { label: "Panamenha", value: "Panamenha" },
+  { label: "Papua-nova-guineense", value: "Papua-nova-guineense" },
+  { label: "Paquistanesa", value: "Paquistanesa" },
+  { label: "Paraguaia", value: "Paraguaia" },
+  { label: "Peruana", value: "Peruana" },
+  { label: "Polonesa", value: "Polonesa" },
+  { label: "Portuguesa", value: "Portuguesa" },
+  { label: "Queniana", value: "Queniana" },
+  { label: "Quirguiz", value: "Quirguiz" },
+  { label: "Romena", value: "Romena" },
+  { label: "Ruandesa", value: "Ruandesa" },
+  { label: "Russa", value: "Russa" },
+  { label: "Salomônica", value: "Salomônica" },
+  { label: "Salvadorenha", value: "Salvadorenha" },
+  { label: "Samoana", value: "Samoana" },
+  { label: "San-marinense", value: "San-marinense" },
+  { label: "Santa-lucense", value: "Santa-lucense" },
+  { label: "São-cristovense", value: "São-cristovense" },
+  { label: "São-vincentina", value: "São-vincentina" },
+  { label: "Sãotomense", value: "Sãotomense" },
+  { label: "Saudita", value: "Saudita" },
+  { label: "Seichelense", value: "Seichelense" },
+  { label: "Senegalesa", value: "Senegalesa" },
+  { label: "Serra-leonesa", value: "Serra-leonesa" },
+  { label: "Sérvia", value: "Sérvia" },
+  { label: "Singapurense", value: "Singapurense" },
+  { label: "Síria", value: "Síria" },
+  { label: "Somali", value: "Somali" },
+  { label: "Sri-lanquesa", value: "Sri-lanquesa" },
+  { label: "Sudanesa", value: "Sudanesa" },
+  { label: "Sueca", value: "Sueca" },
+  { label: "Suíça", value: "Suíça" },
+  { label: "Sul-africana", value: "Sul-africana" },
+  { label: "Sul-coreana", value: "Sul-coreana" },
+  { label: "Sul-sudanesa", value: "Sul-sudanesa" },
+  { label: "Surinamesa", value: "Surinamesa" },
+  { label: "Tailandesa", value: "Tailandesa" },
+  { label: "Taiwanesa", value: "Taiwanesa" },
+  { label: "Tajique", value: "Tajique" },
+  { label: "Tanzaniana", value: "Tanzaniana" },
+  { label: "Tcheca", value: "Tcheca" },
+  { label: "Timorense", value: "Timorense" },
+  { label: "Togolesa", value: "Togolesa" },
+  { label: "Tonganesa", value: "Tonganesa" },
+  { label: "Trinidadiana", value: "Trinidadiana" },
+  { label: "Tunísia", value: "Tunísia" },
+  { label: "Tunisiana", value: "Tunisiana" },
+  { label: "Turca", value: "Turca" },
+  { label: "Turcomena", value: "Turcomena" },
+  { label: "Tuvaluana", value: "Tuvaluana" },
+  { label: "Ucraniana", value: "Ucraniana" },
+  { label: "Ugandense", value: "Ugandense" },
+  { label: "Uruguaia", value: "Uruguaia" },
+  { label: "Uzbeque", value: "Uzbeque" },
+  { label: "Vanuatuense", value: "Vanuatuense" },
+  { label: "Vaticana", value: "Vaticana" },
+  { label: "Venezuelana", value: "Venezuelana" },
+  { label: "Vietnamita", value: "Vietnamita" },
+  { label: "Zambiana", value: "Zambiana" },
+  { label: "Zimbabuense", value: "Zimbabuense" },
 ];
 
 // O gate e a microcopy dizem a mesma coisa ao consultor, então cada frase existe
@@ -581,6 +786,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
     "id_da_matricula",
     "link_de_checkout",
     "link_ficha_do_aluno",
+    "nome_nacionalidade",
     "tipopagamento",
     "valoracrescimo",
     "modalidade_de_interesse",
@@ -635,6 +841,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   const [cpfGateMessage, setCpfGateMessage] = useState(null);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [educationType, setEducationType] = useState("");
+  const [nationality, setNationality] = useState("Brasileira");
   const [registeredCpf, setRegisteredCpf] = useState(null);
 
   // Cancelamento de pré-matrícula: loading fica no botão principal (que é o
@@ -934,6 +1141,11 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       if (dealProperties.bairro) setNeighborhood(dealProperties.bairro);
       if (dealProperties.city) setCity(dealProperties.city);
       if (dealProperties.sigla_estado) setState(dealProperties.sigla_estado);
+      if (dealProperties.nome_nacionalidade) {
+        setNationality(dealProperties.nome_nacionalidade);
+      } else {
+        setNationality("Brasileira");
+      }
 
       // Os campos só iniciam preenchidos quando a data gravada ainda é
       // escolhível. Data no passado abre vazia, para o consultor escolher o
@@ -981,6 +1193,10 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
   }, [dealProperties.escolaridade_do_aluno]);
 
   useEffect(() => {
+    setNationality(dealProperties.nome_nacionalidade || "Brasileira");
+  }, [dealProperties.nome_nacionalidade]);
+
+  useEffect(() => {
     if (!initialLoadDone) return;
 
     const cleanedPostalCode = normalizeDigits(postalCode);
@@ -1023,6 +1239,7 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
       bairro: neighborhood,
       city: city,
       sigla_estado: state,
+      nome_nacionalidade: nationality,
     };
   };
 
@@ -1698,15 +1915,29 @@ const CheckoutCard = ({ context, runServerless, actions }) => {
             />
           </Flex>
 
-          <Select
-            label={SECTION_A_LABELS.educationType}
-            name="educationType"
-            value={educationType}
-            onChange={(value) => setEducationType(String(value))}
-            options={EDUCATION_LEVEL_OPTIONS}
-            placeholder="Selecione a escolaridade"
-            required={true}
-          />
+          <Flex direction="row" gap="small">
+            <Box flex={1}>
+              <Select
+                label={SECTION_A_LABELS.educationType}
+                name="educationType"
+                value={educationType}
+                onChange={(value) => setEducationType(String(value))}
+                options={EDUCATION_LEVEL_OPTIONS}
+                placeholder="Selecione a escolaridade"
+                required={true}
+              />
+            </Box>
+            <Box flex={1}>
+              <Select
+                label={SECTION_A_LABELS.nationality}
+                name="nationality"
+                value={nationality}
+                onChange={(value) => setNationality(String(value))}
+                options={NATIONALITY_OPTIONS}
+                placeholder="Selecione a nacionalidade"
+              />
+            </Box>
+          </Flex>
 
           <Divider />
 
