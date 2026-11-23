@@ -1232,6 +1232,83 @@ const main = async () => {
     }
   }
 
+  // -------------------------------------------------------------------------
+  secao("Desconto de 100%: valor final R$ 0,00 é aplicado e exige aprovação");
+  // Relato de operações (novembro/2026): um desconto de 100% (valor final
+  // R$ 0,00) num sistema só de Mensalidade não era aplicado. `calcDiscountPercent`
+  // tratava `newValue <= 0` como inválido e devolvia null, então nem
+  // `calcTotalDiscountPercent` nem `hasAnyFieldOverThreshold` viam esse
+  // sistema como acima da alçada, e o write path (`buildDiscountMap` em
+  // ApplyDiscounts.js, `buildTargets`/`buildRateHoursMap` no customCode.js)
+  // exigia `novo > 0`, excluindo o próprio valor zero do mapa de desconto. O
+  // item de linha ficava intocado e nenhuma propriedade era gravada.
+  eq(
+    "matemática: 100% de desconto não é mais nulo",
+    M.calcDiscountPercent(500, 0),
+    100,
+  );
+  eq(
+    "matemática: valor negativo continua bloqueado",
+    M.calcDiscountPercent(500, -10),
+    null,
+  );
+
+  {
+    // Sistema só com Mensalidade, o caso exato do relato.
+    const s = await criarSessao(M, [item("P-1", 1, { valor_glt: "500" })]);
+    const r = await s.aplicar({ glt: 0 }, "aprovacao");
+    eq(
+      "mensalidade a 100%: sempre acima da alçada, sempre pendente",
+      r.requerAprovacao,
+      true,
+    );
+    eq(
+      "mensalidade a 100%: valor gravado é zero",
+      s.crm.itens.get("P-1").valor_glt,
+      "0",
+    );
+    eq(
+      "mensalidade a 100%: percentual gravado no item",
+      s.crm.itens.get("P-1").glt_descontado,
+      "100",
+    );
+    eq(
+      "mensalidade a 100%: valor descontado gravado",
+      s.crm.itens.get("P-1").valor_glt_descontado,
+      "500",
+    );
+  }
+
+  {
+    // Sistema só com Licença ("start"), mesma matemática.
+    const s = await criarSessao(M, [item("P-2", 1, { valor_licenca: "800" })]);
+    await s.aplicar({ licenca: 0 }, "aprovacao");
+    eq(
+      "licença a 100%: valor gravado é zero",
+      s.crm.itens.get("P-2").valor_licenca,
+      "0",
+    );
+    eq(
+      "licença a 100%: percentual gravado no item",
+      s.crm.itens.get("P-2").licenca_descontado,
+      "100",
+    );
+  }
+
+  {
+    // As duas rotas de escrita (ApplyDiscounts.js e o customCode.js do
+    // workflow) têm que gravar o mesmo valor também no desconto de 100%.
+    const auto = await criarSessao(M, [item("P-3", 1, { valor_glt: "500" })]);
+    await auto.aplicar({ glt: 0 }, "auto");
+    const aprov = await criarSessao(M, [item("P-4", 1, { valor_glt: "500" })]);
+    await aprov.aplicar({ glt: 0 }, "aprovacao");
+    eq(
+      "100%: as duas rotas concordam",
+      aprov.crm.itens.get("P-4").valor_glt,
+      auto.crm.itens.get("P-3").valor_glt,
+    );
+  }
+
   console.log(
     `\n${falhas ? "FALHOU" : "OK"}: ${passes} asserções passaram, ${falhas} falharam`,
   );

@@ -530,11 +530,15 @@ const buildDiscountMap = (discounts) => {
     };
 
     for (const [campo, { original, novo }] of Object.entries(fields)) {
-      // novo === 0 = "não editado" (convenção do card); exigir novo positivo
-      // impede que linha intacta vire 100% de desconto. `novo !== original` é
-      // deliberadamente dos dois lados: abaixo do bruto é desconto, acima é
-      // "over", que o write path aplica como preço sem gravar desconto.
-      if (original > 0 && novo > 0 && novo !== original) {
+      // `novo === 0` é desconto de 100% (valor final R$ 0,00), cenário de
+      // negociação válido, e tem que entrar no mapa como qualquer outro
+      // desconto: excluir `novo === 0` fazia o item ficar intocado, relato de
+      // operações de novembro/2026. Só negativo continua bloqueado (já
+      // impedido na UI, `min={0}` + `Math.max(0, value)` em Discount.tsx).
+      // `novo !== original` é deliberadamente dos dois lados: abaixo do bruto
+      // é desconto, acima é "over", que o write path aplica como preço sem
+      // gravar desconto.
+      if (original > 0 && novo >= 0 && novo !== original) {
         map[line.nome_do_sistema][campo] = novo;
       }
     }
@@ -562,9 +566,11 @@ const buildDiscountMap = (discounts) => {
 
     for (const [campo, vals] of Object.entries(rateHoursFields)) {
       // `!==` dos dois lados, como nos campos flat: desconto e "over".
+      // `unitNew === 0` é desconto de 100% na categoria hora×valor (ver o
+      // mesmo ajuste nos campos flat, acima): não pode ficar de fora do mapa.
       const hasUnitChange =
         vals.unitOriginal > 0 &&
-        vals.unitNew > 0 &&
+        vals.unitNew >= 0 &&
         vals.unitNew !== vals.unitOriginal;
 
       // Horas: null/undefined = não editado, `novo === atual` é no-op. Zerar é
