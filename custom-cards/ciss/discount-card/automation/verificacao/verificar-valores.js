@@ -1232,6 +1232,199 @@ const main = async () => {
     }
   }
 
+  // -------------------------------------------------------------------------
+  secao("CISSPoder: consolidação de treinamento no item 1634 (RN-01/RN-02/RN-03)");
+  // Chama ApplyDiscounts.main / customCode.main diretamente (como `criarSessao`
+  // faz por baixo), mas com sistema "1" (CISSPoder) em vez da constante SISTEMA
+  // do resto do arquivo: a regra só existe para esse sistema, então o teste
+  // precisa de um sistema diferente para provar que fora dele nada muda.
+  {
+    const payloadTreinamento = (overrides = {}) => ({
+      nome_do_sistema: "1",
+      gltOriginal: 0,
+      gltNew: 0,
+      locacaoOriginal: 0,
+      locacaoNew: 0,
+      licencaOriginal: 0,
+      licencaNew: 0,
+      treinamentoValorUnitarioOriginal: 10,
+      treinamentoValorUnitarioNew: 10,
+      treinamentoHorasOriginal: 100,
+      treinamentoHorasNew: 150,
+      desenvolvimentoValorUnitarioOriginal: 0,
+      desenvolvimentoValorUnitarioNew: 0,
+      desenvolvimentoHorasOriginal: 0,
+      desenvolvimentoHorasNew: null,
+      consultoriaValorUnitarioOriginal: 0,
+      consultoriaValorUnitarioNew: 0,
+      consultoriaHorasOriginal: 0,
+      consultoriaHorasNew: null,
+      treinamentoTotalBruto: 1000,
+      desenvolvimentoTotalBruto: 0,
+      consultoriaTotalBruto: 0,
+      label: "Sistema CISSPoder",
+      percentualDesconto: 0,
+      ...overrides,
+    });
+
+    // CP-A é sempre o primeiro na ordem devolvida pela API (ordem de inserção
+    // no Map do CRM falso), e é o item que o comportamento ANTIGO escolhia.
+    const tresItensTreinamento = (sistema, skus) => [
+      item("CP-A", 1, { nome_do_sistema: sistema, valor_treinamento: "500", horas_treinamento: "50", hs_sku: skus[0] }),
+      item("CP-B", 1, { nome_do_sistema: sistema, valor_treinamento: "300", horas_treinamento: "30", hs_sku: skus[1] }),
+      item("CP-C", 1, { nome_do_sistema: sistema, valor_treinamento: "200", horas_treinamento: "20", hs_sku: skus[2] }),
+    ];
+
+    const rodar = async (itens, payload, rota) => {
+      const crm = criarCrm(itens);
+      clienteAtual.ref = crm.cliente;
+      if (rota === "auto") {
+        await silenciar(() =>
+          applyDiscounts.main({
+            parameters: {
+              dealId: DEAL_ID,
+              dealName: "Deal CISSPoder",
+              discounts: [payload],
+              pending: [],
+              resumo: "",
+            },
+          }),
+        );
+      } else {
+        await silenciar(() =>
+          applyDiscounts.main({
+            parameters: {
+              dealId: DEAL_ID,
+              dealName: "Deal CISSPoder",
+              discounts: [],
+              pending: [payload],
+              resumo: "resumo",
+            },
+          }),
+        );
+        crm.decidir("sim");
+        await silenciar(() =>
+          workflow.main(
+            {
+              object: { objectId: DEAL_ID },
+              inputFields: { proposta_aprovada: "sim", observacoes: "" },
+            },
+            () => {},
+          ),
+        );
+      }
+      return crm;
+    };
+
+    for (const rota of ["auto", "aprovacao"]) {
+      // RN-01: item 1634 no grupo, consolida nele mesmo não sendo o primeiro
+      // da ordem da API.
+      {
+        const crm = await rodar(
+          tresItensTreinamento("1", ["111", "1634", "222"]),
+          payloadTreinamento(),
+          rota,
+        );
+        eq(`RN-01 rota ${rota}: horas no item 1634`, crm.itens.get("CP-B").horas_treinamento, "150");
+        eq(`RN-01 rota ${rota}: valor no item 1634`, crm.itens.get("CP-B").valor_treinamento, "1500");
+        eq(`RN-01 rota ${rota}: item antes do 1634 zerado`, crm.itens.get("CP-A").horas_treinamento, "0");
+        eq(`RN-01 rota ${rota}: item depois do 1634 zerado`, crm.itens.get("CP-C").horas_treinamento, "0");
+      }
+
+      // RN-02: fora de CISSPoder, mantém o comportamento atual (primeiro item
+      // da ordem da API), mesmo havendo um item de SKU 1634 no grupo.
+      {
+        const crm = await rodar(
+          tresItensTreinamento("99", ["111", "1634", "222"]),
+          payloadTreinamento({ nome_do_sistema: "99" }),
+          rota,
+        );
+        eq(`RN-02 rota ${rota}: primeiro item consolida`, crm.itens.get("CP-A").horas_treinamento, "150");
+        eq(`RN-02 rota ${rota}: item com sku 1634 não é privilegiado fora de CISSPoder`, crm.itens.get("CP-B").horas_treinamento, "0");
+      }
+
+      // RN-03: CISSPoder sem o item 1634 no grupo, categoria treinamento não
+      // é gravada em nenhum item.
+      {
+        const crm = await rodar(
+          tresItensTreinamento("1", ["111", "222", "333"]),
+          payloadTreinamento(),
+          rota,
+        );
+        eq(`RN-03 rota ${rota}: item A mantém horas originais`, crm.itens.get("CP-A").horas_treinamento, "50");
+        eq(`RN-03 rota ${rota}: item B mantém horas originais`, crm.itens.get("CP-B").horas_treinamento, "30");
+        eq(`RN-03 rota ${rota}: item C mantém horas originais`, crm.itens.get("CP-C").horas_treinamento, "20");
+      }
+    }
+
+    // CA-05: no caminho de aprovação, um sistema CISSPoder sem o item 1634
+    // não impede a decisão de outro sistema pendente no mesmo deal.
+    {
+      const itensMisto = [
+        ...tresItensTreinamento("1", ["111", "222", "333"]),
+        item("OUT-1", 1, { nome_do_sistema: "99", valor_glt: "1000" }),
+      ];
+      const crm = criarCrm(itensMisto);
+      clienteAtual.ref = crm.cliente;
+      const payloadOutroSistema = {
+        nome_do_sistema: "99",
+        gltOriginal: 1000,
+        gltNew: 800,
+        locacaoOriginal: 0,
+        locacaoNew: 0,
+        licencaOriginal: 0,
+        licencaNew: 0,
+        treinamentoValorUnitarioOriginal: 0,
+        treinamentoValorUnitarioNew: 0,
+        treinamentoHorasOriginal: 0,
+        treinamentoHorasNew: null,
+        desenvolvimentoValorUnitarioOriginal: 0,
+        desenvolvimentoValorUnitarioNew: 0,
+        desenvolvimentoHorasOriginal: 0,
+        desenvolvimentoHorasNew: null,
+        consultoriaValorUnitarioOriginal: 0,
+        consultoriaValorUnitarioNew: 0,
+        consultoriaHorasOriginal: 0,
+        consultoriaHorasNew: null,
+        treinamentoTotalBruto: 0,
+        desenvolvimentoTotalBruto: 0,
+        consultoriaTotalBruto: 0,
+        label: "Outro sistema",
+        percentualDesconto: 20,
+      };
+
+      await silenciar(() =>
+        applyDiscounts.main({
+          parameters: {
+            dealId: DEAL_ID,
+            dealName: "Deal misto",
+            discounts: [],
+            pending: [payloadTreinamento(), payloadOutroSistema],
+            resumo: "resumo",
+          },
+        }),
+      );
+      crm.decidir("sim");
+      let resultadoCallback;
+      await silenciar(() =>
+        workflow.main(
+          {
+            object: { objectId: DEAL_ID },
+            inputFields: { proposta_aprovada: "sim", observacoes: "" },
+          },
+          (out) => {
+            resultadoCallback = out;
+          },
+        ),
+      );
+
+      eq("CA-05: decisão não entra em erro", resultadoCallback?.outputFields?.status, "aprovado");
+      eq("CA-05: os dois sistemas pendentes são processados", resultadoCallback?.outputFields?.sistemas_processados, 2);
+      eq("CA-05: sistema sem relação é decidido mesmo com CISSPoder bloqueado", crm.itens.get("OUT-1").valor_glt, "800");
+      eq("CA-05: CISSPoder sem o item 1634 segue sem gravação", crm.itens.get("CP-A").horas_treinamento, "50");
+    }
+  }
+
   console.log(
     `\n${falhas ? "FALHOU" : "OK"}: ${passes} asserções passaram, ${falhas} falharam`,
   );

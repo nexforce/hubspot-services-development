@@ -144,6 +144,23 @@ const RATE_HOURS_FIELDS = [
   },
 ];
 
+// Consolidação da categoria treinamento (horas técnicas) em negociações de
+// origem CISSPoder: regra de execução no CLAUDE.md deste app, "Categories &
+// discount math". Quando o sistema é CISSPoder e o item de SKU 1634
+// (CISSPoder: Horas Técnicas) está entre os participantes da categoria
+// treinamento, a consolidação grava nele em vez do primeiro item da ordem da
+// API. Cisslive e lançamento de módulos individuais nunca têm esse item, e
+// caem no comportamento atual sem nenhuma condição extra.
+// BLOCO IDÊNTICO em automation/desconto-decisao/customCode.js. Mudou um,
+// mude o outro.
+//
+// Valor interno do enum nome_do_sistema para CISSPoder confirmado em
+// 2026-11-23: "1". Não reutilize SISTEMA_CISPODER de GroupContracts.js, que
+// guarda "cispoder" — valor incorreto, TODO aberto naquele arquivo, corrigido
+// em tarefa separada.
+const SISTEMA_CISPODER = "1";
+const SKU_TREINAMENTO_CISPODER = "1634";
+
 const FIELDS = [
   {
     fieldName: "glt",
@@ -344,6 +361,9 @@ const buildAllocation = (itens, alvos, propsGravaveis) => {
         horasItem: parseFloat(item.properties[rf.hoursProp] || 0),
         brutoBase: snapshot || valorItem,
         temSnapshotProp,
+        // Só para a regra de consolidação CISSPoder/treinamento abaixo.
+        sku: item.properties.hs_sku,
+        sistema: item.properties.nome_do_sistema,
       });
     }
   }
@@ -365,16 +385,41 @@ const buildAllocation = (itens, alvos, propsGravaveis) => {
 
   for (const [campo, { plano, participantes }] of gruposHoras) {
     if (plano.hoursEdited) {
-      // Consolidação: o primeiro item da categoria (ordem devolvida pela API)
-      // recebe TODAS as horas e o valor cheio; os demais vão a zero. O snapshot
-      // segue a mudança de escopo (valor/h ORIGINAL × horas novas). Os dois em
-      // centavo inteiro, senão o bruto exibido no card passa a desviar.
-      // Nenhum dos dois é dividido por quantity: ver o bloco de categoria
-      // hora×valor no cabeçalho desta seção.
+      // Consolidação: por padrão o primeiro item da categoria (ordem
+      // devolvida pela API) recebe TODAS as horas e o valor cheio; os demais
+      // vão a zero. Exceção: sistema CISSPoder na categoria treinamento
+      // consolida sempre no item de SKU 1634 (CISSPoder: Horas Técnicas),
+      // nunca em um item escolhido pela ordem da API. Ver SISTEMA_CISPODER /
+      // SKU_TREINAMENTO_CISPODER no topo do arquivo.
+      const ehTreinamentoCispoder =
+        campo === "treinamento" &&
+        participantes[0]?.sistema === SISTEMA_CISPODER;
+
+      let indiceAlvo = 0;
+      if (ehTreinamentoCispoder) {
+        indiceAlvo = participantes.findIndex(
+          (p) => p.sku === SKU_TREINAMENTO_CISPODER,
+        );
+        if (indiceAlvo === -1) {
+          // Sistema CISSPoder sem o item 1634 na composição: não grava a
+          // categoria treinamento deste sistema, mas não falha o restante do
+          // submit. Cobre deals lançados antes desta mudança e qualquer
+          // edição manual que tenha removido o item.
+          console.warn(
+            `[applyDiscounts] sistema CISSPoder sem item ${SKU_TREINAMENTO_CISPODER}: categoria treinamento não gravada (${participantes.length} item(ns) no grupo)`,
+          );
+          continue;
+        }
+      }
+
+      // O snapshot segue a mudança de escopo (valor/h ORIGINAL × horas
+      // novas). Os dois em centavo inteiro, senão o bruto exibido no card
+      // passa a desviar. Nenhum dos dois é dividido por quantity: ver o
+      // bloco de categoria hora×valor no cabeçalho desta seção.
       const alvoCent = emCentavos(plano.alvoTotal);
       const snapCent = emCentavos(plano.unitOriginal * plano.hoursTarget);
       participantes.forEach((p, i) => {
-        const acumulador = i === 0;
+        const acumulador = i === indiceAlvo;
         guardar(horas, p.id, campo, {
           horas: acumulador ? plano.hoursTarget : 0,
           valorBase: acumulador ? alvoCent / 100 : 0,
@@ -493,6 +538,7 @@ const fetchDealStateForPending = async (dealId, hubspotClient) => {
 const fetchLineItemProperties = async (ids, hubspotClient) => {
   const properties = [
     "nome_do_sistema",
+    "hs_sku",
     "price",
     "quantity",
     "classificacao_do_contrato",
