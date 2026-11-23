@@ -9,6 +9,16 @@
 // Proposta" / "ID Item Módulo"): cada chave é o ID do modelo e a lista são os
 // SKUs do módulo associados a ele. Ao receber um novo modelos.csv, regenere
 // este bloco inteiro a partir do CSV, sem editar os SKUs manualmente aqui.
+//
+// Exceção: o SKU "1634" (CISSPoder: Horas Técnicas) foi adicionado à mão aos
+// 8 modelos de origem CISSPoder ("9", "10", "11", "12", "13", "14", "17",
+// "22") porque modelos.csv ainda não tem uma linha para esse item em nenhum
+// deles. Regra de negócio: todo modelo CISSPoder passa a conter o item 1634,
+// que é o alvo exclusivo da consolidação de desconto de horas técnicas em
+// discount-card (ver CLAUDE.md de discount-card, "Categories & discount
+// math"). Quando modelos.csv for atualizado pela CISS com a linha oficial do
+// item 1634 para cada um desses modelos, regenere o bloco inteiro a partir
+// do CSV e esta exceção deixa de existir.
 
 const axios = require("axios");
 
@@ -43,6 +53,7 @@ const modelsMap = {
     "578",
     "366",
     "44",
+    "1634",
   ],
   // Super Medio Porte Presumido/Real
   "10": [
@@ -96,6 +107,7 @@ const modelsMap = {
     "578",
     "366",
     "44",
+    "1634",
   ],
   // MatCon Pequeno Porte Simples
   "11": [
@@ -136,6 +148,7 @@ const modelsMap = {
     "212",
     "366",
     "44",
+    "1634",
   ],
   // MatCon Pequeno Porte Presumido/Real
   "12": [
@@ -184,6 +197,7 @@ const modelsMap = {
     "289",
     "366",
     "44",
+    "1634",
   ],
   // Super Grande Porte Lucro Real
   "13": [
@@ -271,6 +285,7 @@ const modelsMap = {
     "289",
     "366",
     "44",
+    "1634",
   ],
   // MatCon Grande Porte Lucro Real
   "14": [
@@ -363,6 +378,7 @@ const modelsMap = {
     "1003",
     "44",
     "367",
+    "1634",
   ],
   // Super Pequeno Porte Presumido/Real
   "17": [
@@ -410,6 +426,7 @@ const modelsMap = {
     "578",
     "366",
     "44",
+    "1634",
   ],
   // CISSLive Grupo CRM - Loja Própria
   "19": [
@@ -719,6 +736,7 @@ const modelsMap = {
     "44",
     "367",
     "1151",
+    "1634",
   ],
   // CISSLive Gestor
   "23": [
