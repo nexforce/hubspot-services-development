@@ -294,15 +294,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       posCount < 1 &&
       gradCount < 1);
 
-  // Categoria do desconto de pagamento à vista (Ação Comercial) por nível de interesse:
-  // CEU -> acao_comercial_ceu | Pós-graduação (e fallback) -> acao_comercial_pos.
-  // A categoria é normalizada de volta para "acao_comercial" ao agrupar, mantendo
-  // toda a lógica interna (seleção, validação, cálculo) intacta.
-  const avistaCategoria =
-    properties.nivel_de_interesse === NIVEL_INTERESSE_CEU
-      ? "acao_comercial_ceu"
-      : "acao_comercial_pos";
-
   // Derived: diamantes visíveis na interface (limitados por diamondLimit para CEU/Pós)
   const visibleDiamonds = diamondLimit !== null
     ? diamondIndications.slice(0, diamondLimit)
@@ -332,31 +323,19 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     setSelectedDiamonds([]);
   };
 
-  // Agrupa descontos por categoria (aluno_diamante is handled separately via diamondIndications)
-  const groupDiscountsByCategory = (allDiscounts, selectedCategories, showAcaoComercial, avistaCategoriaAtual) => {
+  // Agrupa descontos por categoria (aluno_diamante is handled separately via diamondIndications).
+  // Ação Comercial deixou de ser uma categoria interna do card: virou registro do objeto
+  // Descontos, entra em selectedCategories como qualquer outra categoria.
+  const groupDiscountsByCategory = (allDiscounts, selectedCategories) => {
     const grouped = {};
 
     selectedCategories.forEach(categoria => {
-      // Skip acao_comercial - handled separately based on payment type
-      if (categoria === "aluno_diamante" || categoria === "acao_comercial") return;
+      if (categoria === "aluno_diamante") return;
 
       let descontosCategoria = allDiscounts.filter(d => d.categoria === categoria);
       descontosCategoria.sort((a, b) => parseFloat(a.percdescontoparcela) - parseFloat(b.percdescontoparcela));
       grouped[categoria] = descontosCategoria;
     });
-
-    // Always include acao_comercial when payment type is à vista.
-    // A categoria vinda da MuleSoft (acao_comercial_pos / acao_comercial_ceu) é
-    // normalizada para "acao_comercial" para manter a lógica interna intacta.
-    if (showAcaoComercial) {
-      let acaoComercialDiscounts = allDiscounts
-        .filter(d => d.categoria === avistaCategoriaAtual)
-        .map(d => ({ ...d, categoria: "acao_comercial" }));
-      acaoComercialDiscounts.sort((a, b) => parseFloat(a.percdescontoparcela) - parseFloat(b.percdescontoparcela));
-      if (acaoComercialDiscounts.length > 0) {
-        grouped["acao_comercial"] = acaoComercialDiscounts;
-      }
-    }
 
     return grouped;
   };
@@ -520,7 +499,8 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   }, [legacyReevalKey]);
 
   // Reconcilia a seleção em memória com o conjunto elegível para que uma troca de
-  // convênio (ex.: normal -> especial) remova descontos que deixaram de se aplicar.
+  // forma de pagamento ou de convênio remova descontos que deixaram de se aplicar.
+  // Vale para as categorias marcadas e para o desconto escolhido dentro de cada uma.
   useEffect(() => {
     if (legacyCategories === null) return;
     const eligibleValues = new Set([
@@ -528,6 +508,13 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       ...objectDiscountCategories.map((o) => o.value),
     ]);
     setSelectedCategory((prev) => prev.filter((c) => eligibleValues.has(c)));
+    setSelectedDiscountsByCategory((prev) => {
+      const next = {};
+      for (const [categoria, desconto] of Object.entries(prev)) {
+        if (eligibleValues.has(categoria)) next[categoria] = desconto;
+      }
+      return Object.keys(next).length === Object.keys(prev).length ? prev : next;
+    });
   }, [legacyCategories, objectDiscountCategories]);
 
   // CPF do aluno: espelha a propriedade cpf; grava no clique; a busca de matrículas
@@ -803,17 +790,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
         });
       }
 
-      // Always fetch acao_comercial discount (pagamento à vista).
-      // Categoria varia por nível de interesse: acao_comercial_pos (Pós) / acao_comercial_ceu (CEU).
-      promises.push(
-        runServerless({
-          name: "fetchDiscount",
-          parameters: {
-            categoriadesconto: avistaCategoria,
-          },
-        }).then((resultado) => ({ ...resultado, __categoria: "acao_comercial" })),
-      );
-
       // Fetch diamante indications if aluno_diamante is in selected categories
       if (selectedCategory.includes("aluno_diamante") && associatedContact?.id) {
         setIsLoadingDiamonds(true);
@@ -832,7 +808,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       const responses = await Promise.all(promises);
       const financialPlanResponse = responses[0];
 
-      // Total de respostas após plano financeiro: descontos + acao_comercial + opcionalmente diamantes
+      // Total de respostas após plano financeiro: descontos + opcionalmente diamantes
       const discountResponses = responses.slice(1);
 
       // Agregar todos os descontos das categorias
@@ -939,14 +915,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
 
       setFinancialPlanData(planData);
 
-      // Agrupar descontos por categoria (acao_comercial incluída quando à vista)
+      // Agrupar descontos por categoria
       if (allDiscounts.length > 0) {
-        const grouped = groupDiscountsByCategory(
-          allDiscounts,
-          selectedCategory,
-          isPagamentoAVista(selectedTipoPagamento),
-          avistaCategoria,
-        );
+        const grouped = groupDiscountsByCategory(allDiscounts, selectedCategory);
         setDiscountsByCategory(grouped);
       }
 
@@ -964,7 +935,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     }
   };
 
-  // Calcula descontos cumulativos: diamante primeiro, depois categorias, depois pagamento à vista (acao_comercial)
+  // Calcula descontos cumulativos: diamante primeiro, depois as categorias selecionadas
   const getDiscountData = (originalValue, selectedDiscounts) => {
     let currentValue = originalValue;
     let totalCategoryDiscountValue = 0;
@@ -986,8 +957,9 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       });
     }
 
-    // Step 2: Obter descontos selecionados (VA primeiro, PO depois), excluindo acao_comercial (tratado como pagamento à vista)
-    const selectedArray = Object.values(selectedDiscounts || {}).filter(d => d.categoria !== "acao_comercial");
+    // Step 2: Obter descontos selecionados (VA primeiro, PO depois). Ação Comercial
+    // entrou na mesma lista: é um desconto do objeto como qualquer outro.
+    const selectedArray = Object.values(selectedDiscounts || {});
     const sortedDiscounts = selectedArray.sort((a, b) => {
       if (a.tipodescontoparcela === "VA" && b.tipodescontoparcela !== "VA") return -1;
       if (a.tipodescontoparcela !== "VA" && b.tipodescontoparcela === "VA") return 1;
@@ -1045,43 +1017,12 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
       ? ((originalValue - currentValue) / originalValue * 100)
       : 0;
 
-    // Step 4: Apply acao_comercial (pagamento à vista) discount from selected discounts
-    const avistaDiscount = selectedDiscounts?.["acao_comercial"];
-    let pagamentoAVistaPercent = 0;
-    let pagamentoAVistaValue = 0;
-    if (avistaDiscount && avistaDiscount.somenteAntecipacao) {
-      // Ação comercial marcada: registra o código sem reduzir o valor.
-      discountDetails.push({
-        name: avistaDiscount.nomeplanodesconto,
-        categoria: "acao_comercial",
-        type: avistaDiscount.tipodescontoparcela,
-        originalValue: avistaDiscount.percdescontoparcela + "%",
-        appliedValue: 0,
-        naoAplicado: true,
-        code: avistaDiscount.codigoplanodesconto,
-      });
-    } else if (avistaDiscount) {
-      pagamentoAVistaPercent = parseFloat(avistaDiscount.percdescontoparcela || 0);
-      pagamentoAVistaValue = currentValue * (pagamentoAVistaPercent / 100);
-      currentValue = currentValue * (1 - pagamentoAVistaPercent / 100);
-      discountDetails.push({
-        name: avistaDiscount.nomeplanodesconto,
-        categoria: "acao_comercial",
-        type: "PO",
-        originalValue: avistaDiscount.percdescontoparcela + "%",
-        appliedValue: pagamentoAVistaValue,
-        code: avistaDiscount.codigoplanodesconto,
-      });
-    }
-
     const finalValue = currentValue;
 
     return {
       allDiscounts: discountDetails,
-      totalCategoryDiscountValue: pagamentoAVistaValue > 0 ? totalCategoryDiscountValue + pagamentoAVistaValue : totalCategoryDiscountValue,
+      totalCategoryDiscountValue,
       totalCategoryDiscountPercent,
-      pagamentoAVistaPercent,
-      pagamentoAVistaValue,
       finalValue,
       totalDiscountPercent: originalValue > 0
         ? ((originalValue - finalValue) / originalValue * 100).toFixed(2)
@@ -1099,7 +1040,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
   const calculateAntecipationValue = (
     totalValue,
     properties,
-    selectedCondition,
   ) => {
     let antecipationValue = totalValue;
 
@@ -1113,16 +1053,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     }
 
     if (
-      properties.nivel_de_interesse === NIVEL_INTERESSE_CEU &&
-      selectedCondition.valorMatricula === 150
-    ) {
-      antecipationValue = totalValue - 20;
-    } else if (
-      properties.nivel_de_interesse === NIVEL_INTERESSE_CEU &&
-      selectedCondition.valorMatricula === 250
-    ) {
-      antecipationValue = totalValue - 50;
-    } else if (
       properties.nivel_de_interesse === "Pós-graduação" &&
       (properties.modalidade_de_interesse === "Presencial" ||
         properties.modalidade_de_interesse === "Ao Vivo") &&
@@ -1157,17 +1087,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     if (missingCategories.length > 0) {
       sendAlert({
         type: "warning",
-        message: `Selecione um desconto para: ${missingCategories.map(c => categoryLabels[c] || c).join(", ")}`,
-      });
-      return;
-    }
-
-    // Validate acao_comercial is selected when payment type is PIX or A_VISTA
-    const isAVista = isPagamentoAVista(selectedTipoPagamento);
-    if (isAVista && !selectedDiscountsByCategory["acao_comercial"]) {
-      sendAlert({
-        type: "warning",
-        message: "Selecione o desconto de pagamento à vista (Ação Comercial).",
+        message: `Selecione um desconto para: ${missingCategories.map(c => categoryLabelMap[c] || c).join(", ")}`,
       });
       return;
     }
@@ -1198,12 +1118,11 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
         selectedCondition.valorParcela,
         selectedDiscountsByCategory,
       );
-      const { allDiscounts, totalCategoryDiscountValue, totalCategoryDiscountPercent, finalValue, pagamentoAVistaPercent, pagamentoAVistaValue } = discountData;
+      const { allDiscounts, totalCategoryDiscountValue, totalCategoryDiscountPercent, finalValue } = discountData;
       const discountCodes = allDiscounts.filter(d => d.code).map(d => d.code).join(";");
       const antecipationValue = calculateAntecipationValue(
         finalValue,
         properties,
-        selectedCondition,
       );
 
       // Build diamantes_orcados string: IDs selected, separated by ";"
@@ -1342,10 +1261,20 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
             .filter((cat) => cat !== "" && cat !== "acao_comercial")
         : [];
 
+  // Rótulo exibido para a categoria: o label do objeto Descontos tem prioridade,
+  // porque categorias novas (ex.: acao_comercial_pos) não existem nas opções da
+  // propriedade do negócio usadas por fetchDealPropertyOptions.
+  const categoryLabelMap = {
+    ...categoryLabels,
+    ...Object.fromEntries(
+      objectDiscountCategories.map((item) => [item.value, item.label || item.value]),
+    ),
+  };
+
   const legacyCategoryOptions = approvedCategoriesSource
     .filter((cat) => cat !== "" && cat !== "acao_comercial")
     .map((cat) => ({
-      label: categoryLabels[cat] || cat,
+      label: categoryLabelMap[cat] || cat,
       value: cat,
     }));
 
@@ -1357,8 +1286,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
     .filter((item) => !approvedCategoriesSource.includes(item.value));
 
   const discountCategoryOptions = [...legacyCategoryOptions, ...objectCategoryOptions];
-
-  const isAVista = isPagamentoAVista(selectedTipoPagamento);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -1572,15 +1499,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
           onChange={(value) => {
             const newTipo = String(value);
             setSelectedTipoPagamento(newTipo);
-            // Clear acao_comercial selection when switching away from à vista
-            const newIsAVista = isPagamentoAVista(newTipo);
-            if (!newIsAVista && selectedDiscountsByCategory["acao_comercial"]) {
-              setSelectedDiscountsByCategory(prev => {
-                const newState = { ...prev };
-                delete newState["acao_comercial"];
-                return newState;
-              });
-            }
             // Motor da etapa 2: reavalia as regras do objeto Descontos com a forma de
             // pagamento escolhida, antes de qualquer simulação. Passa o valor novo
             // diretamente (o estado ainda não atualizou neste ponto).
@@ -1599,6 +1517,13 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
               value={selectedCategory}
               onChange={(value) => {
                 setSelectedCategory(value);
+                setSelectedDiscountsByCategory((prev) => {
+                  const next = {};
+                  for (const [categoria, desconto] of Object.entries(prev)) {
+                    if (value.includes(categoria)) next[categoria] = desconto;
+                  }
+                  return Object.keys(next).length === Object.keys(prev).length ? prev : next;
+                });
                 if (!value.includes("aluno_diamante")) {
                   setHasRequestedDiamondIndications(false);
                   setDiamondIndications([]);
@@ -1642,7 +1567,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
             </Alert>
           )}
 
-        {/* Discount Selection by Category (exclui acao_comercial) */}
+        {/* Discount Selection by Category (aluno_diamante é tratado à parte) */}
         {Object.keys(discountsByCategory).filter(c => c !== "acao_comercial").length > 0 && (
           <>
             <Divider />
@@ -1650,7 +1575,7 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
             {Object.entries(discountsByCategory).filter(([c]) => c !== "acao_comercial").map(([categoria, descontos]) => (
               <Flex key={categoria} direction="column" gap="small">
                 <Text format={{ fontWeight: "demibold" }}>
-                  {categoryLabels[categoria] || categoria}
+                  {categoryLabelMap[categoria] || categoria}
                 </Text>
                 {descontos.length === 0 ? (
                   <Text format={{ fontSize: "small" }}>
@@ -1694,52 +1619,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                 )}
               </Flex>
             ))}
-          </>
-        )}
-
-        {/* Seção: Ação Comercial (Pagamento à Vista) — aparece automaticamente quando PIX ou A_VISTA */}
-        {isAVista && discountsByCategory["acao_comercial"] && (
-          <>
-            <Divider />
-            <Heading>Desconto Pagamento à Vista (Ação Comercial)</Heading>
-            {discountsByCategory["acao_comercial"].length === 0 ? (
-              <Text format={{ fontSize: "small" }}>
-                Nenhum desconto de ação comercial disponível.
-              </Text>
-            ) : (
-              <Flex direction="row" gap="small" wrap="wrap">
-                {discountsByCategory["acao_comercial"].map((desconto) => (
-                  <Card key={desconto.codigoplanodesconto}>
-                    <Flex direction="column" gap="extra-small">
-                      <Text format={{ fontWeight: "demibold" }}>
-                        {desconto.tipodescontoparcela === "VA" ? "R$" + desconto.percdescontoparcela : desconto.percdescontoparcela + "%"}
-                      </Text>
-                      <Text format={{ fontSize: "small" }}>
-                        {desconto.nomeplanodesconto}
-                      </Text>
-                      {desconto.somenteAntecipacao && (
-                        <Text format={{ fontSize: "small" }}>
-                          Somente antecipação
-                        </Text>
-                      )}
-                      <Button
-                        onClick={() => handleSelectDiscountForCategory("acao_comercial", desconto)}
-                        variant={
-                          selectedDiscountsByCategory["acao_comercial"]?.codigoplanodesconto === desconto.codigoplanodesconto
-                            ? "primary"
-                            : "secondary"
-                        }
-                        size="small"
-                      >
-                        {selectedDiscountsByCategory["acao_comercial"]?.codigoplanodesconto === desconto.codigoplanodesconto
-                          ? "Selecionado"
-                          : "Selecionar"}
-                      </Button>
-                    </Flex>
-                  </Card>
-                ))}
-              </Flex>
-            )}
           </>
         )}
 
@@ -1872,7 +1751,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                     <TableHeader>Valor da Parcela</TableHeader>
                     <TableHeader>Categorias</TableHeader>
                     <TableHeader>Descontos Aplicados</TableHeader>
-                    <TableHeader>Desconto à Vista</TableHeader>
                     <TableHeader>Valor Final</TableHeader>
                     <TableHeader>Ação</TableHeader>
                   </TableRow>
@@ -1902,17 +1780,12 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                       </TableCell>
                       <TableCell>
                         {selectedCategory.length > 0
-                          ? selectedCategory.map(cat => categoryLabels[cat] || cat).join(", ")
+                          ? selectedCategory.map(cat => categoryLabelMap[cat] || cat).join(", ")
                           : "-"}
                       </TableCell>
                       <TableCell>
                         {discountNames.length > 0
                           ? discountNames.join(", ")
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
-                        {discountData.pagamentoAVistaPercent > 0
-                          ? `${discountData.pagamentoAVistaPercent}%`
                           : "-"}
                       </TableCell>
                       <TableCell>
@@ -1953,11 +1826,10 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
         {selectedCondition &&
           (() => {
             const discountData = getDiscountData(selectedCondition.valorParcela, selectedDiscountsByCategory);
-            const { allDiscounts, totalCategoryDiscountValue, totalCategoryDiscountPercent, finalValue, pagamentoAVistaPercent, pagamentoAVistaValue } = discountData;
+            const { allDiscounts, totalCategoryDiscountValue, totalCategoryDiscountPercent, finalValue } = discountData;
             const antecipationValue = calculateAntecipationValue(
               finalValue,
               properties,
-              selectedCondition,
             );
 
             return (
@@ -2038,25 +1910,6 @@ const Extension = ({ context, runServerless, sendAlert, actions }) => {
                           </Text>
                         </Flex>
                       ))}
-                    </>
-                  )}
-
-                  {pagamentoAVistaPercent > 0 && (
-                    <>
-                      <Flex direction="row" justify="between">
-                        <Text>Tipo de pagamento:</Text>
-                        <Text format={{ fontWeight: "demibold" }}>
-                          {paymentTypeOptions.find(opt => opt.value === selectedTipoPagamento)?.label || selectedTipoPagamento}
-                        </Text>
-                      </Flex>
-                      <Flex direction="row" justify="between">
-                        <Text>
-                          Desconto Pagamento à Vista ({pagamentoAVistaPercent}%):
-                        </Text>
-                        <Text format={{ fontWeight: "bold" }}>
-                          - {formatCurrency(pagamentoAVistaValue)}
-                        </Text>
-                      </Flex>
                     </>
                   )}
 
