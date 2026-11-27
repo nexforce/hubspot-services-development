@@ -947,7 +947,6 @@ const contractTypeClassification = {
   AB: "L",
   AC: "L",
   AF: "L",
-  AG: "L",
   AL: "L",
   AM: "L",
   AZ: "L",
@@ -967,6 +966,7 @@ const contractTypeClassification = {
   AA: "C",
   AD: "C",
   AE: "C",
+  AG: "C", // Aditivo GLT (Retroativo-Antecipação)
   AI: "C",
   AN: "C",
   AT: "C",
